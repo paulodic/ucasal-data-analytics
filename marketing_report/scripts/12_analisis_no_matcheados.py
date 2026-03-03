@@ -442,6 +442,40 @@ plt.savefig(os.path.join(output_dir, 'dominios_match.png'), bbox_inches='tight')
 plt.close()
 
 # ======================================================
+# 3b. HISTOGRAMA GRANULAR DE TIEMPOS (día a día)
+# ======================================================
+if has_time_data:
+    print("Generando histograma granular de tiempos (3b)...")
+    md_content += "## 3b. Distribución Granular: Día a Día hasta Inscripción\n\n"
+    md_content += "Esta gráfica complementa la sección 2b mostrando un **histograma continuo día a día**, "
+    md_content += "donde cada barra representa un intervalo pequeño de días. "
+    md_content += "Permite visualizar con mayor detalle los picos y la forma de la distribución, "
+    md_content += "especialmente en los primeros días donde se concentra la mayor cantidad de inscripciones.\n\n"
+    md_content += f"**Personas analizadas:** {len(exactos_t):,} (mismas que sección 2)\n\n"
+
+    plt.figure(figsize=(12, 6))
+    plt.hist(exactos_t, bins=50, color='#9b59b6', edgecolor='white', alpha=0.85)
+    plt.axvline(mediana_exacto, color='#e67e22', linewidth=2, linestyle='--',
+                label=f'Mediana: {mediana_exacto:.0f} días')
+    plt.axvline(avg_dias_exacto, color='#e74c3c', linewidth=2, linestyle=':',
+                label=f'Promedio: {avg_dias_exacto:.0f} días')
+    # Marcar "Mismo día" (0-1 días) explícitamente
+    n_mismo_dia = ((exactos_t >= 0) & (exactos_t <= 1)).sum()
+    plt.annotate(f'Mismo día\n(0-1 días)\n{n_mismo_dia} personas',
+                 xy=(0.5, n_mismo_dia * 0.3), fontsize=9, fontweight='bold',
+                 color='#8e44ad', ha='center',
+                 arrowprops=dict(arrowstyle='->', color='#8e44ad'),
+                 xytext=(40, n_mismo_dia * 0.6))
+    plt.xlabel('Días desde Primera Consulta hasta Pago')
+    plt.ylabel('Cantidad de Personas')
+    plt.title('Distribución Granular: Día a Día hasta Inscripción\n(histograma continuo con 50 intervalos)')
+    plt.legend()
+    plt.grid(axis='y', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'histograma_granular_dias.png'), bbox_inches='tight')
+    plt.close()
+
+# ======================================================
 # EXPORTACIONES
 # ======================================================
 print("Guardando archivos y PDF...")
@@ -555,6 +589,23 @@ pdf.ln(5)
 try:
     pdf.image(os.path.join(output_dir, 'dominios_match.png'), w=160)
 except Exception: pass
+
+# 3b. Histograma granular
+if has_time_data:
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 10, "3b. Distribución Granular: Día a Día hasta Inscripción", ln=True)
+    pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(0, 6, "Histograma continuo con 50 intervalos que muestra la distribución día a día. "
+                         "Complementa la sección 2b permitiendo ver con mayor detalle los picos y la forma "
+                         "de la distribución, especialmente en los primeros días donde se concentra la mayor "
+                         "cantidad de inscripciones.\n\n"
+                         f"Personas analizadas: {len(exactos_t):,} (mismas que sección 2). "
+                         "Se calcula desde la PRIMERA CONSULTA REGISTRADA de cada persona.")
+    pdf.ln(5)
+    try:
+        pdf.image(os.path.join(output_dir, 'histograma_granular_dias.png'), w=230)
+    except Exception: pass
 
 pdf.output(os.path.join(output_dir, 'Analisis_No_Matcheados_Reporte.pdf'))
 
