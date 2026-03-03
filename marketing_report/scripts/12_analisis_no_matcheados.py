@@ -271,27 +271,27 @@ if 'Consulta: Fecha de creación' in df.columns:
         md_content += f"- **Promedio:** {avg_dias_exacto:.0f} días\n"
         md_content += f"- **Mediana:** {mediana_exacto:.0f} días\n"
         md_content += f"- **Moda (Valor Más Frecuente):** {moda_exacto:.0f} días\n\n"
-        md_content += "**Nota:** La gráfica 2a (histograma) muestra la distribución general continua. Para un análisis más detallado y específico con rangos definidos, ver sección 2b.\n\n"
+        md_content += "**Nota:** Las gráficas 2a y 2b utilizan los mismos rangos de días para garantizar coherencia. La gráfica 2a muestra la distribución como histograma continuo, mientras que 2b presenta los datos como barras categóricas con porcentajes y acumulados.\n\n"
         
         df_tiempos = pd.DataFrame({
             'Metrica': ['Promedio', 'Mediana', 'Moda', 'Personas Analizadas'],
             'Valor': [f'{avg_dias_exacto:.0f} días', f'{mediana_exacto:.0f} días', f'{moda_exacto:.0f} días', f'{len(exactos_t):,}']
         })
 
-        # NOTA: Se usa histograma con muchos bins para mostrar distribución general
-        # (diferente de 2b que usa rangos categóricos específicos)
-        plt.figure(figsize=(8, 5))
-
-        # Usar un número de bins más granular pero no excesivo
-        # Basado en Sturges' rule: bins = ceil(log2(n)) + 1
-        n_bins = max(30, int(np.ceil(np.log2(len(exactos_t)))) + 1)
-
-        plt.hist(exactos_t, bins=n_bins, color='#3498db', edgecolor='white', alpha=0.85)
+        # Histograma 2a: usa los MISMOS bins que la gráfica 2b para coherencia visual
+        bins_hist = [0, 1, 3, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, max(exactos_t.max() + 1, 271)]
+        plt.figure(figsize=(10, 5))
+        counts_h, edges_h, patches = plt.hist(exactos_t, bins=bins_hist, color='#3498db', edgecolor='white', alpha=0.85)
+        # Etiquetas centradas en cada barra con la cantidad
+        for i, (cnt, left, right) in enumerate(zip(counts_h, edges_h[:-1], edges_h[1:])):
+            if cnt > 0:
+                mid = (left + right) / 2
+                plt.text(mid, cnt + max(counts_h) * 0.01, f'{int(cnt)}', ha='center', fontsize=7, fontweight='bold')
         plt.axvline(mediana_exacto, color='#e67e22', linewidth=2, linestyle='--', label=f'Mediana: {mediana_exacto:.0f} días')
         plt.axvline(avg_dias_exacto, color='#e74c3c', linewidth=2, linestyle=':', label=f'Promedio: {avg_dias_exacto:.0f} días')
         plt.xlabel('Días desde Primera Consulta hasta Pago')
         plt.ylabel('Cantidad de Personas')
-        plt.title('Distribución de Tiempos de Resolución (Inscriptos Matcheados)\nVer sección 2b para rangos específicos y análisis detallado')
+        plt.title('Distribución de Tiempos de Resolución (Inscriptos Matcheados)')
         plt.legend()
         plt.grid(axis='y', alpha=0.3)
         plt.savefig(os.path.join(output_dir, 'tiempos_resolucion.png'), bbox_inches='tight')
@@ -512,8 +512,8 @@ if has_time_data:
     pdf.set_font("Helvetica", size=10)
     pdf.multi_cell(0, 6, f"Promedio: {avg_dias_exacto:.0f} días | Mediana: {mediana_exacto:.0f} días\n"
                          f"Personas analizadas: {len(exactos_t):,}\n\n"
-                         f"La siguiente gráfica 2a muestra la distribución general continua. Para un análisis detallado "
-                         f"con rangos específicos, ver sección 2b.")
+                         f"Las gráficas 2a y 2b utilizan los mismos rangos de días para garantizar coherencia. "
+                         f"La gráfica 2a muestra la distribución como histograma, 2b agrega porcentajes y acumulados.")
     pdf.ln(5)
     try:
         pdf.image(os.path.join(output_dir, 'tiempos_resolucion.png'), w=150)
@@ -523,12 +523,12 @@ if has_time_data:
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 10, "2b. ¿Cuántos días tardan en inscribirse?", ln=True)
     pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(0, 6, "Distribución de inscriptos por rangos de días específicos. Los primeros rangos son detallados (0-30 días) "
-                         "y desde 30 hasta 270 días se usan intervalos uniformes de ~30 días para comparar a igual escala.\n\n"
-                         "NOTA IMPORTANTE: Este análisis usa rangos específicos personalizados (a diferencia de la gráfica 2a que es un histograma continuo). "
-                         "'Mismo día' = 0-1 días (persona se inscribió el mismo día o el siguiente). Se calcula desde la PRIMERA CONSULTA REGISTRADA "
-                         "(si consultó múltiples veces, el reloj comienza en el primer contacto). Responde: '¿Cuánto tiempo desde que primero se "
-                         "interesó hasta que efectivamente se inscribió?', de forma conservadora y realista.")
+    pdf.multi_cell(0, 6, "Distribución de inscriptos por rangos de días específicos (mismos rangos que la gráfica 2a). "
+                         "Los primeros rangos son detallados (0-30 días) y desde 30 hasta 270 días se usan intervalos uniformes de ~30 días.\n\n"
+                         "'Mismo día' = 0-1 días (persona se inscribió el mismo día o el siguiente de su primera consulta). "
+                         "Se calcula desde la PRIMERA CONSULTA REGISTRADA (si consultó múltiples veces, el reloj comienza en el primer contacto). "
+                         "Responde: '¿Cuánto tiempo desde que primero se interesó hasta que efectivamente se inscribió?', "
+                         "de forma conservadora y realista.")
     pdf.ln(5)
     try:
         pdf.image(os.path.join(output_dir, 'distribucion_dias_inscripcion.png'), w=230)
