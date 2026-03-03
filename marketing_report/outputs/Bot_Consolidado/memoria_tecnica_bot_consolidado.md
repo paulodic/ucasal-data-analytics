@@ -1,6 +1,6 @@
 # Memoria Técnica — 19_bot_consolidado.py
 
-**Generado automáticamente el 2026-03-02 23:17:25**
+**Generado automáticamente el 2026-03-03 09:01:37**
 **Datos actualizados al 17 de febrero de 2026** *(fecha del último inscripto registrado)*
 
 ---
