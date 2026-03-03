@@ -199,6 +199,44 @@ for seg in segmentos:
     def safe_div(a, b):
         return a / b if b > 0 else 0
 
+    # ROI: leer Insc_Haber de inscriptos atribuidos para estimar ingreso atribuible
+    # ROI = (Ingreso_Atribuido - Inversion) / Inversion * 100
+    leads_csv_path = os.path.join(base_dir, "outputs", "Data_Base", seg,
+                                  "reporte_marketing_leads_completos.csv")
+    rev_google, rev_fb = 0.0, 0.0
+    try:
+        df_tmp = pd.read_csv(leads_csv_path,
+                             usecols=['Match_Tipo', 'Insc_Haber', '_mc_tmp'],
+                             low_memory=False)
+    except Exception:
+        df_tmp = pd.read_csv(leads_csv_path,
+                             usecols=lambda c: c in ['Match_Tipo', 'Insc_Haber', 'UtmSource',
+                                                     'FuenteLead', 'DNI', 'Correo'],
+                             low_memory=False)
+        df_tmp['_is_exacto'] = df_tmp['Match_Tipo'].astype(str).str.contains('Exacto')
+        df_tmp['_pk2'] = df_tmp['DNI'].astype(str).str.split('.').str[0].str.strip()
+        df_tmp.loc[df_tmp['_pk2'].isin(['nan','','None']), '_pk2'] = \
+            df_tmp.loc[df_tmp['_pk2'].isin(['nan','','None']), 'Correo'].astype(str)
+        df_tmp['_utm'] = df_tmp.get('UtmSource', pd.Series('', index=df_tmp.index)).astype(str).str.lower()
+        df_tmp['_fuente'] = pd.to_numeric(df_tmp.get('FuenteLead', pd.Series(dtype='float')),
+                                          errors='coerce')
+        df_tmp['_haber'] = pd.to_numeric(df_tmp.get('Insc_Haber', pd.Series(dtype='float')),
+                                         errors='coerce').fillna(0)
+
+        exactos = df_tmp[df_tmp['_is_exacto']].drop_duplicates(subset='_pk2')
+        mask_g = exactos['_utm'].str.contains('google', na=False)
+        meta_kw = ['fb', 'facebook', 'ig', 'instagram', 'meta']
+        mask_f = exactos['_utm'].str.contains('|'.join(meta_kw), na=False) | (exactos['_fuente'] == 18)
+        rev_google = float(exactos[mask_g]['_haber'].sum())
+        rev_fb     = float(exactos[mask_f]['_haber'].sum())
+
+    total_spend = g_spend + f_spend
+    total_conv  = r['google_conv'] + r['fb_conv']
+    total_rev   = rev_google + rev_fb
+    roi_google  = safe_div(rev_google - g_spend, g_spend) * 100 if g_spend > 0 else 0
+    roi_fb      = safe_div(rev_fb     - f_spend, f_spend) * 100 if f_spend > 0 else 0
+    roi_total   = safe_div(total_rev  - total_spend, total_spend) * 100 if total_spend > 0 else 0
+
     metrics.append({
         'Segmento': seg,
         'G_Spend': g_spend,
@@ -206,12 +244,19 @@ for seg in segmentos:
         'G_Conv': r['google_conv'],
         'G_CPL': safe_div(g_spend, r['google_leads']),
         'G_CPA': safe_div(g_spend, r['google_conv']),
+        'G_RevAtrib': rev_google,
+        'G_ROI': roi_google,
         'F_Spend': f_spend,
         'F_Leads_Plat': f_leads_plat,
         'F_Leads_CRM': r['fb_leads_crm'],
         'F_Conv': r['fb_conv'],
         'F_CPL': safe_div(f_spend, r['fb_leads_crm']),
         'F_CPA': safe_div(f_spend, r['fb_conv']),
+        'F_RevAtrib': rev_fb,
+        'F_ROI': roi_fb,
+        'Total_Spend': total_spend,
+        'Total_RevAtrib': total_rev,
+        'ROI_Total': roi_total,
     })
 
 df_metrics = pd.DataFrame(metrics)
@@ -221,7 +266,7 @@ df_metrics = pd.DataFrame(metrics)
 # ==========================================
 print("\nGenerando charts...")
 
-# — Chart 1: Facebook spend por segmento (pie) —
+# - Chart 1: Facebook spend por segmento (pie) -
 fig, ax = plt.subplots(figsize=(7, 5))
 fb_pie = fb_seg[fb_seg['FB_Spend'] > 0].copy()
 colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12']
@@ -235,7 +280,7 @@ pie_path = os.path.join(output_dir, 'fb_spend_pie.png')
 plt.savefig(pie_path, bbox_inches='tight', dpi=150)
 plt.close()
 
-# — Chart 2: CPL y CPA Google vs Facebook (Grado_Pregrado) —
+# - Chart 2: CPL y CPA Google vs Facebook (Grado_Pregrado) -
 grado_row = df_metrics[df_metrics['Segmento'] == 'Grado_Pregrado']
 comp_path = None
 if len(grado_row) > 0 and grado_row.iloc[0]['G_Spend'] > 0:
@@ -247,7 +292,7 @@ if len(grado_row) > 0 and grado_row.iloc[0]['G_Spend'] > 0:
     # CPL
     cpl_vals = [r['G_CPL'], r['F_CPL']]
     bars = axes[0].bar(channels, cpl_vals, color=colors_bar, width=0.5, edgecolor='white')
-    axes[0].set_title('CPL — Costo por Lead (CRM)', fontsize=11, fontweight='bold')
+    axes[0].set_title('CPL - Costo por Lead (CRM)', fontsize=11, fontweight='bold')
     axes[0].set_ylabel('ARS')
     axes[0].yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'$ {v/1000:.0f}K'))
     for bar, val in zip(bars, cpl_vals):
@@ -257,20 +302,20 @@ if len(grado_row) > 0 and grado_row.iloc[0]['G_Spend'] > 0:
     # CPA
     cpa_vals = [r['G_CPA'], r['F_CPA']]
     bars2 = axes[1].bar(channels, cpa_vals, color=colors_bar, width=0.5, edgecolor='white')
-    axes[1].set_title('CPA — Costo por Inscripto', fontsize=11, fontweight='bold')
+    axes[1].set_title('CPA - Costo por Inscripto', fontsize=11, fontweight='bold')
     axes[1].set_ylabel('ARS')
     axes[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'$ {v/1_000_000:.1f}M' if v >= 1_000_000 else f'$ {v/1000:.0f}K'))
     for bar, val in zip(bars2, cpa_vals):
         axes[1].text(bar.get_x() + bar.get_width()/2, bar.get_height() * 1.02,
                      f'$ {val:,.0f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
 
-    plt.suptitle('Grado y Pregrado — Google Ads vs Facebook Ads', fontsize=13, fontweight='bold', y=1.02)
+    plt.suptitle('Grado y Pregrado - Google Ads vs Facebook Ads', fontsize=13, fontweight='bold', y=1.02)
     plt.tight_layout()
     comp_path = os.path.join(output_dir, 'canal_cpl_cpa.png')
     plt.savefig(comp_path, bbox_inches='tight', dpi=150)
     plt.close()
 
-# — Chart 3: Top campañas Facebook Grado_Pregrado (barh) —
+# - Chart 3: Top campañas Facebook Grado_Pregrado (barh) -
 top_camp_path = None
 if len(fb_top_grado) > 0:
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -278,7 +323,7 @@ if len(fb_top_grado) > 0:
     names_short = [n[:45] + '...' if len(n) > 45 else n for n in top['Campana']]
     bars = ax.barh(names_short, top['Spend'], color='#1877f2', edgecolor='white')
     ax.set_xlabel('Importe Gastado (ARS)')
-    ax.set_title('Top Campanas Facebook — Grado y Pregrado (por inversion)', fontsize=11, fontweight='bold')
+    ax.set_title('Top Campanas Facebook - Grado y Pregrado (por inversion)', fontsize=11, fontweight='bold')
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'$ {v/1_000_000:.1f}M'))
     for bar, val in zip(bars, top['Spend']):
         ax.text(bar.get_width() + top['Spend'].max() * 0.01, bar.get_y() + bar.get_height()/2,
@@ -302,7 +347,7 @@ class PDF(FPDF):
     def header(self):
         self.set_font('Helvetica', 'B', 10)
         self.set_text_color(*DARK)
-        self.cell(0, 9, 'UCASAL — Inversion Publicitaria y ROI  |  Ingreso 2026', align='C', new_x='LMARGIN', new_y='NEXT')
+        self.cell(0, 9, 'UCASAL - Inversion Publicitaria y ROI  |  Ingreso 2026', align='C', new_x='LMARGIN', new_y='NEXT')
         self.set_draw_color(200, 200, 200)
         self.line(15, self.get_y(), 195, self.get_y())
         self.ln(3)
@@ -347,7 +392,7 @@ pdf.set_auto_page_break(auto=True, margin=15)
 pdf.add_page()
 
 # =============== PÁGINA 1: RESUMEN EJECUTIVO ===============
-pdf.section_title('Inversion Publicitaria — Grado y Pregrado (Ingreso 2026)')
+pdf.section_title('Inversion Publicitaria - Grado y Pregrado (Ingreso 2026)')
 pdf.set_font('Helvetica', '', 10)
 pdf.set_text_color(*GRAY)
 pdf.cell(0, 6, f'Periodo Google Ads: {GOOGLE_PERIODO}  |  Periodo Facebook Ads: {fb_periodo}', new_x='LMARGIN', new_y='NEXT')
@@ -376,20 +421,28 @@ pdf.cell(110, 7, 'TOTAL INVERTIDO:')
 pdf.cell(0, 7, f'$ {total_inv:,.2f}', new_x='LMARGIN', new_y='NEXT')
 pdf.ln(5)
 
-# Tabla KPIs Google vs Facebook — Grado_Pregrado
-pdf.section_title('KPIs por Canal — Grado y Pregrado (Muestra Cohorte 2026)')
+# Tabla KPIs Google vs Facebook - Grado_Pregrado
+pdf.section_title('KPIs por Canal - Grado y Pregrado (Muestra Cohorte 2026)')
 
-hdrs = ['Canal', 'Inversion ARS', 'Leads CRM', 'Inscriptos', 'CPL', 'CPA']
-wids = [32, 40, 25, 25, 32, 32]
+hdrs = ['Canal', 'Inversion ARS', 'Leads CRM', 'Inscriptos', 'CPL', 'CPA', 'Rev.Atribuida', 'ROI']
+wids = [27, 33, 22, 22, 27, 27, 30, 20]
 pdf.table_header(hdrs, wids)
 
 if len(grado_row) > 0:
     r = grado_row.iloc[0]
     rows_data = [
-        ('Google Ads', f"$ {r['G_Spend']:,.0f}", f"{int(r['G_Leads']):,}", f"{int(r['G_Conv']):,}",
-         f"$ {r['G_CPL']:,.0f}", f"$ {r['G_CPA']:,.0f}"),
-        ('Facebook Ads', f"$ {r['F_Spend']:,.0f}", f"{int(r['F_Leads_CRM']):,}", f"{int(r['F_Conv']):,}",
-         f"$ {r['F_CPL']:,.0f}", f"$ {r['F_CPA']:,.0f}"),
+        ('Google Ads',
+         f"$ {r['G_Spend']:,.0f}", f"{int(r['G_Leads']):,}", f"{int(r['G_Conv']):,}",
+         f"$ {r['G_CPL']:,.0f}", f"$ {r['G_CPA']:,.0f}",
+         f"$ {r['G_RevAtrib']:,.0f}", f"{r['G_ROI']:+.0f}%"),
+        ('Facebook Ads',
+         f"$ {r['F_Spend']:,.0f}", f"{int(r['F_Leads_CRM']):,}", f"{int(r['F_Conv']):,}",
+         f"$ {r['F_CPL']:,.0f}", f"$ {r['F_CPA']:,.0f}",
+         f"$ {r['F_RevAtrib']:,.0f}", f"{r['F_ROI']:+.0f}%"),
+        ('TOTAL',
+         f"$ {r['Total_Spend']:,.0f}", '-', f"{int(r['G_Conv']+r['F_Conv']):,}",
+         '-', '-',
+         f"$ {r['Total_RevAtrib']:,.0f}", f"{r['ROI_Total']:+.0f}%"),
     ]
     for i, row_d in enumerate(rows_data):
         pdf.table_row(row_d, wids, fill=(i % 2 == 0))
@@ -398,10 +451,12 @@ pdf.ln(3)
 pdf.set_font('Helvetica', 'I', 8)
 pdf.set_text_color(*GRAY)
 pdf.multi_cell(0, 5,
-    'Notas: CPL = Costo por Lead en CRM (personas unicas deduplicadas, ventana cohorte 01/09/2025 - max fecha inscripcion). '
-    'CPA = Costo por Inscripto atribuido exactamente (Match Exacto DNI/Email/Telefono). '
-    'Leads Facebook CRM = FuenteLead 18 o UTM source meta/fb/ig. '
-    'Google Ads sin impuestos. Facebook segun export plataforma.')
+    'CPL = Costo por Lead CRM (personas deduplicadas, ventana cohorte). '
+    'CPA = Inversion / Inscriptos atribuidos (Match Exacto). '
+    'Rev. Atribuida = suma de Insc_Haber de inscriptos cuyo primer contacto fue via ese canal. '
+    'ROI = (Rev.Atribuida - Inversion) / Inversion * 100. '
+    'Ingreso es el haber registrado al momento de inscripcion (cuota o arancel), no LTV completo. '
+    'Google sin impuestos. Facebook segun export plataforma.')
 pdf.set_text_color(*DARK)
 pdf.ln(4)
 
@@ -430,7 +485,7 @@ pdf.table_row(['TOTAL', f"$ {fb_total:,.0f}", '100%', f"{total_leads_plat:,}", f
 
 # =============== PÁGINA 2: CHARTS ===============
 pdf.add_page()
-pdf.section_title('Google Ads vs Facebook Ads — Grado y Pregrado')
+pdf.section_title('Google Ads vs Facebook Ads - Grado y Pregrado')
 
 if comp_path and os.path.exists(comp_path):
     pdf.image(comp_path, x=10, w=185)
@@ -440,30 +495,32 @@ else:
     pdf.cell(0, 8, '(No hay datos de Google Ads para comparar en este segmento)', new_x='LMARGIN', new_y='NEXT')
     pdf.ln(4)
 
-# Tabla detalle Google vs Facebook con todos los segmentos
+# Tabla detalle Google vs Facebook con todos los segmentos (incluye ROI)
 pdf.section_title('Detalle por Segmento')
-hdrs3 = ['Segmento', 'Canal', 'Inversion', 'Leads CRM', 'Inscriptos', 'CPL', 'CPA']
-wids3 = [28, 22, 38, 25, 25, 30, 30]
+hdrs3 = ['Segmento', 'Canal', 'Inversion', 'Leads CRM', 'Insc.', 'CPL', 'CPA', 'Rev.Atrib.', 'ROI']
+wids3 = [25, 20, 32, 22, 18, 25, 25, 28, 18]
 pdf.table_header(hdrs3, wids3)
 
 fill_toggle = True
 for _, row_d in df_metrics.iterrows():
     seg_label = row_d['Segmento'].replace('_', ' ')
-    for canal, spend_k, leads_k, conv_k, cpl_k, cpa_k in [
-        ('Google Ads', 'G_Spend', 'G_Leads', 'G_Conv', 'G_CPL', 'G_CPA'),
-        ('Facebook', 'F_Spend', 'F_Leads_CRM', 'F_Conv', 'F_CPL', 'F_CPA'),
+    for canal, sk, lk, ck, cplk, cpak, rvk, roik in [
+        ('Google Ads', 'G_Spend', 'G_Leads', 'G_Conv', 'G_CPL', 'G_CPA', 'G_RevAtrib', 'G_ROI'),
+        ('Facebook',   'F_Spend', 'F_Leads_CRM', 'F_Conv', 'F_CPL', 'F_CPA', 'F_RevAtrib', 'F_ROI'),
     ]:
-        spend_v = row_d[spend_k]
+        spend_v = row_d[sk]
         if spend_v == 0 and canal == 'Google Ads':
-            continue  # omitir Google donde no hay datos
+            continue
         pdf.table_row([
             seg_label if canal == 'Google Ads' else '',
             canal,
             f"$ {spend_v:,.0f}",
-            f"{int(row_d[leads_k]):,}",
-            f"{int(row_d[conv_k]):,}",
-            f"$ {row_d[cpl_k]:,.0f}" if row_d[cpl_k] > 0 else '-',
-            f"$ {row_d[cpa_k]:,.0f}" if row_d[cpa_k] > 0 else '-',
+            f"{int(row_d[lk]):,}",
+            f"{int(row_d[ck]):,}",
+            f"$ {row_d[cplk]:,.0f}" if row_d[cplk] > 0 else '-',
+            f"$ {row_d[cpak]:,.0f}" if row_d[cpak] > 0 else '-',
+            f"$ {row_d[rvk]:,.0f}" if row_d[rvk] > 0 else '-',
+            f"{row_d[roik]:+.0f}%" if row_d[roik] != 0 else '-',
         ], wids3, fill=fill_toggle)
         fill_toggle = not fill_toggle
 
@@ -476,12 +533,12 @@ if os.path.exists(pie_path):
     pdf.ln(4)
 
 if top_camp_path and os.path.exists(top_camp_path):
-    pdf.section_title('Top Campanas Facebook — Grado y Pregrado (por inversion)')
+    pdf.section_title('Top Campanas Facebook - Grado y Pregrado (por inversion)')
     pdf.image(top_camp_path, x=10, w=185)
     pdf.ln(4)
 
 # Tabla top campañas Grado numéricamente
-pdf.section_title('Top 15 Campanas Facebook — Grado y Pregrado (detalle)')
+pdf.section_title('Top 15 Campanas Facebook - Grado y Pregrado (detalle)')
 hdrs4 = ['#', 'Campana (nombre abreviado)', 'Inversion ARS', '% del segmento']
 wids4 = [10, 110, 40, 30]
 pdf.table_header(hdrs4, wids4)

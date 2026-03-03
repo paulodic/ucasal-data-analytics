@@ -69,11 +69,16 @@ df_gads_dedup = df_gads.drop_duplicates(subset='_pk')
 total_gads = len(df_gads_dedup)
 
 # REGLA DE NEGOCIO COHORTES (Muestra para Conversión)
+# Inicio cohorte 2026 = 1-sep-2025. Upper bound = última fecha de inscripción registrada.
+df_main['Fecha_Limpia'] = pd.to_datetime(
+    df_main['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
 if segmento == 'Grado_Pregrado':
-    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], errors='coerce')
-    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2024-09-01'].copy()
+    df_main_conv = df_main[
+        (df_main['Fecha_Limpia'] >= '2025-09-01') &
+        (df_main['Fecha_Limpia'] <= max_insc_ts)
+    ].copy()
 else:
-    df_main_conv = df_main.copy()
+    df_main_conv = df_main[df_main['Fecha_Limpia'] <= max_insc_ts].copy()
 
 df_gads_conv = df_main_conv[df_main_conv['UtmSource'].str.contains('google', na=False)].copy()
 df_gads_dedup_conv = df_gads_conv.drop_duplicates(subset='_pk')

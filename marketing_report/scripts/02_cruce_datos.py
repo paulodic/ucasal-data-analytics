@@ -243,8 +243,9 @@ if __name__ == '__main__':
 
     df_leads['DNI_match'] = df_leads.get('DNI', pd.Series(dtype='object')).apply(clean_dni)
     df_leads['Email_match'] = df_leads.get('Correo', pd.Series(dtype='object')).apply(clean_email)
-    df_leads['Phone_match'] = df_leads.get('Telefono', pd.Series(dtype='object')).apply(clean_phone)
-    df_leads['Nombre_match'] = df_leads.get('Nombre', pd.Series(dtype='object')).apply(clean_name)
+    df_leads['Phone_match']   = df_leads.get('Telefono', pd.Series(dtype='object')).apply(clean_phone)
+    df_leads['Cel_lead_match'] = df_leads.get('Celular', pd.Series(dtype='object')).apply(clean_phone)
+    df_leads['Nombre_match']  = df_leads.get('Nombre', pd.Series(dtype='object')).apply(clean_name)
 
     df_inscriptos['Inscripto_Tmp_ID'] = df_inscriptos.index.astype(str)
     df_leads['Lead_Tmp_ID'] = df_leads.index.astype(str)
@@ -300,7 +301,7 @@ if __name__ == '__main__':
     matched_leads_ids.update(merge3a['Lead_Tmp_ID'])
     matched_insc_ids.update(merge3a['Inscripto_Tmp_ID'])
 
-    # Insc Celular
+    # Match 3b: lead Telefono vs insc Celular
     leads_rem_3 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
     insc_rem_3 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
 
@@ -311,6 +312,30 @@ if __name__ == '__main__':
 
     matched_leads_ids.update(merge3b['Lead_Tmp_ID'])
     matched_insc_ids.update(merge3b['Inscripto_Tmp_ID'])
+
+    # Match 3c: lead Celular vs insc Telefono
+    leads_rem_4 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
+    insc_rem_4 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
+
+    leads_cel2 = leads_rem_4[leads_rem_4['Cel_lead_match'].notna()]
+    insc_phone2 = insc_rem_4[insc_rem_4['Insc_Phone_match'].notna()]
+    merge3c = pd.merge(leads_cel2, insc_phone2, left_on='Cel_lead_match', right_on='Insc_Phone_match', how='inner')
+    merge3c['Match_Tipo'] = 'Exacto (Celular)'
+
+    matched_leads_ids.update(merge3c['Lead_Tmp_ID'])
+    matched_insc_ids.update(merge3c['Inscripto_Tmp_ID'])
+
+    # Match 3d: lead Celular vs insc Celular
+    leads_rem_5 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
+    insc_rem_5 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
+
+    leads_cel3 = leads_rem_5[leads_rem_5['Cel_lead_match'].notna()]
+    insc_cel2 = insc_rem_5[insc_rem_5['Insc_Cel_match'].notna()]
+    merge3d = pd.merge(leads_cel3, insc_cel2, left_on='Cel_lead_match', right_on='Insc_Cel_match', how='inner')
+    merge3d['Match_Tipo'] = 'Exacto (Celular)'
+
+    matched_leads_ids.update(merge3d['Lead_Tmp_ID'])
+    matched_insc_ids.update(merge3d['Inscripto_Tmp_ID'])
 
     # ==========================================
     # 3.5 LÓGICA DE CRUCE FUZZY EMAIL (OPTIMIZADO CON INDICES DE LONGITUD)
@@ -432,8 +457,8 @@ if __name__ == '__main__':
     # ==========================================
     print("Consolidando resultados...")
 
-    # Leads Exactos
-    df_matched_exact = pd.concat([merge1, merge2, merge3a, merge3b], ignore_index=True)
+    # Leads Exactos (DNI + Email + Teléfono×4 combinaciones)
+    df_matched_exact = pd.concat([merge1, merge2, merge3a, merge3b, merge3c, merge3d], ignore_index=True)
 
     # Juntar exactos + fuzzy
     frames_matched = [df_matched_exact]
@@ -463,7 +488,7 @@ if __name__ == '__main__':
 
     # Limpieza columnas
     cols_to_drop = [
-        'DNI_match', 'Email_match', 'Phone_match', 'Nombre_match', 'Lead_Tmp_ID', 'Inscripto_Tmp_ID',
+        'DNI_match', 'Email_match', 'Phone_match', 'Cel_lead_match', 'Nombre_match', 'Lead_Tmp_ID', 'Inscripto_Tmp_ID',
         'Insc_DNI_match', 'Insc_Email_match', 'Insc_Phone_match', 'Insc_Cel_match', 'Insc_Nombre_match'
     ]
 

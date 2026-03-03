@@ -23,6 +23,7 @@ scripts_analiticos = [
     "05_mapeo_y_reportes.py",
     "08_tabla_utm.py",
     "12_analisis_no_matcheados.py",
+    "21_exportar_matcheo_completo.py",
 ]
 
 # Scripts que se ejecutan UNA sola vez (sin argumento de segmento, datos globales)
@@ -33,6 +34,8 @@ scripts_globales = [
     "15_dominios_invalidos.py",
     "15_carreras.py",
     "generate_eda_pdf.py",
+    "20_presupuesto_roi.py",
+    "22_auditoria_indicadores.py",
 ]
 
 def run_script(script_path, args=None, label=""):

@@ -162,7 +162,7 @@ df_inscriptos_bot = df_bot_dedup[df_bot_dedup['_mc'] == 'exacto'].copy()
 # Seleccionar todas las columnas relevantes disponibles
 cols_prioritarias = [
     'Segmento', 'Candidato', 'Nombre', 'Insc_Apellido y Nombre',
-    'DNI', 'Correo', 'Telefono', 'Match_Tipo',
+    'DNI', 'Correo', 'Telefono', 'Celular', 'Match_Tipo',
     'Consulta: Fecha de creación',
     'FuenteLead',
     'UtmSource', 'UtmCampaign', 'UtmMedium',
