@@ -1,6 +1,6 @@
 # Informe de Performance - Google Ads
 
-*(Datos actualizados al 2 de diciembre de 2026)*
+*(Datos actualizados al 14 de febrero de 2026)*
 
 Este informe profundiza exclusivamente en el trafico atribuido a Google Ads.
 

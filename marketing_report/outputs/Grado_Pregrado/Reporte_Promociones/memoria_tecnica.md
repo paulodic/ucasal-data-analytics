@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Promociones
 
-**Generado:** 2026-03-02 23:14:07
+**Generado:** 2026-03-03 08:11:15
 **Segmento:** Grado_Pregrado
 **Script:** `18_analisis_promociones.py`
 

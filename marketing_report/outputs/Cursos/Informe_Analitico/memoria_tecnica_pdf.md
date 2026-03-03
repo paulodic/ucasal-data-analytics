@@ -1,6 +1,6 @@
 # Memoria Técnica: PDF Informe Analítico Completo
 
-**Generado:** 2026-03-02 23:16:16
+**Generado:** 2026-03-03 08:18:32
 **Segmento:** Cursos
 **Script:** `07_pdf_completo.py`
 
