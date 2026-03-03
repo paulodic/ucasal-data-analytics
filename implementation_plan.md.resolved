@@ -1,0 +1,40 @@
+# Plan de Implementación: Reporte de Marketing
+
+Este plan describe cómo se construirá el script que cruza los datos de Leads (Salesforce) con los Inscriptos.
+
+## Arquitectura del Script (`02_cruce_datos.py`)
+El script se encargará de realizar las siguientes acciones utilizando la librería `pandas`:
+
+1. **Lectura de Datos:**
+   - Leerá automáticamente todos los archivos [.xlsx](file:///h:/Test-Antigravity/marketing_report/data/1_raw/leads_salesforce/Leads%20enero%202026.xlsx) de la carpeta `data/1_raw/leads_salesforce/`.
+   - Leerá automáticamente todos los archivos [.xls](file:///h:/Test-Antigravity/marketing_report/data/1_raw/inscriptos/Enero_2026.xls) de la carpeta `data/1_raw/inscriptos/`.
+   - Consolidará (apilará) todos los leads en una tabla única y todos los inscriptos en otra tabla única.
+
+2. **Limpieza de Claves de Cruce:**
+   - **DNI:** Se limpiarán espacios, puntos o formatos inválidos para asegurar que el cruce sea exacto.
+   - **Email:** La columna `Correo` (en Leads) y `Email` (en Inscriptos) se pasarán a minúsculas sin espacios adicionales.
+
+3. **Lógica de Cruce (Match):**
+   - El objetivo es cruzar la información. Intentaremos hacer coincidir secuencialmente por **DNI**, luego por **Correo/Email**, y finalmente por **Teléfono** (cruzando el campo `Telefono` de Leads con `Telefono` o `Celular` de Inscriptos).
+   - Se creará una tabla unificada (un `LEFT JOIN` desde Leads hacia Inscriptos, o un `OUTER JOIN` para ver tanto los que consultaron y no se inscribieron, como los que se inscribieron directamente).
+
+4. **Generación del Reporte:**
+   - Se exportará un archivo final en `outputs/reporte_marketing_unificado.xlsx`.
+   - Contendrá los datos de la consulta, la información de UTMs (para trazabilidad de origen) y, si la persona se inscribió, los datos de su inscripción (Fecha de pago, Carrera, Sede, etc.).
+
+## User Review Required
+> [!IMPORTANT]
+> Necesito que me confirmes lo siguiente antes de escribir el código final:
+> 1. **Tipo de cruce:** ¿Quieres que el reporte final tenga **todos los leads** y nos marque cuáles se inscribieron? ¿O quieres que tenga **solo los que hicieron match**?
+> 2. **Claves:** Usar el `DNI` como clave principal (y el `Correo/Email` como secundaria) ¿te parece correcto?
+> 3. **Orígenes:** Mencionaste "sumar el origen de los lead por otro lado". Veo que la tabla de Leads ya tiene `FuenteLead`, `UtmSource`, `UtmCampaign`, etc. ¿Hay un archivo adicional de orígenes que falte colocar en `1_raw/origenes_leads`, o usamos las columnas UTMs que ya vienen en Salesforce?
+
+## Verification Plan
+### Automated Tests
+- Ejecutar el script `python scripts/02_cruce_datos.py` apuntando a las carpetas `1_raw`.
+- Verificar que el script no arroje errores de lectura ni de memoria (`pandas`).
+
+### Manual Verification
+- Abrir el archivo generado en `outputs/reporte_marketing_unificado.xlsx`.
+- Validar visualmente que las filas que tienen un DNI presente en ambas tablas originen columnas de Inscriptos no vacías (ej: `Fecha Pago`).
+- Verificar que la cantidad total de registros sea coherente con la suma de los archivos analizados.
