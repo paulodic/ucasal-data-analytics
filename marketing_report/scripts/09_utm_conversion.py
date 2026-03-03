@@ -39,7 +39,7 @@ max_date_str = get_max_date(df_insc)
 
 def classify(v):
     s = str(v)
-    if 'Si (Lead -> Inscripto Exacto)' in s: return 'exacto'
+    if 'Exacto' in s: return 'exacto'
     if 'Posible Match Fuzzy' in s: return 'fuzzy'
     return 'no_match'
 

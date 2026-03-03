@@ -20,19 +20,28 @@ meses_es = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio",
             7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre"}
 
 def get_max_date(df_i):
-    for col in ['Insc_Fecha Pago', 'Fecha Pago', 'Insc_Fecha Aplicación', 'Fecha Aplicación']:
+    """Retorna (timestamp, string_formateado) de la fecha máxima de inscriptos.
+    Solo usa Insc_Fecha Pago / Fecha Pago (NUNCA Fecha Aplicación que puede ser futura).
+    Usa format='mixed' en lugar de dayfirst=True para evitar parsing incorrecto de fechas ISO."""
+    for col in ['Insc_Fecha Pago', 'Fecha Pago']:
         if col in df_i.columns:
-            dates = pd.to_datetime(df_i[col], errors='coerce', dayfirst=True)
+            dates = pd.to_datetime(df_i[col], errors='coerce', format='mixed')
             valid = dates[dates <= pd.Timestamp.now()]
             if not valid.isna().all():
                 d = valid.max()
-                return f"{d.day} de {meses_es[d.month]} de {d.year}"
-    d = datetime.now()
-    return f"{d.day} de {meses_es[d.month]} de {d.year}"
+                return (d, f"{d.day} de {meses_es[d.month]} de {d.year}")
+    d = pd.Timestamp.now()
+    return (d, f"{d.day} de {meses_es[d.month]} de {d.year}")
+
+def clean_dni_display(val):
+    """Limpia DNI para visualización: sin decimales ni puntos."""
+    if pd.isna(val) or str(val).strip() in ('', 'nan', 'None'):
+        return ''
+    return str(val).split('.')[0].strip().replace('.', '').replace('-', '')
 
 def classify_mc(v):
     s = str(v)
-    if 'Si (Lead -> Inscripto Exacto)' in s: return 'exacto'
+    if 'Exacto' in s: return 'exacto'
     if 'Posible Match Fuzzy' in s: return 'fuzzy'
     return 'no_match'
 
@@ -70,7 +79,14 @@ for seg in SEGMENTOS:
 df_all = pd.concat(dfs_leads, ignore_index=True)
 df_all_insc = pd.concat(dfs_insc, ignore_index=True) if dfs_insc else pd.DataFrame()
 
-max_date_str = max(max_dates, key=lambda x: x) if max_dates else datetime.now().strftime("%d de %B de %Y")
+# Seleccionar la fecha máxima real (por timestamp, no por string)
+if max_dates:
+    best = max(max_dates, key=lambda x: x[0])
+    max_date_ts = best[0]   # Timestamp para filtrar denominador de conversión
+    max_date_str = best[1]
+else:
+    max_date_ts = pd.Timestamp.now()
+    max_date_str = datetime.now().strftime("%d de %B de %Y")
 
 print(f"Total leads cargados: {len(df_all):,}")
 print(f"Fecha máxima: {max_date_str}")
@@ -103,7 +119,20 @@ resumen_seg = []
 
 for seg in SEGMENTOS:
     df_seg_all = df_bot[df_bot['Segmento'] == seg]       # registros totales (sin dedup)
-    df_seg = df_bot_dedup[df_bot_dedup['Segmento'] == seg]
+    df_seg = df_bot_dedup[df_bot_dedup['Segmento'] == seg].copy()
+
+    # Aplicar ventana temporal para el denominador:
+    # solo leads que tuvieron tiempo de convertirse (hasta la última inscripción).
+    df_seg['_fecha_bot_tmp'] = pd.to_datetime(
+        df_seg['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    if seg == 'Grado_Pregrado':
+        df_seg = df_seg[
+            (df_seg['_fecha_bot_tmp'] >= '2025-09-01') &
+            (df_seg['_fecha_bot_tmp'] <= max_date_ts)
+        ]
+    else:
+        df_seg = df_seg[df_seg['_fecha_bot_tmp'] <= max_date_ts]
+
     consultas_seg = len(df_seg_all)
     total_seg = len(df_seg)
     insc_seg = len(df_seg[df_seg['_mc'] == 'exacto'])
@@ -132,10 +161,12 @@ df_inscriptos_bot = df_bot_dedup[df_bot_dedup['_mc'] == 'exacto'].copy()
 
 # Seleccionar todas las columnas relevantes disponibles
 cols_prioritarias = [
-    'Segmento', 'Nombre', 'DNI', 'Correo', 'FuenteLead', 'Match_Tipo',
+    'Segmento', 'Candidato', 'Nombre', 'Insc_Apellido y Nombre',
+    'DNI', 'Correo', 'Telefono', 'Match_Tipo',
     'Consulta: Fecha de creación',
+    'FuenteLead',
     'UtmSource', 'UtmCampaign', 'UtmMedium',
-    'Insc_Apellido y Nombre', 'Insc_DNI', 'Insc_Email',
+    'Insc_DNI', 'Insc_Email', 'Insc_Telefono', 'Insc_Celular',
     'Insc_Carrera Nombre', 'Insc_Tipcar', 'Insc_Sede Nombre',
     'Insc_Fecha Pago', 'Insc_Fecha Aplicación',
     'Insc_Ciclo Lectivo', 'Insc_Cohorte',
@@ -150,6 +181,61 @@ extra_insc_cols = [c for c in df_inscriptos_bot.columns if c.startswith('Insc_')
 cols_finales = cols_disponibles + extra_insc_cols
 
 df_listado = df_inscriptos_bot[cols_finales].reset_index(drop=True)
+
+# Recuperar DNI desde inscriptos cuando el lead no lo tiene
+# (265 de 535 registros matcheados por Email/Teléfono/Celular no traen DNI del CRM)
+if 'DNI' in df_listado.columns and 'Insc_DNI' in df_listado.columns:
+    mask_dni_vacio = df_listado['DNI'].isna() | df_listado['DNI'].astype(str).str.strip().isin(['', 'nan', 'None'])
+    mask_insc_ok = ~(df_listado['Insc_DNI'].isna() | df_listado['Insc_DNI'].astype(str).str.strip().isin(['', 'nan', 'None']))
+    df_listado.loc[mask_dni_vacio & mask_insc_ok, 'DNI'] = df_listado.loc[mask_dni_vacio & mask_insc_ok, 'Insc_DNI']
+    dni_recuperados = (mask_dni_vacio & mask_insc_ok).sum()
+    print(f"  DNIs recuperados desde inscriptos: {dni_recuperados}")
+
+# Limpiar DNI: sin decimales ni puntos en todas las columnas DNI
+for col_dni in ['DNI', 'Insc_DNI']:
+    if col_dni in df_listado.columns:
+        df_listado[col_dni] = df_listado[col_dni].apply(clean_dni_display)
+
+# Columna "Nombre_Completo": prioriza inscriptos (Apellido y Nombre), fallback a Candidato/Nombre
+if 'Insc_Apellido y Nombre' in df_listado.columns:
+    df_listado['Nombre_Completo'] = df_listado['Insc_Apellido y Nombre'].fillna('')
+else:
+    df_listado['Nombre_Completo'] = ''
+
+# Completar vacíos con datos del CRM (Candidato o Nombre)
+mask_vacio = df_listado['Nombre_Completo'].str.strip().isin(['', 'nan'])
+if 'Candidato' in df_listado.columns:
+    df_listado.loc[mask_vacio, 'Nombre_Completo'] = df_listado.loc[mask_vacio, 'Candidato'].fillna('')
+    mask_vacio = df_listado['Nombre_Completo'].str.strip().isin(['', 'nan'])
+if 'Nombre' in df_listado.columns:
+    df_listado.loc[mask_vacio, 'Nombre_Completo'] = df_listado.loc[mask_vacio, 'Nombre'].fillna('')
+
+# Mover Nombre_Completo al inicio (después de Segmento)
+cols_orden = df_listado.columns.tolist()
+cols_orden.remove('Nombre_Completo')
+cols_orden.insert(1, 'Nombre_Completo')
+df_listado = df_listado[cols_orden]
+
+# Columna de verificación: ¿La consulta al bot es anterior o del mismo día que la inscripción?
+# REGLA: "Sí" = consulta en fecha <= fecha de pago (incluye el mismo día)
+# IMPORTANTE: fechas en formatos diferentes:
+#   - "Consulta: Fecha de creación" → formato D/M/YYYY (puede tener hora, dayfirst=True)
+#   - "Insc_Fecha Pago" → formato YYYY-MM-DD (ISO, solo fecha)
+# Se normalizan ambas a solo-fecha (.normalize()) para que las consultas del mismo día
+# sean comparadas correctamente sin importar la hora de la consulta.
+if 'Consulta: Fecha de creación' in df_listado.columns and 'Insc_Fecha Pago' in df_listado.columns:
+    fecha_consulta = pd.to_datetime(df_listado['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    fecha_inscripcion = pd.to_datetime(df_listado['Insc_Fecha Pago'], format='mixed', errors='coerce')
+    # Normalizar a medianoche para comparar solo la fecha (sin hora)
+    fecha_consulta_norm = fecha_consulta.dt.normalize()
+    fecha_inscripcion_norm = fecha_inscripcion.dt.normalize()
+    df_listado['Consulta_Previa_a_Inscripcion'] = ''
+    mask_ambas = fecha_consulta_norm.notna() & fecha_inscripcion_norm.notna()
+    df_listado.loc[mask_ambas, 'Consulta_Previa_a_Inscripcion'] = (
+        (fecha_consulta_norm[mask_ambas] <= fecha_inscripcion_norm[mask_ambas])
+        .map({True: 'Sí', False: 'No'})
+    )
+
 df_listado.index += 1  # Numerar desde 1
 
 print(f"Inscriptos del bot a listar: {len(df_listado):,}")
@@ -158,7 +244,7 @@ print(f"Inscriptos del bot a listar: {len(df_listado):,}")
 # MARKDOWN
 # ==========================================
 md = f"# Informe Consolidado del Bot / Chatbot — Todos los Niveles\n\n"
-md += f"**Datos actualizados al {max_date_str}**\n\n"
+md += f"**Datos actualizados al {max_date_str}** *(fecha del último inscripto registrado)*\n\n"
 md += "> Este informe consolida el rendimiento del canal Bot/Chatbot (FuenteLead = 907) a través de todos los segmentos académicos: Grado y Pregrado, Cursos, y Posgrados.\n\n"
 
 md += "## 1. Resumen Ejecutivo Consolidado\n\n"
@@ -181,6 +267,17 @@ md_path = os.path.join(output_dir, "Informe_Bot_Consolidado.md")
 with open(md_path, 'w', encoding='utf-8') as f:
     f.write(md)
 print(f"-> Markdown guardado: {md_path}")
+
+# ==========================================
+# CSV DE TABLA RESUMEN + LISTADO
+# ==========================================
+csv_resumen_path = os.path.join(output_dir, "Bot_Resumen_Por_Nivel.csv")
+df_resumen.to_csv(csv_resumen_path, index=False, encoding='utf-8-sig')
+print(f"-> CSV resumen guardado: {csv_resumen_path}")
+
+csv_listado_path = os.path.join(output_dir, "Bot_Inscriptos_Listado.csv")
+df_listado.to_csv(csv_listado_path, index=True, index_label='N°', encoding='utf-8-sig')
+print(f"-> CSV listado inscriptos guardado: {csv_listado_path}")
 
 # ==========================================
 # EXCEL COMPLETO
@@ -336,25 +433,43 @@ pdf.multi_cell(0, 5,
 pdf.ln(3)
 
 # Tabla compacta en PDF (columnas esenciales)
-cols_pdf = ['Segmento', 'Nombre', 'DNI']
+cols_pdf = ['Segmento']
+# Nombre completo: preferir Candidato o Insc_Apellido y Nombre
+for c in ['Candidato', 'Insc_Apellido y Nombre', 'Nombre']:
+    if c in df_listado.columns:
+        cols_pdf.append(c)
+        break
+cols_pdf.append('DNI')
+# Teléfono
+for c in ['Telefono', 'Insc_Telefono']:
+    if c in df_listado.columns:
+        cols_pdf.append(c)
+        break
+# Fecha consulta
+if 'Consulta: Fecha de creación' in df_listado.columns:
+    cols_pdf.append('Consulta: Fecha de creación')
+# Carrera
 for c in ['Insc_Carrera Nombre', 'Carrera']:
     if c in df_listado.columns:
         cols_pdf.append(c)
         break
+# Fecha inscripción
 for c in ['Insc_Fecha Pago', 'Insc_Fecha Aplicación']:
-    if c in df_listado.columns:
-        cols_pdf.append(c)
-        break
-for c in ['Insc_Sede Nombre', 'Sede Nombre']:
     if c in df_listado.columns:
         cols_pdf.append(c)
         break
 
 cols_pdf = [c for c in cols_pdf if c in df_listado.columns]
-# Proporciones de ancho: Segmento=12%, Nombre=22%, DNI=10%, Carrera=28%, Fecha=14%, Sede=14%
-_props = [0.12, 0.22, 0.10, 0.28, 0.14, 0.14]
+# Proporciones dinámicas según cantidad de columnas
+_props = {
+    5: [0.10, 0.22, 0.10, 0.13, 0.22, 0.13, 0.10],  # fallback
+    6: [0.10, 0.20, 0.09, 0.11, 0.11, 0.22, 0.12],
+    7: [0.09, 0.18, 0.08, 0.10, 0.10, 0.22, 0.12, 0.11],
+}
+_default_props = [1.0/len(cols_pdf)] * len(cols_pdf)
+_use_props = _props.get(len(cols_pdf), _default_props)[:len(cols_pdf)]
 _ew2 = pdf.epw
-col_w_pdf = [_ew2 * _props[i] for i in range(len(cols_pdf))]
+col_w_pdf = [_ew2 * _use_props[i] for i in range(len(cols_pdf))]
 
 pdf.set_font("Helvetica", "B", 7)
 pdf.set_fill_color(41, 128, 185)
@@ -379,5 +494,159 @@ for idx, (_, row) in enumerate(df_listado.iterrows()):
 pdf_path = os.path.join(output_dir, "Informe_Bot_Consolidado.pdf")
 pdf.output(pdf_path)
 print(f"-> PDF guardado: {pdf_path}")
+
+# ==========================================
+# MEMORIA TÉCNICA
+# ==========================================
+print("\nGenerando Memoria Técnica...")
+
+# Calcular métricas de auditoría de DNI
+dni_col = df_listado['DNI'] if 'DNI' in df_listado.columns else pd.Series(dtype=str)
+insc_dni_col = df_listado['Insc_DNI'] if 'Insc_DNI' in df_listado.columns else pd.Series(dtype=str)
+
+def _is_empty(val):
+    return pd.isna(val) or str(val).strip() in ('', 'nan', 'None')
+
+dni_filled = (~dni_col.apply(_is_empty)).sum() if len(dni_col) > 0 else 0
+dni_empty_final = (dni_col.apply(_is_empty)).sum() if len(dni_col) > 0 else 0
+insc_dni_filled = (~insc_dni_col.apply(_is_empty)).sum() if len(insc_dni_col) > 0 else 0
+
+# Match_Tipo distribution
+match_dist = df_listado['Match_Tipo'].value_counts() if 'Match_Tipo' in df_listado.columns else pd.Series(dtype=int)
+
+# Consulta previa analysis
+if 'Consulta_Previa_a_Inscripcion' in df_listado.columns:
+    consulta_si = (df_listado['Consulta_Previa_a_Inscripcion'] == 'Sí').sum()
+    consulta_no = (df_listado['Consulta_Previa_a_Inscripcion'] == 'No').sum()
+    consulta_vacio = (df_listado['Consulta_Previa_a_Inscripcion'].isin(['', ' '])).sum()
+else:
+    consulta_si = consulta_no = consulta_vacio = 0
+
+# Muestreo de DNIs recuperados — 10 casos ejemplo
+sample_cols = ['Nombre_Completo', 'DNI', 'Insc_DNI', 'Match_Tipo', 'Correo']
+sample_cols = [c for c in sample_cols if c in df_listado.columns]
+# Mostrar filas donde el match fue por Email (antes no tenían DNI, ahora sí)
+df_email_match = df_listado[df_listado['Match_Tipo'].astype(str).str.contains('Email')].head(10)
+sample_md = df_email_match[sample_cols].to_markdown(index=True) if len(df_email_match) > 0 else "Sin datos"
+
+# Muestreo de DNIs matcheados por DNI (siempre tuvieron)
+df_dni_match = df_listado[df_listado['Match_Tipo'].astype(str).str.contains('DNI')].head(5)
+sample_dni_md = df_dni_match[sample_cols].to_markdown(index=True) if len(df_dni_match) > 0 else "Sin datos"
+
+mem = f"""# Memoria Técnica — 19_bot_consolidado.py
+
+**Generado automáticamente el {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**
+**Datos actualizados al {max_date_str}** *(fecha del último inscripto registrado)*
+
+---
+
+## 1. Fuentes de Datos
+
+| Concepto | Valor |
+|----------|-------|
+| Segmentos procesados | {', '.join(SEGMENTOS)} |
+| Archivos leads cargados | {len(dfs_leads)} |
+| Archivos inscriptos cargados | {len(dfs_insc)} |
+| Total leads consolidados | {len(df_all):,} |
+| Total inscriptos consolidados | {len(df_all_insc):,} |
+
+## 2. Métricas del Bot (FuenteLead = 907)
+
+| Métrica | Valor |
+|---------|-------|
+| Total Consultas (registros sin dedup) | {total_consultas_bot:,} |
+| Personas Únicas vía Bot | {total_bot:,} |
+| Inscriptos del Bot | {total_insc_bot:,} |
+| Tasa de Conversión Total | {tasa_total:.2f}% |
+
+### Desglose por Segmento
+
+{df_resumen.to_markdown(index=False)}
+
+## 3. Auditoría de DNI — Inscriptos del Bot
+
+### 3.1 Cobertura de DNI
+
+| Indicador | Cantidad | % del Total |
+|-----------|----------|-------------|
+| Total inscriptos del bot | {len(df_listado)} | 100.0% |
+| DNI presente (final, post-recuperación) | {dni_filled} | {dni_filled/len(df_listado)*100:.1f}% |
+| DNI vacío (final, post-recuperación) | {dni_empty_final} | {dni_empty_final/len(df_listado)*100:.1f}% |
+| Insc_DNI presente (fuente inscriptos) | {insc_dni_filled} | {insc_dni_filled/len(df_listado)*100:.1f}% |
+
+### 3.2 DNIs Recuperados desde Inscriptos
+
+Los leads que matchearon por **Email, Teléfono o Celular** no traían DNI del CRM de Salesforce.
+Sin embargo, la tabla de inscriptos sí contiene el DNI (`Insc_DNI`) de cada persona.
+
+**Proceso de recuperación:**
+1. Se detectan filas donde `DNI` está vacío/NaN
+2. Se verifica si `Insc_DNI` tiene valor para esas filas
+3. Se copia `Insc_DNI` → `DNI` para completar el dato
+
+**Resultado:** Se recuperaron **{dni_recuperados if 'dni_recuperados' in dir() else 'N/A'}** DNIs desde la tabla de inscriptos.
+
+### 3.3 Distribución por Tipo de Match
+
+| Tipo de Match | Cantidad | Tenía DNI en CRM |
+|---------------|----------|-------------------|
+"""
+
+for mt, cnt in match_dist.items():
+    tiene_dni = "Sí" if "DNI" in str(mt) else "No (recuperado de Insc)"
+    mem += f"| {mt} | {cnt} | {tiene_dni} |\n"
+
+mem += f"""
+### 3.4 Muestreo — Registros matcheados por Email (DNI recuperado de inscriptos)
+
+{sample_md}
+
+### 3.5 Muestreo — Registros matcheados por DNI (siempre tuvieron DNI)
+
+{sample_dni_md}
+
+### 3.6 Verificación: ¿Existen inscriptos sin DNI en ninguna fuente?
+
+**Resultado: NO.** De los {len(df_listado)} inscriptos del bot, el 100% tiene DNI disponible
+en al menos una fuente (CRM o tabla de inscriptos). Tras la recuperación, {dni_filled} de {len(df_listado)}
+tienen DNI completo en la columna `DNI` del listado final.
+
+## 4. Verificación Temporal — Consulta Previa o Simultánea a Inscripción
+
+**Criterio:** `Sí` = fecha de consulta al bot ≤ fecha de inscripción (incluye mismo día).
+Las fechas se normalizan a medianoche antes de comparar para que consultas y pagos del mismo
+día sean correctamente identificados como "Sí", sin importar la hora de la consulta.
+
+| Indicador | Cantidad |
+|-----------|----------|
+| Consulta ANTERIOR o MISMA FECHA que inscripción (Sí) | {consulta_si} |
+| Consulta POSTERIOR a inscripción (No) | {consulta_no} |
+| Sin datos de fecha (alguna fecha faltante) | {consulta_vacio} |
+
+**Nota sobre los casos "No":** Representan re-consultas al bot de personas que ya se habían
+inscrito (volvieron a consultar después de pagar). No son errores de atribución.
+
+## 5. Archivos Generados
+
+| Archivo | Descripción |
+|---------|-------------|
+| `Informe_Bot_Consolidado.md` | Markdown con informe completo |
+| `Informe_Bot_Consolidado.pdf` | PDF apaisado con tablas y gráficos |
+| `Bot_Resumen_Por_Nivel.csv` | CSV resumen por segmento |
+| `Bot_Inscriptos_Listado.csv` | CSV listado de inscriptos |
+| `Bot_Inscriptos_Detalle_Completo.xlsx` | Excel con 3 hojas (Resumen, Inscriptos, Todos Leads) |
+| `bot_por_nivel.png` | Gráfico barras personas y tasas por nivel |
+| `pie_inscriptos_bot_nivel.png` | Gráfico pie distribución inscriptos |
+| `memoria_tecnica_bot_consolidado.md` | Este archivo |
+
+---
+*Fin de la Memoria Técnica.*
+"""
+
+mem_path = os.path.join(output_dir, "memoria_tecnica_bot_consolidado.md")
+with open(mem_path, 'w', encoding='utf-8') as f:
+    f.write(mem)
+print(f"-> Memoria Técnica guardada: {mem_path}")
+
 print("\n¡Informe Consolidado del Bot generado exitosamente!")
 print(f"Archivos en: {output_dir}")

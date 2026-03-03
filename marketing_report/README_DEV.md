@@ -170,7 +170,42 @@ labels = [f'{l}\n({p}%)' for l, v, p in pairs]
 sizes = [v for l, v, p in pairs]
 ```
 
-### 6. 📧 Dominios de correo inválidos comunes
+### 6. 📅 `Consulta: Fecha de creación` — Formato D/M/YYYY (¡CRÍTICO!)
+**Descubrimiento:** La columna `Consulta: Fecha de creación` en los CSVs maestros está almacenada en formato **`D/M/YYYY`** (ej: `2/3/2026` = 2 de marzo de 2026). Esto es distinto a todas las columnas `Insc_*` que usan `YYYY-MM-DD` (ISO).
+
+**Impacto si NO se corrige:** `pd.to_datetime(col, errors='coerce')` sin `dayfirst=True` falla para el 87% de las filas (todas con día > 12), dejándolas como `NaT`. Los gráficos de curva de consultas por mes solo muestran 35K de 270K registros.
+
+**Corrección obligatoria en todos los scripts:**
+```python
+# ✅ CORRECTO para Consulta: Fecha de creación
+pd.to_datetime(df['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+
+# ✅ CORRECTO para columnas Insc_Fecha Pago, Fecha Pago (formato ISO YYYY-MM-DD)
+pd.to_datetime(df['Insc_Fecha Pago'], format='mixed', errors='coerce')
+
+# ❌ MAL — falla para fechas con día > 12
+pd.to_datetime(df['Consulta: Fecha de creación'], errors='coerce')
+```
+
+**Scripts corregidos:** `04_reporte_final.py`, `07_pdf_completo.py`, `19_bot_consolidado.py`.
+
+### 7. 🤖 Tasa de Conversión del Bot — Criterio Canónico
+**Descubrimiento:** Dos métodos de cálculo producían tasas diferentes para el mismo canal (Bot):
+- **Método A (incorrecto):** Deduplicar TODOS los leads → filtrar por `FuenteLead=907` → calcular tasa. Resultado: ~7.89%. Undercounts porque personas que consultaron por otro canal primero y luego por bot quedan excluidas.
+- **Método B (correcto):** Filtrar por `FuenteLead=907` → deduplicar personas del bot → aplicar filtro cohorte → calcular tasa. Resultado: 6.12%.
+
+**Regla de negocio:** El informe bot consolidado (`19`) y el informe general (`07`) deben usar el **Método B** para que las tasas del bot sean idénticas en ambos informes.
+
+**Fórmula canónica:**
+```python
+df_bot = df_main[df_main['_fl'] == '907']           # todos los registros bot
+df_bot_dedup = df_bot.drop_duplicates(subset='_pk')  # personas únicas del bot
+if segmento == 'Grado_Pregrado':
+    df_bot_dedup = df_bot_dedup[df_bot_dedup['fecha'] >= '2024-09-01']  # cohorte
+tasa = bot_inscriptos / len(df_bot_dedup) * 100
+```
+
+### 8. 📧 Dominios de correo inválidos comunes
 **Descubrimiento:** Una cantidad significativa de leads (1,378) tienen dominios con errores de tipeo. Los más frecuentes:
 - `gmail.com.ar` (434 leads) — **NO EXISTE**, es un error común de argentinos
 - `gmail.con` (354 leads) — falta la "m"

@@ -18,7 +18,7 @@ df = pd.read_csv(leads_csv, low_memory=False)
 # Clasificar
 def classify(v):
     s = str(v)
-    if 'Si (Lead -> Inscripto Exacto)' in s: return 'exacto'
+    if 'Exacto' in s: return 'exacto'
     if 'Posible Match Fuzzy' in s: return 'fuzzy'
     return 'no_match'
 

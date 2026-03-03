@@ -44,18 +44,21 @@ else:
     df_journey = pd.DataFrame()
 
 def get_max_date(df_i):
-    meses = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio", 
+    """Retorna (Timestamp, string_formateado) de la última fecha de pago de inscriptos."""
+    meses = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio",
              7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre"}
-    for col in ['Insc_Fecha Pago', 'Insc_Fecha Aplicación', 'Fecha Pago', 'Fecha Aplicación']:
+    # SOLO usar Fecha Pago — NUNCA Fecha Aplicación (puede ser fecha futura de cursado)
+    for col in ['Insc_Fecha Pago', 'Fecha Pago']:
         if col in df_i.columns:
-            dates = pd.to_datetime(df_i[col], errors='coerce', dayfirst=True)
-            if not dates.isna().all():
-                d = dates.max()
-                return f"{d.day} de {meses[d.month]} de {d.year}"
-    d = datetime.now()
-    return f"{d.day} de {meses[d.month]} de {d.year}"
+            dates = pd.to_datetime(df_i[col], format='mixed', errors='coerce')
+            valid = dates[dates <= pd.Timestamp.now()]
+            if not valid.isna().all():
+                d = valid.max()
+                return (d, f"{d.day} de {meses[d.month]} de {d.year}")
+    d = pd.Timestamp.now()
+    return (d, f"{d.day} de {meses[d.month]} de {d.year}")
 
-max_date_str = get_max_date(df_insc)
+max_insc_ts, max_date_str = get_max_date(df_insc)
 # ==========================================
 # CÁLCULO DE MÉTRICAS Y GRÁFICOS
 # ==========================================
@@ -70,17 +73,23 @@ sns.set_theme(style="whitegrid")
 
 # 1. Tasa General de Leads
 # Calculada sobre TODO el universo de leads, contando solo los cruces seguros.
-# REGLA DE NEGOCIO: Si el segmento es Grado_Pregrado, la tasa de conversión 
-# se calcula sobre los leads generados desde el 1 de septiembre de 2024 (1ra cohorte).
+# REGLA DE NEGOCIO: Si el segmento es Grado_Pregrado, la tasa de conversión
+# se calcula sobre los leads generados desde el 1 de septiembre de 2025 (inicio cohorte 2026).
+# Denominador = leads dentro de [inicio_cohorte, max_fecha_inscripcion]
+# Los leads posteriores a la última inscripción no tuvieron tiempo de convertirse.
+df_leads['Fecha_Limpia_Consulta'] = pd.to_datetime(
+    df_leads['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
 if segmento == 'Grado_Pregrado':
-    df_leads['Fecha_Limpia_Consulta'] = pd.to_datetime(df_leads['Consulta: Fecha de creación'], errors='coerce')
-    df_leads_conv = df_leads[df_leads['Fecha_Limpia_Consulta'] >= '2024-09-01'].copy()
+    df_leads_conv = df_leads[
+        (df_leads['Fecha_Limpia_Consulta'] >= '2025-09-01') &
+        (df_leads['Fecha_Limpia_Consulta'] <= max_insc_ts)
+    ].copy()
 else:
-    df_leads_conv = df_leads.copy()
+    df_leads_conv = df_leads[df_leads['Fecha_Limpia_Consulta'] <= max_insc_ts].copy()
 
 total_leads = len(df_leads)
 total_leads_conv = len(df_leads_conv)
-leads_convertidos_exact = len(df_leads_conv[df_leads_conv['Match_Tipo'] == 'Si (Lead -> Inscripto Exacto)'])
+leads_convertidos_exact = len(df_leads_conv[df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')])
 leads_convertidos_fuzzy = len(df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Posible Match Fuzzy')])
 leads_no_convertidos = len(df_leads[df_leads['Match_Tipo'] == 'No (Solo Lead)'])
 tasa_conversion_leads = (leads_convertidos_exact / total_leads_conv) * 100 if total_leads_conv > 0 else 0
@@ -163,7 +172,7 @@ plt.savefig(chart5_path, bbox_inches='tight')
 plt.close()
 
 # Gráfico 7: Distribución Pagados vs Otros (Solo Inscriptos Exactos)
-df_exactos = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')]
+df_exactos = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')].copy()
 mask_pago_exactos = (df_exactos['UtmCampaign_Clean'] != '') | (df_exactos['FuenteLead_Num'] == 18)
 insc_pago = len(df_exactos[mask_pago_exactos])
 insc_otros = len(df_exactos) - insc_pago
@@ -179,9 +188,9 @@ if len(df_exactos) > 0:
     plt.close()
 
 # Gráfico 8: Tiempos de Resolución (Pagados vs Otros)
-df_exactos['Fecha_Consulta'] = pd.to_datetime(df_exactos['Consulta: Fecha de creación'], errors='coerce')
+df_exactos['Fecha_Consulta'] = pd.to_datetime(df_exactos['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
 fecha_col_exactos = 'Insc_Fecha Pago' if 'Insc_Fecha Pago' in df_exactos.columns else 'Fecha Pago'
-df_exactos['Fecha_Pago'] = pd.to_datetime(df_exactos[fecha_col_exactos], dayfirst=True, errors='coerce')
+df_exactos['Fecha_Pago'] = pd.to_datetime(df_exactos[fecha_col_exactos], format='mixed', errors='coerce')
 
 df_exactos['Dias_Resolucion'] = (df_exactos['Fecha_Pago'] - df_exactos['Fecha_Consulta']).dt.days
 df_tiempos = df_exactos[(df_exactos['Dias_Resolucion'] >= 0) & (df_exactos['Dias_Resolucion'] <= 180)].copy()
@@ -224,7 +233,9 @@ if not df_tiempos.empty:
     report_tiempos += "![Tiempos Resolucion](chart_8_tiempos_resolucion.png)\n"
 
 # Gráfico 9: Curva de Consultas/Leads por Día
-df_leads['Fecha_Limpia_Consulta'] = pd.to_datetime(df_leads['Consulta: Fecha de creación'], errors='coerce')
+# Consulta: Fecha de creación viene en D/M/YYYY desde Salesforce — requiere dayfirst=True
+df_leads['Fecha_Limpia_Consulta'] = pd.to_datetime(
+    df_leads['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
 hoy = pd.Timestamp.now()
 df_leads_valid = df_leads[df_leads['Fecha_Limpia_Consulta'] <= hoy].copy()
 
@@ -250,9 +261,23 @@ if not consultas_por_dia.empty:
     consultas_por_mes = df_leads_valid.copy()
     consultas_por_mes['Mes'] = consultas_por_mes['Fecha_Limpia_Consulta'].dt.to_period('M')
     consultas_por_mes_agrupado = consultas_por_mes.groupby('Mes').size().reset_index(name='Cantidad')
+    # Rellenar meses faltantes con 0 para mostrar el timeline completo sin saltos
+    if not consultas_por_mes_agrupado.empty:
+        min_mes = consultas_por_mes_agrupado['Mes'].min()
+        max_mes = consultas_por_mes_agrupado['Mes'].max()
+        all_meses = pd.period_range(start=min_mes, end=max_mes, freq='M')
+        consultas_por_mes_agrupado = (
+            consultas_por_mes_agrupado
+            .set_index('Mes')
+            .reindex(all_meses, fill_value=0)
+            .rename_axis('Mes')
+            .reset_index()
+        )
     consultas_por_mes_agrupado['Mes_Str'] = consultas_por_mes_agrupado['Mes'].astype(str)
-    
-    plt.figure(figsize=(10, 5))
+    n_meses = len(consultas_por_mes_agrupado)
+    fig_w = max(10, n_meses * 0.8)
+
+    plt.figure(figsize=(fig_w, 5))
     sns.lineplot(data=consultas_por_mes_agrupado, x='Mes_Str', y='Cantidad', marker='s', color='darkorange', linewidth=2.5)
     plt.title('Curva de Consultas (Leads) por Mes', fontsize=14)
     plt.xlabel('Mes de Consulta')
@@ -333,7 +358,7 @@ Se analizaron un total de **{total_leads:,}** leads únicos y **{total_inscripto
 
 ### Desglose por Ecosistema Principal
 *(Nota: Las tasas de conversión reflejan estrictamente cruces exactos sin contemplar coincidencias difusas)*
-{f'*(Nota Cohortes: Para {segmento}, las tasas de conversión asumen como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con el inicio de inscripción a la primera cohorte. En mayo se abren a la segunda.)*' if segmento == 'Grado_Pregrado' else ''}
+{f'*(Nota Cohortes: Para {segmento}, las tasas de conversión asumen como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con el inicio de inscripción a la primera cohorte. En mayo se abren a la segunda.)*' if segmento == 'Grado_Pregrado' else ''}
 | Ecosistema | Total Leads Analizados | Inscriptos Atribuidos | Tasa de Conversión |
 |------------|------------------------|-----------------------|--------------------|
 | **Google Ads** | {total_google_conv:,} | {google_convertidos:,} | **{tasa_conversion_google:.2f}%** |
@@ -375,7 +400,7 @@ for fuente, cantidad in top_fuentes.items():
 # Preferimos 'Insc_Fecha Pago', si no está, usamos 'Fecha Pago'
 fecha_col = 'Insc_Fecha Pago' if 'Insc_Fecha Pago' in df_insc.columns else 'Fecha Pago'
 if fecha_col in df_insc.columns:
-    df_insc['Fecha_Limpia'] = pd.to_datetime(df_insc[fecha_col], errors='coerce', dayfirst=True)
+    df_insc['Fecha_Limpia'] = pd.to_datetime(df_insc[fecha_col], format='mixed', errors='coerce')
     
     # Filtrar fechas futuras inválidas (mayores a hoy)
     hoy = pd.Timestamp.now()
@@ -462,3 +487,62 @@ with open(report_md_file, "w", encoding="utf-8") as file:
     file.write(report_content)
 
 print(f"-> Informe final Markdown generado en: {report_md_file}")
+
+# ==========================================
+# MEMORIA TÉCNICA
+# ==========================================
+memoria = f"""# Memoria Técnica: Informe Analítico de Marketing
+
+**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Segmento:** {segmento}
+**Script:** `04_reporte_final.py`
+
+## Fuentes de Datos
+- Leads: `{leads_csv}`
+- Inscriptos: `{inscriptos_csv}`
+- Journey: `{journey_file}`
+
+## Volúmenes Procesados
+| Métrica | Valor |
+|---|---|
+| Total Leads cargados | {total_leads:,} |
+| Leads en período de conversión | {total_leads_conv:,} |
+| Total Inscriptos | {total_inscriptos:,} |
+| Leads convertidos (Exacto) | {leads_convertidos_exact:,} |
+| Leads convertidos (Fuzzy) | {leads_convertidos_fuzzy:,} |
+| Leads no convertidos | {leads_no_convertidos:,} |
+| Inscriptos atribuidos a Lead (Exacto) | {inscriptos_con_origen:,} |
+| Inscriptos sin trazabilidad | {inscriptos_directos:,} |
+
+## Tasas de Conversión Calculadas
+| Ecosistema | Universo | Convertidos | Tasa |
+|---|---|---|---|
+| **General** | {total_leads_conv:,} | {leads_convertidos_exact:,} | {tasa_conversion_leads:.2f}% |
+| **Google Ads** | {total_google_conv:,} | {google_convertidos:,} | {tasa_conversion_google:.2f}% |
+| **Meta (FB/IG)** | {total_meta_conv:,} | {meta_convertidos:,} | {tasa_conversion_meta:.2f}% |
+
+## Procedencia de Leads
+| Categoría | Cantidad | Porcentaje |
+|---|---|---|
+| Plataformas Pagas (UTM/Ads) | {total_pago:,} | {(total_pago/total_leads)*100:.1f}% |
+| Otros (Orgánico/Sin Tracking) | {total_otros:,} | {(total_otros/total_leads)*100:.1f}% |
+
+## Reglas de Negocio Aplicadas
+- **Filtro de cohorte (Grado_Pregrado):** {'Sí — leads desde 2025-09-01' if segmento == 'Grado_Pregrado' else 'No — se usan todos los leads'}
+- **Match_Tipo para conversión exacta:** Se filtran registros cuyo `Match_Tipo` contenga la cadena `"Exacto"` (incluye: Exacto DNI, Email, Teléfono, Celular)
+- **Fuzzy excluidos de tasa:** Los matches fuzzy (nombre/email) NO se cuentan como conversión
+- **Fecha de corte del informe:** `{max_date_str}` (extraída de inscriptos, columna `Insc_Fecha Pago`)
+
+## Gráficos Generados
+1. `chart_1_conversion_leads.png` — Barras: Total Leads vs Conv. Exactas vs Fuzzy
+2. `chart_2_composicion_inscriptos.png` — Pie: Atribuidos vs Sin trazabilidad
+3. `chart_5_leads_pagos_vs_otros.png` — Pie: Leads pagados vs orgánicos
+4. `chart_7_inscriptos_pagos_vs_otros.png` — Pie: Inscripciones pagas vs orgánicas
+5. `chart_8_tiempos_resolucion.png` — Barras: Días resolución pagados vs orgánicos
+6. `chart_9_consultas_por_dia.png` — Línea: Volumen consultas diario
+7. `chart_9b_consultas_por_mes.png` — Línea: Volumen consultas mensual
+8. `chart_6_inscripciones_por_dia.png` — Línea: Curva inscripciones por día
+"""
+with open(os.path.join(output_dir, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
+    f.write(memoria)
+print(f"-> Memoria técnica generada en: {output_dir}")

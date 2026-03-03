@@ -149,8 +149,8 @@ insc_por_dia['Semana_Unica'] = insc_por_dia['Año'].astype(str) + "-W" + insc_po
 semanas_pico_info = {}
 dias_semana_es = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves', 4: 'Viernes', 5: 'Sábado', 6: 'Domingo'}
 
-# Tramos a resaltar: Tramo 2 (40%), Tramo 3 (30%), Tramo 4 (20%), Tramo 5 (15%), Tramo 6 (10% Ene)
-for tramo in tramos_fechas[1:6]:
+# Tramos a resaltar: Tramo 1 (50%), Tramo 2 (40%), Tramo 3 (30%), Tramo 4 (20%), Tramo 5 (15%), Tramo 6 (10% Ene)
+for tramo in tramos_fechas[0:6]:
     fecha_fin = tramo['Fin']
     num_sem = fecha_fin.isocalendar().week
     año = fecha_fin.isocalendar().year
@@ -171,7 +171,7 @@ for tramo in tramos_fechas[1:6]:
 plt.figure(figsize=(12, 6))
 # Dibujar una línea por cada semana
 semanas = insc_por_dia['Semana_Unica'].unique()
-colores_pico = ['firebrick', 'darkorange', 'forestgreen', 'purple', 'teal']
+colores_pico = ['goldenrod', 'firebrick', 'darkorange', 'forestgreen', 'purple', 'teal']
 pico_idx = 0
 
 for sem in semanas:
@@ -273,12 +273,11 @@ pdf.set_font('Helvetica', '', 10)
 pdf.multi_cell(0, 5, "Esta gráfica superpone el rendimiento de cada semana individual del año "
                      "(líneas grises tenues) sobre los 7 días de la semana, comenzando por el Lunes. "
                      "La línea gruesa azul representa el promedio de inscriptos para ese día específico. "
-                     "Se han resaltado a color las semanas que contienen los 5 picos históricos más altos de inscripción. "
+                     "Se han resaltado a color las semanas que contienen los 6 picos históricos más altos de inscripción "
+                     "(incluyendo la semana de cierre del 50% OFF de septiembre). "
                      "El gráfico permite confirmar que efectivamente cada pico de máxima inscripción se encuentra asociado de manera "
                      "exactamente adyacente al Cierre de una ventana Promocional.")
 pdf.ln(5)
-pdf.image(chart_semana_path, x=15, w=180)
-
 pdf.image(chart_semana_path, x=15, w=180)
 
 pdf_file = os.path.join(output_dir_base, '18_reporte_promociones.pdf')
@@ -298,3 +297,39 @@ with open(md_file, "w", encoding="utf-8") as f:
     f.write("- Tabla de Concentración por Tramo\n")
     
 print(f"-> Generado MD de Promociones en: {md_file}")
+
+# ==========================================
+# MEMORIA TÉCNICA
+# ==========================================
+total_insc_promo = len(df_insc)
+memoria = f"""# Memoria Técnica: Reporte de Promociones
+
+**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Segmento:** {segmento}
+**Script:** `18_analisis_promociones.py`
+
+## Fuentes de Datos
+- Inscriptos: `{inscriptos_csv}`
+
+## Volúmenes Procesados
+| Métrica | Valor |
+|---|---|
+| Total inscriptos analizados | {total_insc_promo:,} |
+| Primer inscripto registrado | {primer_inscripto_str} |
+
+## Distribución por Tramo Promocional
+{resumen_tramos.to_markdown(index=False)}
+
+## Reglas de Negocio
+- **Fecha utilizada:** `Insc_Fecha Pago` / `Fecha Pago` (fecha de transacción, NO Fecha Aplicación)
+- **Tramos:** Definidos por rangos de fecha fijos según calendario de promociones UCASAL
+- **Aplica solo a:** Segmento Grado_Pregrado
+
+## Archivos de Salida
+- PDF: `{pdf_file}`
+- MD: `{md_file}`
+- CSV: `{csv_promociones_path}`
+"""
+with open(os.path.join(output_dir_base, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
+    f.write(memoria)
+print(f"-> Memoria técnica generada en: {output_dir_base}")

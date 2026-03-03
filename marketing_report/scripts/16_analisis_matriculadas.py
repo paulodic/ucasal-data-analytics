@@ -230,3 +230,49 @@ pdf.image(chart_bar_path, x=25, w=160)
 pdf_output_path = os.path.join(report_output_dir, "auditoria_crm_matriculadas.pdf")
 pdf.output(pdf_output_path)
 print(f"\\nDocumento PDF PDF guardado exitosamente en: {pdf_output_path}")
+
+# ==========================================
+# MEMORIA TÉCNICA
+# ==========================================
+memoria = f"""# Memoria Técnica: Auditoría CRM Matriculadas
+
+**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Segmento:** {segmento}
+**Script:** `16_analisis_matriculadas.py`
+
+## Fuentes de Datos
+- Leads: `{leads_csv}`
+- Inscriptos: `{inscriptos_csv}`
+
+## Auditoría CRM vs Base Contable
+| Métrica | Valor |
+|---|---|
+| Total Leads analizados | {total_leads:,} |
+| Leads con Matriculadas=1 en CRM | {matriculados_crm:,} |
+| Inscriptos reales cruzados (verificados) | {inscriptos_reales_cruzados:,} |
+| **Falsos positivos CRM** (marcados pero no inscriptos) | {len(falsos_positivos_crm):,} |
+| **Falsos negativos CRM** (inscriptos pero no marcados) | {len(falsos_negativos_crm):,} |
+| Diferencia bruta (CRM - Real) | {diferencia_bruta:,} |
+
+## Atribución de Inscriptos Reales
+| Tipo de Match | Cantidad |
+|---|---|
+| Total inscriptos físicos (base contable) | {total_inscriptos_fisicos:,} |
+| Rastreados por match Exacto | {inscriptos_exactos:,} |
+| Rastreados por match Fuzzy (nombre) | {inscriptos_fuzzys:,} |
+| Rastreados por match Fuzzy (email) | {inscriptos_fuzzys_email:,} |
+| Huérfanos (sin traza en CRM) | {inscriptos_huerfanos:,} |
+
+## Reglas de Negocio
+- **Matriculadas CRM:** Columna `Matriculadas` con valor `1.0` en los leads
+- **Inscriptos reales:** Cualquier lead con `Match_Tipo` que contenga `"Exacto"` o `"Fuzzy"`
+- **Falso positivo:** `Matriculadas=1` pero sin match en base contable
+- **Falso negativo:** Inscripto real verificado sin `Matriculadas=1` en CRM
+
+## Archivos de Salida
+- PDF: `{pdf_output_path}`
+- MD: `{os.path.join(report_output_dir, '16_analisis_matriculadas.md')}`
+"""
+with open(os.path.join(report_output_dir, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
+    f.write(memoria)
+print(f"-> Memoria técnica generada en: {report_output_dir}")

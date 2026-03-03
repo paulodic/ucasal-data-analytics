@@ -118,3 +118,46 @@ print(f"-> Reporte Journey guardado en: {output_excel}")
 
 
 print("¡Proceso de Journey finalizado!")
+
+# ==========================================
+# MEMORIA TÉCNICA
+# ==========================================
+from datetime import datetime as _dt
+total_personas = len(df_journey)
+total_inscriptos_j = len(df_journey[df_journey['Inscripto'] == 'Sí'])
+total_no_inscriptos = len(df_journey[df_journey['Inscripto'] == 'No'])
+avg_consultas = df_journey['Total_Consultas'].mean() if not df_journey.empty else 0
+avg_dias = df_journey.loc[df_journey['Inscripto'] == 'Sí', 'Dias_hasta_Inscripcion'].mean() if total_inscriptos_j > 0 else 0
+
+memoria = f"""# Memoria Técnica: Journey del Estudiante (Sankey)
+
+**Generado:** {_dt.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Segmento:** {segmento}
+**Script:** `03_journey_sankey.py`
+
+## Fuentes de Datos
+- Leads: `{leads_file}`
+- Inscriptos: `{inscriptos_file}`
+
+## Volúmenes Procesados
+| Métrica | Valor |
+|---|---|
+| Personas únicas analizadas | {total_personas:,} |
+| Personas inscriptas (con pago confirmado) | {total_inscriptos_j:,} |
+| Personas no inscriptas | {total_no_inscriptos:,} |
+| Promedio consultas por persona | {avg_consultas:.1f} |
+| Promedio días hasta inscripción | {avg_dias:.1f} |
+
+## Lógica del Journey
+- **Agrupación:** Se agrupan leads por `DNI` (persona única)
+- **Ruta de fuentes:** Se concatenan los valores de `FuenteLead` por orden cronológico de consulta
+- **Touch 1/2/3:** Primeros tres contactos con fuentes diferentes
+- **Inscripto:** `"Sí"` si la persona tiene al menos un match Exacto con un inscripto
+- **Días hasta inscripción:** Diferencia entre primera consulta (`Consulta: Fecha de creación`) y `Fecha Pago`/`Insc_Fecha Pago`
+
+## Archivos de Salida
+- Excel: `{output_excel}`
+"""
+with open(os.path.join(output_dir, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
+    f.write(memoria)
+print(f"-> Memoria técnica generada en: {output_dir}")

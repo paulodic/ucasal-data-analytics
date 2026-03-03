@@ -1,9 +1,12 @@
 Grupo_Asesor,Estado,Cantidad
-Asesores UCASAL (Central),Abierto,110
-Asesores UCASAL (Central),Interesado,136
-Asesores UCASAL (Central),No interesado,161
-Asesores UCASAL (Central),Solicitud creada,179
-Sedes / Delegaciones,Interesado,3
-Sedes / Delegaciones,No interesado,3
-Sedes / Delegaciones,Solicitud creada,2
-Sistemas / Automatizado,No Especificado,14
+Asesores UCASAL (Central),Abierto,103
+Asesores UCASAL (Central),Interesado,127
+Asesores UCASAL (Central),No interesado,148
+Asesores UCASAL (Central),Solicitud creada,258
+Sedes / Delegaciones,Interesado,1
+Sedes / Delegaciones,No interesado,2
+Sedes / Delegaciones,Solicitud creada,1
+Sistemas / Automatizado,Abierto,62
+Sistemas / Automatizado,Interesado,30
+Sistemas / Automatizado,No interesado,166
+Sistemas / Automatizado,Solicitud creada,67

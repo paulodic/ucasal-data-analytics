@@ -25,15 +25,15 @@ meses_es = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio",
             7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre"}
 
 def get_max_date_from_inscriptos():
-    """Lee la fecha máxima de PAGO del archivo de inscriptos (NUNCA Fecha Aplicación, que es futura)."""
+    """Retorna (Timestamp, string_formateado) de la última fecha de pago de inscriptos."""
     try:
         cols_i = pd.read_csv(inscriptos_csv, nrows=1).columns.tolist()
         # SOLO columnas de PAGO, no Aplicación (que puede ser futura: ej. 2026-12-26)
         pago_candidates = [c for c in cols_i if 'fecha' in c.lower() and 'pago' in c.lower()]
         if not pago_candidates:
-            d = datetime.now()
-            return f"{d.day} de {meses_es[d.month]} de {d.year}"
-        
+            d = pd.Timestamp.now()
+            return (d, f"{d.day} de {meses_es[d.month]} de {d.year}")
+
         df_i = pd.read_csv(inscriptos_csv, usecols=pago_candidates, low_memory=False)
         max_date = pd.NaT
         for col in pago_candidates:
@@ -45,17 +45,17 @@ def get_max_date_from_inscriptos():
             if pd.notna(col_max):
                 if pd.isna(max_date) or col_max > max_date:
                     max_date = col_max
-        
+
         if pd.notna(max_date):
-            return f"{max_date.day} de {meses_es[max_date.month]} de {max_date.year}"
+            return (max_date, f"{max_date.day} de {meses_es[max_date.month]} de {max_date.year}")
     except Exception as e:
         print(f"Error leyendo inscriptos para fecha: {e}")
-    
-    d = datetime.now()
-    return f"{d.day} de {meses_es[d.month]} de {d.year}"
+
+    d = pd.Timestamp.now()
+    return (d, f"{d.day} de {meses_es[d.month]} de {d.year}")
 
 print("Obteniendo fecha máxima desde inscriptos...")
-max_date_str = get_max_date_from_inscriptos()
+max_insc_ts, max_date_str = get_max_date_from_inscriptos()
 print(f"Fecha máxima inscriptos: {max_date_str}")
 
 # ======================================================
@@ -293,11 +293,12 @@ if 'Consulta: Fecha de creación' in df.columns:
         # Muestra cuántas personas se inscribieron en cada rango de días
         md_content += "### 2b. Distribución por Rangos de Días hasta Inscripción\n\n"
         
-        # Definir rangos claros y comprensibles, ampliados para cubrir colas largas
-        bins_dias = [0, 1, 3, 7, 14, 30, 60, 90, 120, 180, 270, 365, float('inf')]
-        labels_dias = ['Mismo día', '1-3 días', '4-7 días', '8-14 días', '15-30 días', 
-                       '31-60 días', '61-90 días', '91-120 días', '121-180 días', 
-                       '181-270 días', '271-365 días', 'Más de 1 año']
+        # Definir rangos: fine-grained para 0-30 días, luego uniforme ~30 días hasta 270
+        bins_dias = [0, 1, 3, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, float('inf')]
+        labels_dias = ['Mismo día', '1-3 días', '4-7 días', '8-14 días', '15-30 días',
+                       '31-60 días', '61-90 días', '91-120 días', '121-150 días',
+                       '151-180 días', '181-210 días', '211-240 días', '241-270 días',
+                       'Más de 270 días']
         
         # Clasificar cada persona en su rango de días
         persona_time_valid['Rango_Dias'] = pd.cut(persona_time_valid['Dias_Resolucion'], bins=bins_dias, 
@@ -340,6 +341,34 @@ if 'Consulta: Fecha de creación' in df.columns:
         ax.grid(axis='y', alpha=0.3)
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, 'distribucion_dias_inscripcion.png'), bbox_inches='tight')
+        plt.close()
+
+        # --- 2b-2: CURVA ACUMULADA CONTINUA (ECDF) ---
+        # Eje X: días desde primera consulta. Eje Y: % acumulado de inscriptos que ya pagaron.
+        dias_sorted = np.sort(exactos_t.values)
+        pct_cumsum = np.arange(1, len(dias_sorted) + 1) / len(dias_sorted) * 100
+
+        fig_curva, ax_curva = plt.subplots(figsize=(12, 6))
+        ax_curva.plot(dias_sorted, pct_cumsum, color='#2ecc71', linewidth=2.5, label='% acumulado de inscriptos')
+
+        # Líneas de referencia verticales en días clave (cada 30d dentro del rango principal)
+        ref_days_list = [30, 60, 90, 120, 150, 180, 210, 240, 270]
+        for ref_d in ref_days_list:
+            pct_at = (dias_sorted <= ref_d).mean() * 100
+            ax_curva.axvline(x=ref_d, color='gray', linestyle='--', alpha=0.45, linewidth=1)
+            ax_curva.text(ref_d + 1, pct_at + 1.5, f'{ref_d}d\n{pct_at:.0f}%',
+                          fontsize=7.5, color='dimgray', va='bottom')
+
+        ax_curva.set_xlabel('Días desde Primera Consulta hasta Pago')
+        ax_curva.set_ylabel('% Acumulado de Inscriptos')
+        ax_curva.set_title('Curva Acumulada de Conversión: velocidad de inscripción de leads')
+        ax_curva.set_xlim(left=0, right=max(dias_sorted.max(), 280))
+        ax_curva.set_ylim(0, 105)
+        ax_curva.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'{v:.0f}%'))
+        ax_curva.legend(fontsize=10)
+        ax_curva.grid(alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'curva_acumulada_conversion.png'), bbox_inches='tight')
         plt.close()
 
         # --- Tabla de deciles (referencia estadística) ---
@@ -480,9 +509,23 @@ if has_time_data:
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 10, "2b. ¿Cuántos días tardan en inscribirse?", ln=True)
+    pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(0, 6, "Distribución de inscriptos por rangos de días. Los primeros rangos son detallados (0-30 días) "
+                         "y desde 30 hasta 270 días se usan intervalos uniformes de ~30 días para comparar a igual escala.")
     pdf.ln(5)
     try:
         pdf.image(os.path.join(output_dir, 'distribucion_dias_inscripcion.png'), w=230)
+    except Exception: pass
+
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 10, "2c. Curva Acumulada de Conversión", ln=True)
+    pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(0, 6, "Cada punto de la curva responde: '¿Qué % de los inscriptos ya habían pagado dentro de N días "
+                         "de su primera consulta?'. Las líneas punteadas muestran el % alcanzado en cada umbral de 30 días.")
+    pdf.ln(5)
+    try:
+        pdf.image(os.path.join(output_dir, 'curva_acumulada_conversion.png'), w=230)
     except Exception: pass
 
 # 3. Dominios
@@ -685,12 +728,16 @@ mt.ln(3)
 # ==============================================================
 if segmento == 'Grado_Pregrado':
     mt.set_font("Helvetica", "B", 11)
-    mt.cell(0, 8, "5. VERIFICACIÓN: Tasas de Conversión (Muestra Cohorte Sept 2024)", ln=True)
+    mt.cell(0, 8, "5. VERIFICACIÓN: Tasas de Conversión (Muestra Cohorte Sept 2025)", ln=True)
     mt.set_font("Helvetica", size=9)
     
-    df['Fecha_Limpia'] = pd.to_datetime(df['Consulta: Fecha de creación'], errors='coerce')
-    df_conv = df[df['Fecha_Limpia'] >= '2024-09-01'].copy()
-    
+    df['Fecha_Limpia'] = pd.to_datetime(
+        df['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_conv = df[
+        (df['Fecha_Limpia'] >= '2025-09-01') &
+        (df['Fecha_Limpia'] <= max_insc_ts)
+    ].copy()
+
     t_leads_c = len(df_conv)
     c_exactos_gen_c = len(df_conv[df_conv['Grupo_Match'] == 'Exacto'])
     tasa_gen_c = (c_exactos_gen_c / t_leads_c) * 100 if t_leads_c > 0 else 0
@@ -706,7 +753,8 @@ if segmento == 'Grado_Pregrado':
     tasa_google_c = (c_exactos_google_c / t_google_c) * 100 if t_google_c > 0 else 0
     
     mt.multi_cell(0, 5,
-        f"Se aplicó el filtro estricto desde Septiembre 2024 para Grado_Pregrado.\n"
+        f"Ventana de conversion: 01/09/2025 al {max_date_str} (ultima inscripcion registrada).\n"
+        f"Leads posteriores a esa fecha se excluyen del denominador (no tuvieron tiempo de convertirse).\n"
         f"- Total Leads General (Muestra): {t_leads_c:,} | Convertidos: {c_exactos_gen_c:,} -> Tasa: {tasa_gen_c:.2f}%\n"
         f"- Leads Meta (Muestra): {t_meta_c:,} | Convertidos Meta: {c_exactos_meta_c:,} -> Tasa: {tasa_meta_c:.2f}%\n"
         f"- Leads Google (Muestra): {t_google_c:,} | Convertidos Google: {c_exactos_google_c:,} -> Tasa: {tasa_google_c:.2f}%")

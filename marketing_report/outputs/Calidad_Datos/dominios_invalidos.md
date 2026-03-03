@@ -15,8 +15,8 @@ Se detectaron **21** dominios con errores de tipeo, afectando **1,378** leads.
 | gmai.com       | gmail.com          |           119 |                     5 |             114 |                      3.67 |                          4 |
 | gmail.comm     | gmail.com          |            63 |                     0 |              63 |                      3.67 |                          2 |
 | gmal.com       | gmail.com          |            57 |                     0 |              57 |                      3.67 |                          2 |
-| gmial.com      | gmail.com          |            41 |                     1 |              40 |                      3.67 |                          1 |
 | gmail.co       | gmail.com          |            41 |                     1 |              40 |                      3.67 |                          1 |
+| gmial.com      | gmail.com          |            41 |                     1 |              40 |                      3.67 |                          1 |
 | gnail.com      | gmail.com          |            30 |                     3 |              27 |                      3.67 |                          0 |
 | hotmail.con    | hotmail.com        |            24 |                     1 |              23 |                      1.19 |                          0 |
 | hotmal.com     | hotmail.com        |            10 |                     0 |              10 |                      1.19 |                          0 |
@@ -24,12 +24,12 @@ Se detectaron **21** dominios con errores de tipeo, afectando **1,378** leads.
 | gmail.cm       | gmail.com          |             6 |                     0 |               6 |                      3.67 |                          0 |
 | icloud.con     | icloud.com         |             5 |                     0 |               5 |                      6.31 |                          0 |
 | hotamail.com   | hotmail.com        |             4 |                     0 |               4 |                      1.19 |                          0 |
-| outlook.con    | outlook.com        |             3 |                     0 |               3 |                      2.17 |                          0 |
 | iclud.com      | icloud.com         |             3 |                     0 |               3 |                      6.31 |                          0 |
 | hotamil.com    | hotmail.com        |             3 |                     0 |               3 |                      1.19 |                          0 |
+| outlook.con    | outlook.com        |             3 |                     0 |               3 |                      2.17 |                          0 |
 | live.con       | live.com           |             1 |                     0 |               1 |                      1.32 |                          0 |
-| gmail.om       | gmail.com          |             1 |                     1 |               0 |                      3.67 |                          0 |
 | yahooo.com     | yahoo.com          |             1 |                     0 |               1 |                      2.06 |                          0 |
+| gmail.om       | gmail.com          |             1 |                     1 |               0 |                      3.67 |                          0 |
 
 ### Cómo se calcula la estimación
 Se toma la tasa de match del dominio correcto (ej: gmail.com tiene ~5.5%) y se aplica a los leads no matcheados del dominio con typo. Esto da una estimación conservadora de cuántos matches se recuperarían.
@@ -49,25 +49,25 @@ Los siguientes dominios tienen 5 o más leads pero no son proveedores de correo 
 | gmail.com.com        |            52 |            0 |           0    |
 | hmail.com            |            45 |            0 |           0    |
 | admin.com            |            43 |            0 |           0    |
-| gmail.i.comcom.com   |            41 |            0 |           0    |
-| gmail.coma           |            41 |            0 |           0    |
 | sanluis.edu.ar       |            41 |            0 |           0    |
+| gmail.coma           |            41 |            0 |           0    |
+| gmail.i.comcom.com   |            41 |            0 |           0    |
 | gmeil.com            |            35 |            0 |           0    |
 | gmail.coml           |            34 |            0 |           0    |
 | gamail.com           |            34 |            0 |           0    |
 | mi.unc.edu.ar        |            32 |            0 |           0    |
 | ymail.com            |            31 |            1 |           3.23 |
-| gmail.comn           |            26 |            0 |           0    |
 | devnull.facebook.com |            26 |            0 |           0    |
+| gmail.comn           |            26 |            0 |           0    |
 | gmail.coms           |            22 |            0 |           0    |
 | gmaill.com           |            21 |            0 |           0    |
 | fibertel.com.ar      |            18 |            0 |           0    |
 | remax.com.ar         |            17 |            0 |           0    |
-| gmsil.com            |            17 |            0 |           0    |
 | gmail.comr           |            17 |            0 |           0    |
+| gmsil.com            |            17 |            0 |           0    |
 | hitmail.com          |            16 |            1 |           6.25 |
 | hotmai.com           |            15 |            0 |           0    |
 | gmail.comv           |            15 |            0 |           0    |
-| gmail.comi           |            15 |            0 |           0    |
 | gmail.comcom         |            15 |            0 |           0    |
+| gmail.comi           |            15 |            0 |           0    |
 

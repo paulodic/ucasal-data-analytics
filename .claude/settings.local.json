@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(python marketing_report/scripts/02_cruce_datos.py)",
+      "Bash(python marketing_report/scripts/00_run_all.py)"
+    ]
+  }
+}

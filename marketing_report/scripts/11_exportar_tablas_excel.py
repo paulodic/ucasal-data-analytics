@@ -22,7 +22,7 @@ df_insc = pd.read_csv(inscriptos_file, low_memory=False)
 # Clasificar
 def classify(v):
     s = str(v)
-    if 'Si (Lead -> Inscripto Exacto)' in s: return 'exacto'
+    if 'Exacto' in s: return 'exacto'
     if 'Posible Match Fuzzy' in s: return 'fuzzy'
     return 'no_match'
 
@@ -36,12 +36,27 @@ df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
 
 personas = df_main.drop_duplicates(subset='_pk')
 
+# Fecha máxima de inscripción (límite superior del denominador de conversión)
+_max_insc_ts = pd.Timestamp.now()
+for _col in ['Insc_Fecha Pago', 'Fecha Pago']:
+    if _col in df_insc.columns:
+        _d = pd.to_datetime(df_insc[_col], format='mixed', errors='coerce')
+        _d = _d[_d <= pd.Timestamp.now()]
+        if not _d.isna().all():
+            _max_insc_ts = _d.max()
+            break
+
 # REGLA DE NEGOCIO COHORTES (Muestra para Conversión)
+# Ventana: [inicio_cohorte, max_fecha_inscripcion]
+df_main['Fecha_Limpia'] = pd.to_datetime(
+    df_main['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
 if segmento == 'Grado_Pregrado':
-    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], errors='coerce')
-    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2024-09-01'].copy()
+    df_main_conv = df_main[
+        (df_main['Fecha_Limpia'] >= '2025-09-01') &
+        (df_main['Fecha_Limpia'] <= _max_insc_ts)
+    ].copy()
 else:
-    df_main_conv = df_main.copy()
+    df_main_conv = df_main[df_main['Fecha_Limpia'] <= _max_insc_ts].copy()
 
 personas_conv_df = df_main_conv.drop_duplicates(subset='_pk')
 
@@ -97,6 +112,7 @@ df_resumen = pd.DataFrame(resumen_data)
 # ==========================================
 print("Mapeando orígenes y normalizando modalidades...")
 df_main['FuenteLead_clean'] = df_main['FuenteLead'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+df_main_conv['FuenteLead_clean'] = df_main_conv['FuenteLead'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
 # Simular mapping (podríamos leer el Excel, pero para el resumen usamos la lógica de 05)
 def get_origen_name(fuente_id):
@@ -106,6 +122,7 @@ def get_origen_name(fuente_id):
     return f"Origen ({fuente_id})"
 
 df_main['Formulario_Origen'] = df_main['FuenteLead_clean'].apply(get_origen_name)
+df_main_conv['Formulario_Origen'] = df_main_conv['FuenteLead_clean'].apply(get_origen_name)
 
 def normalize_modo(val):
     v_str = str(val).strip().lower()

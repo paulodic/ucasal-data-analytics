@@ -80,7 +80,7 @@ df_leads['Modo_Limpio'] = df_leads['Modo'].apply(normalize_modo)
 # Clasificar resultado: EXCLUYENDO FUZZY del principal
 def classify_match(val):
     s = str(val)
-    if 'Si (Lead -> Inscripto Exacto)' in s:
+    if 'Exacto' in s:
         return 'exacto'
     if 'Posible Match Fuzzy' in s:
         return 'fuzzy'

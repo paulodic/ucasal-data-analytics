@@ -8,10 +8,10 @@
 
 | Métrica | Bot/Chatbot | Meta Ads | Google Ads | Otros Canales | Total |
 |---------|------------|----------|------------|---------------|-------|
-| Leads (Histórico) | 3,913 | 140,561 | 27,721 | 34,991 | 207,186 |
-| Leads (Muestra Conv.) | 3,913 | 140,561 | 27,721 | 34,804 | 206,999 |
-| Inscriptos Confirmados | 209 | 1,362 | 1,215 | 3,302 | 6,088 |
-| Conversión (Muestra) | 5.34% | 0.97% | 4.38% | 9.49% | 2.94% |
+| Leads (Histórico) | 8,449 | 244,205 | 53,810 | 62,684 | 369,148 |
+| Leads (Muestra Conv.) | 2,871 | 51,025 | 11,549 | 12,150 | 77,595 |
+| Inscriptos Confirmados | 250 | 235 | 388 | 1,197 | 2,070 |
+| Conversión (Muestra) | 8.71% | 0.46% | 3.36% | 9.85% | 2.67% |
 
 ## 2. Tasa de Conversión (Inscripción)
 
@@ -19,53 +19,57 @@
 
 Desglose algorítmico de cómo se vincularon los leads del bot con inscripciones concretadas:
 
-| Metodología de Cruce (Lead -> Inscripto)   |   Inscriptos Confirmados |   % |
-|:-------------------------------------------|-------------------------:|----:|
-| Si (Lead -> Inscripto Exacto)              |                      209 | 100 |
+| Metodología de Cruce (Lead -> Inscripto)   |   Inscriptos Confirmados |    % |
+|:-------------------------------------------|-------------------------:|-----:|
+| Exacto (DNI)                               |                      146 | 58.4 |
+| Exacto (Email)                             |                       77 | 30.8 |
+| Exacto (Teléfono)                          |                       17 |  6.8 |
+| Exacto (Celular)                           |                       10 |  4   |
 
 ## 4. Top 10 Carreras Inscriptas vía Bot
 
 | Carrera                                           |   Inscriptos (Muestra) |   Consultas (Muestra) |   Tasa_% |
 |:--------------------------------------------------|-----------------------:|----------------------:|---------:|
-| ABOGACÍA                                          |                     30 |                   704 |     4.26 |
-| CIENCIAS VETERINARIAS                             |                     15 |                    77 |    19.48 |
-| ARQUITECTURA                                      |                     12 |                    42 |    28.57 |
-| CONTADOR PÚBLICO                                  |                     11 |                   148 |     7.43 |
-| LICENCIATURA EN RECURSOS HUMANOS                  |                     10 |                   113 |     8.85 |
-| LICENCIATURA EN PSICOLOGÍA                        |                      9 |                   141 |     6.38 |
-| LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO |                      9 |                   156 |     5.77 |
-| LICENCIATURA EN CRIMINALÍSTICA                    |                      7 |                    74 |     9.46 |
-| LICENCIATURA EN DISEÑO GRÁFICO                    |                      7 |                    27 |    25.93 |
-| DISEÑO INDUSTRIAL                                 |                      6 |                     9 |    66.67 |
+| ABOGACÍA                                          |                     36 |                   543 |     6.63 |
+| CIENCIAS VETERINARIAS                             |                     20 |                    68 |    29.41 |
+| ARQUITECTURA                                      |                     15 |                    31 |    48.39 |
+| ESCRIBANÍA                                        |                     13 |                   110 |    11.82 |
+| CONTADOR PÚBLICO                                  |                     12 |                   103 |    11.65 |
+| LICENCIATURA EN RECURSOS HUMANOS                  |                     10 |                    88 |    11.36 |
+| LICENCIATURA EN DISEÑO GRÁFICO                    |                      9 |                    19 |    47.37 |
+| LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO |                      9 |                   127 |     7.09 |
+| LICENCIATURA EN PSICOLOGÍA                        |                      8 |                   102 |     7.84 |
+| INGENIERÍA EN INFORMÁTICA                         |                      8 |                    40 |    20    |
 
 ## 4. Distribución por Sede
 
 | Sede                                        |   Leads |
 |:--------------------------------------------|--------:|
-| SALTA - CASTAÑARES PRESENCIAL               |    1619 |
-| HOME                                        |    1418 |
-| SALTA - DISTANCIA Modo 7                    |     720 |
-| DELEGACIÓN SAN MIGUEL - BUENOS AIRES Modo 7 |      52 |
-| DELEGACION S S DE JUJUY - JUJUY             |      28 |
-| SALTA - ANEXO CENTRO                        |      26 |
-| BUENOS AIRES - CABA                         |      23 |
-| CAFAYATE - SALTA                            |       2 |
-| CAPITAL FEDERAL - CABA                      |       1 |
-| DELEGACION CONCORDIA - ENTRE RÍOS           |       1 |
+| SALTA - CASTAÑARES PRESENCIAL               |    3828 |
+| HOME                                        |    2775 |
+| SALTA - DISTANCIA Modo 7                    |    1522 |
+| DELEGACIÓN SAN MIGUEL - BUENOS AIRES Modo 7 |     104 |
+| DELEGACION S S DE JUJUY - JUJUY             |      60 |
+| SALTA - ANEXO CENTRO                        |      50 |
+| BUENOS AIRES - CABA                         |      38 |
+| SANTIAGO DEL ESTERO - SANTIAGO DEL ESTERO   |       7 |
+| CAFAYATE - SALTA                            |       5 |
+| TARTAGAL - SALTA                            |       4 |
 
 ## 5. Canales de Origen (ColaNombre)
 
 | Cola           |   Leads |
 |:---------------|--------:|
-| Contact_Center |    1951 |
-| Sede_33        |       3 |
+| Contact_Center |    4388 |
+| Sede_33        |       2 |
 
 ## 6. Estado de los Leads de Bot
 
 | Estado           |   Cantidad |    % |
 |:-----------------|-----------:|-----:|
-| Abierto          |       1984 | 50.7 |
-| No interesado    |        984 | 25.1 |
-| Interesado       |        824 | 21.1 |
-| Solicitud creada |        121 |  3.1 |
+| Abierto          |       4231 | 50.1 |
+| No interesado    |       2217 | 26.2 |
+| Interesado       |       1670 | 19.8 |
+| Solicitud creada |        330 |  3.9 |
+| Pre Inscripción  |          1 |  0   |
 

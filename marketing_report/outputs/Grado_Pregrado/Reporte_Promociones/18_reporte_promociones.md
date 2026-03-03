@@ -1,13 +1,13 @@
 # Reporte de Promociones y Comportamiento de Inscripciones
 
-Primer inscrito oficial documentado: 01/10/2025
+Primer inscrito oficial documentado: 01/09/2025
 
 ## 1. Tabla de Volumen Promocional
 
 | Tramo_Promocional         |   Cantidad_Inscriptos |
 |:--------------------------|----------------------:|
-| Tramo 1 (50% OFF)         |                     0 |
-| Tramo 2 (40% OFF)         |                  1146 |
+| Tramo 1 (50% OFF)         |                  1868 |
+| Tramo 2 (40% OFF)         |                  1215 |
 | Tramo 3 (30% OFF)         |                  1112 |
 | Tramo 4 (20% OFF)         |                  1560 |
 | Tramo 5 (15% OFF)         |                  1003 |

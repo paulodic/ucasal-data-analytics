@@ -62,7 +62,7 @@ df['Modo_Limpio'] = df['Modo'].apply(norm_modo)
 # Clasificar match
 def classify(v):
     s = str(v)
-    if 'Si (Lead -> Inscripto Exacto)' in s: return 'exacto'
+    if 'Exacto' in s: return 'exacto'
     if 'Posible Match Fuzzy' in s: return 'fuzzy'
     return 'no_match'
 
@@ -92,9 +92,9 @@ print(f"-> Personas convertidas (exacto): {personas_convertidas:,}")
 print(f"-> Tasa de conversión deduplicada: {tasa_conversion_dedup:.2f}%")
 
 # ==========================================
-# 3. SANKEY A: Solo inscriptos exactos (Origen → Modalidad)
+# 3. SANKEY A: Solo inscriptos exactos (Origen -> Modalidad)
 # ==========================================
-print("Generando Sankey A: Inscriptos Exactos (Origen → Modalidad)...")
+print("Generando Sankey A: Inscriptos Exactos (Origen -> Modalidad)...")
 df_insc_exact = df_main[df_main['_mc'] == 'exacto'].copy()
 
 # Agrupar orígenes menores
@@ -116,13 +116,13 @@ fig_a = go.Figure(data=[go.Sankey(
         value=lnk_a['v'].tolist()
     )
 )])
-fig_a.update_layout(title_text="Inscriptos Confirmados: Formulario Origen → Modalidad", font_size=11, width=1200, height=600)
+fig_a.update_layout(title_text="Inscriptos Confirmados: Formulario Origen -> Modalidad", font_size=11, width=1200, height=600)
 fig_a.write_image(os.path.join(output_dir, "sankey_A_inscriptos_origen_modo.png"))
 fig_a.write_image(os.path.join(output_dir, "sankey_A_inscriptos_origen_modo.pdf"))
 print("-> Sankey A guardado.")
 
 # ==========================================
-# 4. SANKEY B: Cantidad de consultas → Inscripción
+# 4. SANKEY B: Cantidad de consultas -> Inscripción
 # ==========================================
 print("Generando Sankey B: Cantidad de consultas hasta inscripción...")
 
@@ -159,7 +159,7 @@ fig_b = go.Figure(data=[go.Sankey(
         value=lnk_b['v'].tolist()
     )
 )])
-fig_b.update_layout(title_text="Cantidad de Consultas → Resultado de Inscripción (por persona única)", font_size=11, width=1000, height=500)
+fig_b.update_layout(title_text="Cantidad de Consultas -> Resultado de Inscripción (por persona única)", font_size=11, width=1000, height=500)
 fig_b.write_image(os.path.join(output_dir, "sankey_B_consultas_inscripcion.png"))
 fig_b.write_image(os.path.join(output_dir, "sankey_B_consultas_inscripcion.pdf"))
 print("-> Sankey B guardado.")
@@ -176,7 +176,7 @@ df_bot_all = df_main[df_main['_persona_key'].isin(bot_personas)].copy()
 # Todos los orígenes que tocaron esas personas
 df_bot_origins = df_bot_all[['_persona_key', 'Formulario_Origen', '_mc']].copy()
 
-# Nivel 1: Bot → Otros Orígenes que también consultaron
+# Nivel 1: Bot -> Otros Orígenes que también consultaron
 otros = df_bot_origins[df_bot_origins['Formulario_Origen'] != 'Chatbot (Bot)'].copy()
 otros_counts = otros['Formulario_Origen'].value_counts()
 top_otros = otros_counts[otros_counts >= 5].index.tolist()
@@ -193,9 +193,9 @@ otros_merge = otros.merge(resultado_bot, on='_persona_key')
 nodes_c = ['Chatbot (Bot)'] + list(otros_merge['Orig_Agrup'].unique()) + ['✅ Inscripto', '❌ No Inscripto']
 nd_c = {n: i for i, n in enumerate(nodes_c)}
 
-# Links nivel 1: Bot → Otros Orígenes
+# Links nivel 1: Bot -> Otros Orígenes
 l1 = otros_merge.groupby('Orig_Agrup').size().reset_index(name='v')
-# Links nivel 2: Otros Orígenes → Resultado
+# Links nivel 2: Otros Orígenes -> Resultado
 l2 = otros_merge.groupby(['Orig_Agrup', 'Resultado']).size().reset_index(name='v')
 
 src_c = [nd_c['Chatbot (Bot)']] * len(l1) + [nd_c[x] for x in l2['Orig_Agrup']]
@@ -236,7 +236,7 @@ fig_d = go.Figure(data=[go.Sankey(
     node=dict(pad=20, thickness=25, label=nodes_d, color=['rgba(44,160,44,0.8)'] * len(nodes_d)),
     link=dict(source=src_d, target=tgt_d, value=val_d)
 )])
-fig_d.update_layout(title_text="Flujo de Oportunidades: Origen → Modalidad → Inscripto", font_size=11, width=1200, height=600)
+fig_d.update_layout(title_text="Flujo de Oportunidades: Origen -> Modalidad -> Inscripto", font_size=11, width=1200, height=600)
 fig_d.write_image(os.path.join(output_dir, "sankey_D_flujo_oportunidades.png"))
 fig_d.write_image(os.path.join(output_dir, "sankey_D_flujo_oportunidades.pdf"))
 print("-> Sankey D guardado.")
@@ -263,7 +263,7 @@ if len(df_se) > 0:
         node=dict(pad=20, thickness=25, label=nodes_e, color=['rgba(148,103,189,0.8)'] * len(nodes_e)),
         link=dict(source=src_e, target=tgt_e, value=val_e)
     )])
-    fig_e.update_layout(title_text="Flujo Bot: Chatbot → Modalidad → Inscripto", font_size=11, width=1000, height=500)
+    fig_e.update_layout(title_text="Flujo Bot: Chatbot -> Modalidad -> Inscripto", font_size=11, width=1000, height=500)
     fig_e.write_image(os.path.join(output_dir, "sankey_E_flujo_bot.png"))
     fig_e.write_image(os.path.join(output_dir, "sankey_E_flujo_bot.pdf"))
     print("-> Sankey E guardado.")
@@ -381,7 +381,7 @@ Para evitar contar el mismo Lead más de una vez (una persona puede generar múl
 | Personas convertidas (exacto) | {personas_convertidas:,} |
 | **Tasa de conversión real** | **{tasa_conversion_dedup:.2f}%** |
 
-## Sankey: Inscriptos Exactos (Origen → Modalidad)
+## Sankey: Inscriptos Exactos (Origen -> Modalidad)
 ![Sankey Inscriptos](sankey_A_inscriptos_origen_modo.png)
 
 ## Sankey: Consultas hasta Inscripción

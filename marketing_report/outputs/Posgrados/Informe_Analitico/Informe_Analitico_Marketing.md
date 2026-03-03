@@ -2,39 +2,39 @@
 
 **Aviso: Este documento es un BORRADOR. Todos los datos contenidos aquí están pendientes de verificación.**
 
-*(Datos actualizados al 2 de diciembre de 2026)*
+*(Datos actualizados al 14 de febrero de 2026)*
 
 Este informe consolida el análisis generado a partir del cruce de bases de datos de **Consultas (Leads en Salesforce)** e **Inscriptos**, unificando los orígenes y calculando el "Journey" de las personas. Durante la lectura de las bases de datos originales se aplicaron procesos de **deduplicación** para garantizar que los solapamientos de archivos no duplicaran los registros.
 
 ## 1. Resumen Ejecutivo
-Se analizaron un total de **191** leads únicos y **325** inscriptos únicos para identificar qué campañas e interacciones previas generaron las inscripciones finales.
+Se analizaron un total de **157** leads únicos y **325** inscriptos únicos para identificar qué campañas e interacciones previas generaron las inscripciones finales.
 
 | Métrica | Valor |
 |---------|-------|
-| Total Leads | 191 |
+| Total Leads | 157 |
 | Total Inscriptos | 325 |
-| Inscriptos Atribuidos a un Lead (Exacto) | 40 (12.3% del total) |
-| Inscriptos sin trazabilidad | 211 |
-| **Tasa de Conversión General Leads (Exacta)** | **61.26%** |
+| Inscriptos Atribuidos a un Lead (Exacto) | 52 (16.0% del total) |
+| Inscriptos sin trazabilidad | 239 |
+| **Tasa de Conversión General Leads (Exacta)** | **78.95%** |
 
 ### Desglose por Ecosistema Principal
 *(Nota: Las tasas de conversión reflejan estrictamente cruces exactos sin contemplar coincidencias difusas)*
 
 | Ecosistema | Total Leads Analizados | Inscriptos Atribuidos | Tasa de Conversión |
 |------------|------------------------|-----------------------|--------------------|
-| **Google Ads** | 26 | 9 | **34.62%** |
-| **Meta (FB/IG)** | 88 | 47 | **53.41%** |
+| **Google Ads** | 21 | 12 | **57.14%** |
+| **Meta (FB/IG)** | 73 | 57 | **78.08%** |
 
 ### Procedencia de Leads (Pagado vs Orgánico/Desconocido)
-De los 191 leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
-- **Plataformas Pagadas Confirmadas:** 114 leads (59.7%)
-- **Otros (Orgánico / Sin Tracking ID):** 77 leads (40.3%)
+De los 157 leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
+- **Plataformas Pagadas Confirmadas:** 100 leads (63.7%)
+- **Otros (Orgánico / Sin Tracking ID):** 57 leads (36.3%)
 
-De igual manera, al observar solo las **117 inscripciones (cruces exactos)** logradas a partir de leads, la distribución de origen es:
-- **Inscripciones Pagadas (Meta/UTM):** 56 (47.9%)
-- **Inscripciones Orgánicas/Directas:** 61 (52.1%)
+De igual manera, al observar solo las **123 inscripciones (cruces exactos)** logradas a partir de leads, la distribución de origen es:
+- **Inscripciones Pagadas (Meta/UTM):** 72 (58.5%)
+- **Inscripciones Orgánicas/Directas:** 51 (41.5%)
 
-*(Nota sobre Fuzzys: Existen 74 leads sospechosos de ser inscriptos (74 inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
+*(Nota sobre Fuzzys: Existen 34 leads sospechosos de ser inscriptos (34 inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
 
 ### Visualización de Tasas y Atribución
 ![Conversión Leads](chart_1_conversion_leads.png)
@@ -47,8 +47,8 @@ Comparativa gráfica de cuánto demora en inscribirse un prospecto según su ori
 
 | Origen_Agrupado    |   Promedio |   Mediana |   Moda |
 |:-------------------|-----------:|----------:|-------:|
-| Orgánicos/Directos |       13.7 |         9 |      3 |
-| Pagados (Meta/UTM) |       87.2 |        97 |     33 |
+| Orgánicos/Directos |       65   |      32.5 |      4 |
+| Pagados (Meta/UTM) |       90.1 |      95   |    116 |
 
 ![Tiempos Resolucion](chart_8_tiempos_resolucion.png)
 ### Volumen de Consultas por Día y Mes
@@ -61,21 +61,19 @@ Comparativa gráfica de cuánto demora en inscribirse un prospecto según su ori
 ## 2. Journey del Estudiante (Comportamiento)
 Analizando el número de veces que un usuario consulta antes de pagar su matrícula, observamos los siguientes patrones:
 
-- **Promedio de Consultas por Persona:** 1.1 veces.
-- **Tiempo de Decisión Promedio:** Un usuario tarda en promedio **228.7 días** desde su primera consulta hasta que formaliza el pago.
+- **Promedio de Consultas por Persona:** 1.2 veces.
+- **Tiempo de Decisión Promedio:** Un usuario tarda en promedio **62.4 días** desde su primera consulta hasta que formaliza el pago.
 
 ### Principales Fuentes que Inician el Recorrido (1er Touch) en Usuarios Inscriptos:
 ![Top Fuentes](chart_3_top_fuentes.png)
-- **Facebook Lead Ads**: 75 inscriptos
-- **Desconocido**: 33 inscriptos
-- **Web Orgánico (3)**: 23 inscriptos
-- **Portales (4)**: 11 inscriptos
-- **Origen 103**: 7 inscriptos
-- **Origen 297**: 2 inscriptos
-- **Origen 300**: 2 inscriptos
-- **Origen 73**: 2 inscriptos
-- **Chatbot (907)**: 2 inscriptos
-- **Origen 390**: 1 inscriptos
+- **Facebook Lead Ads**: 19 inscriptos
+- **Web Orgánico (3)**: 4 inscriptos
+- **Portales (4)**: 4 inscriptos
+- **Origen 103**: 3 inscriptos
+- **Desconocido**: 1 inscriptos
+- **Origen 6**: 1 inscriptos
+- **Origen 625**: 1 inscriptos
+- **Chatbot (907)**: 1 inscriptos
 
 ## 3. Curva de Inscripciones a lo largo del tiempo
 La siguiente curva muestra el volumen de pagos confirmados por fecha, destacando los picos de inscripciones.
@@ -87,10 +85,10 @@ Los 4 días con mayor volumen de inscripciones confirmadas fueron:
 
 | Fecha | Día de la Semana | Cantidad de Inscripciones |
 |-------|------------------|---------------------------|
-| 12/10/2025 | Domingo | 9 |
-| 01/02/2026 | Domingo | 7 |
-| 12/02/2025 | Miércoles | 6 |
-| 12/05/2025 | Lunes | 6 |
+| 19/12/2025 | Viernes | 16 |
+| 28/11/2025 | Viernes | 15 |
+| 30/01/2026 | Viernes | 15 |
+| 17/12/2025 | Miércoles | 14 |
 
 
 ### Análisis de Valles de Inscripción (Días de menor actividad)
@@ -98,24 +96,24 @@ Analizando los días con las caídas más fuertes de inscripciones, podemos obse
 
 | Fecha | Día de la Semana | Cantidad de Inscripciones |
 |-------|------------------|---------------------------|
-| 13/01/2025 | Lunes | 0 |
-| 14/01/2025 | Martes | 0 |
-| 15/01/2025 | Miércoles | 0 |
-| 16/01/2025 | Jueves | 0 |
-| 17/01/2025 | Viernes | 0 |
-| 18/01/2025 | Sábado | 0 |
-| 19/01/2025 | Domingo | 0 |
-| 20/01/2025 | Lunes | 0 |
-| 21/01/2025 | Martes | 0 |
-| 22/01/2025 | Miércoles | 0 |
-| 23/01/2025 | Jueves | 0 |
-| 24/01/2025 | Viernes | 0 |
-| 25/01/2025 | Sábado | 0 |
-| 26/01/2025 | Domingo | 0 |
-| 27/01/2025 | Lunes | 0 |
+| 01/11/2025 | Sábado | 0 |
+| 02/11/2025 | Domingo | 0 |
+| 03/11/2025 | Lunes | 0 |
+| 04/11/2025 | Martes | 0 |
+| 05/11/2025 | Miércoles | 0 |
+| 06/11/2025 | Jueves | 0 |
+| 07/11/2025 | Viernes | 0 |
+| 08/11/2025 | Sábado | 0 |
+| 09/11/2025 | Domingo | 0 |
+| 10/11/2025 | Lunes | 0 |
+| 11/11/2025 | Martes | 0 |
+| 14/11/2025 | Viernes | 0 |
+| 15/11/2025 | Sábado | 0 |
+| 16/11/2025 | Domingo | 0 |
+| 21/11/2025 | Viernes | 0 |
 
 
-**Observación sobre los valles:** El 26.7% de los días con menor volumen de inscripciones del histórico analizado coinciden directamente con fines de semana (Sábado/Domingo).
+**Observación sobre los valles:** El 40.0% de los días con menor volumen de inscripciones del histórico analizado coinciden directamente con fines de semana (Sábado/Domingo).
 
 ## Conclusiones y Recomendaciones
 

@@ -6,26 +6,24 @@ Este informe analiza de forma exclusiva el volumen y rendimiento de los **Leads 
 
 *(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*
 
-- **Volumen de Leads Totales Meta (Histórico):** 140,561
-- **Volumen de Leads Meta (Muestra Conversión):** 140,561
-- **Inscriptos Confirmados Meta:** 1,362
-- **Tasa de Conversión General Meta (Muestra):** 0.97%
+- **Volumen de Leads Totales Meta (Histórico):** 244,205
+- **Volumen de Leads Meta (Muestra Conversión):** 129,283
+- **Inscriptos Confirmados Meta:** 597
+- **Tasa de Conversión General Meta (Muestra):** 0.46%
 
 ## 1. Distribución de Origen por Red Social (Muestra Conversión)
 
 | Red_Primaria   |   Leads_Muestra |   Inscriptos |   Conversión_% |
 |:---------------|----------------:|-------------:|---------------:|
-| Otro Meta      |           89517 |         1138 |           1.27 |
-| Facebook       |            1783 |           59 |           3.31 |
-| Instagram      |            1512 |          165 |          10.91 |
+| Otro Meta      |          124254 |          503 |           0.4  |
+| Facebook       |            3015 |           21 |           0.7  |
+| Instagram      |            1979 |           73 |           3.69 |
 
 ## 2. Top 15 Campañas por Volumen de Leads (Muestra Conversión)
 
 | UtmCampaign        |   Leads_Muestra |   Inscriptos |   Conversión_% |
 |:-------------------|----------------:|-------------:|---------------:|
-| carreras           |            1760 |           58 |           3.3  |
-| organic            |            1466 |          163 |          11.12 |
-| 120235998797960048 |              31 |            2 |           6.45 |
-| 6613618927007      |               9 |            0 |           0    |
-| 120236406788520048 |               7 |            0 |           0    |
+| carreras           |            3005 |           21 |            0.7 |
+| organic            |            1944 |           72 |            3.7 |
+| 120211991684880189 |               6 |            0 |            0   |
 

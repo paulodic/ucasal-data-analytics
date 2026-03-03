@@ -4,7 +4,7 @@ Se analizó específicamente el rendimiento de las captaciones cuyo origen es el
 
 | Métrica | Bot (907) | General |
 |---------|-----------|---------|
-| Total Leads | 4,001 | 216,800 |
+| Total Leads | 4,001 | 216,790 |
 | Total Inscriptos Confirmados | 231 | 6,945 |
 | Tasa de Conversión | 5.77% | 3.20% |
 

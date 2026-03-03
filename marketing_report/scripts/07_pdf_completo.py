@@ -20,10 +20,28 @@ print("Cargando datos para resumen...")
 df = pd.read_csv(leads_csv, low_memory=False)
 df_insc = pd.read_csv(inscriptos_csv, low_memory=False)
 
+def get_max_date(df_i):
+    """Retorna (Timestamp, string_formateado) de la última fecha de pago de inscriptos."""
+    meses = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio",
+             7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre"}
+    # SOLO usar Fecha Pago — NUNCA Fecha Aplicación (puede ser fecha futura de cursado)
+    for col in ['Insc_Fecha Pago', 'Fecha Pago']:
+        if col in df_i.columns:
+            dates = pd.to_datetime(df_i[col], format='mixed', errors='coerce')
+            valid = dates[dates <= pd.Timestamp.now()]
+            if not valid.isna().all():
+                d = valid.max()
+                return (d, f"{d.day} de {meses[d.month]} de {d.year}")
+    d = pd.Timestamp.now()
+    return (d, f"{d.day} de {meses[d.month]} de {d.year}")
+
+max_insc_ts, max_date_str = get_max_date(df_insc)
+print(f"Fecha maxima de inscriptos: {max_date_str}")
+
 # Clasificar
 def classify(v):
     s = str(v)
-    if 'Si (Lead -> Inscripto Exacto)' in s: return 'exacto'
+    if 'Exacto' in s: return 'exacto'
     if 'Posible Match Fuzzy' in s: return 'fuzzy'
     return 'no_match'
 
@@ -40,12 +58,22 @@ personas = df_main.drop_duplicates(subset='_pk')
 total_personas = len(personas)
 
 # REGLA DE NEGOCIO COHORTES (Filtro para Conversión)
+# Denominador = leads dentro de [inicio_cohorte, max_fecha_inscripcion]
+# Los leads posteriores a la última inscripción aún no tuvieron tiempo de convertirse.
 if segmento == 'Grado_Pregrado':
-    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], errors='coerce')
-    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2024-09-01'].copy()
+    # Consulta: Fecha de creación viene en D/M/YYYY desde Salesforce — requiere dayfirst=True
+    df_main['Fecha_Limpia'] = pd.to_datetime(
+        df_main['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_main_conv = df_main[
+        (df_main['Fecha_Limpia'] >= '2025-09-01') &
+        (df_main['Fecha_Limpia'] <= max_insc_ts)
+    ].copy()
     personas_conv_base = df_main_conv.drop_duplicates(subset='_pk')
 else:
-    personas_conv_base = personas.copy()
+    df_main['Fecha_Limpia'] = pd.to_datetime(
+        df_main['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_main_conv = df_main[df_main['Fecha_Limpia'] <= max_insc_ts].copy()
+    personas_conv_base = df_main_conv.drop_duplicates(subset='_pk')
 
 total_personas_conv = len(personas_conv_base)
 personas_conv = len(personas_conv_base[personas_conv_base['_mc'] == 'exacto'])
@@ -56,15 +84,27 @@ total_registros = len(df_main)
 total_exactos = len(personas_conv_base[personas_conv_base['_mc'] == 'exacto']) # basados en la muestra
 total_fuzzy = len(df_fuzzy)
 
-# Bot
+# Bot — criterio consistente con 19_bot_consolidado.py:
+# Se filtran los leads del bot PRIMERO, luego se deduplication personas del bot,
+# y luego se aplica el filtro de cohorte. Esto evita el undercounting que ocurre
+# al deduplicar todos los leads primero (una persona que también consultó por otro
+# canal antes del bot quedaría excluida con el método anterior).
 df_main['_fl'] = df_main['FuenteLead'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 df_bot = df_main[df_main['_fl'] == '907']
-bot_leads = len(df_bot)
+bot_leads = len(df_bot)  # total histórico de registros bot (sin dedup)
 
-personas_conv_base['_fl'] = personas_conv_base['FuenteLead'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-df_bot_conv = personas_conv_base[personas_conv_base['_fl'] == '907']
-bot_leads_conv = len(df_bot_conv)
-bot_insc = len(df_bot_conv[df_bot_conv['_mc'] == 'exacto'])
+df_bot_dedup_seg = df_bot.drop_duplicates(subset='_pk').copy()
+df_bot_dedup_seg['_fecha_bot_tmp'] = pd.to_datetime(
+    df_bot_dedup_seg['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+if segmento == 'Grado_Pregrado':
+    df_bot_dedup_seg = df_bot_dedup_seg[
+        (df_bot_dedup_seg['_fecha_bot_tmp'] >= '2025-09-01') &
+        (df_bot_dedup_seg['_fecha_bot_tmp'] <= max_insc_ts)
+    ]
+else:
+    df_bot_dedup_seg = df_bot_dedup_seg[df_bot_dedup_seg['_fecha_bot_tmp'] <= max_insc_ts]
+bot_leads_conv = len(df_bot_dedup_seg)
+bot_insc = len(df_bot_dedup_seg[df_bot_dedup_seg['_mc'] == 'exacto'])
 bot_tasa = (bot_insc / bot_leads_conv * 100) if bot_leads_conv > 0 else 0
 
 # Inscriptos
@@ -81,21 +121,6 @@ sin_utm = total_registros - con_utm
 print(f"Personas: {total_personas:,} | Conv: {personas_conv:,} ({tasa_dedup:.2f}%)")
 print(f"Bot: {bot_leads:,} -> {bot_insc:,} ({bot_tasa:.2f}%)")
 
-def get_max_date(df_i):
-    meses = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio", 
-             7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre"}
-    for col in ['Insc_Fecha Pago', 'Insc_Fecha Aplicación', 'Fecha Pago', 'Fecha Aplicación']:
-        if col in df_i.columns:
-            dates = pd.to_datetime(df_i[col], errors='coerce', dayfirst=True)
-            if not dates.isna().all():
-                d = dates.max()
-                return f"{d.day} de {meses[d.month]} de {d.year}"
-    d = datetime.now()
-    return f"{d.day} de {meses[d.month]} de {d.year}"
-
-max_date_str = get_max_date(df_insc)
-print(f"Fecha maxima de inscriptos: {max_date_str}")
-
 # ==========================================
 # EXPORTAR TEXTOS A MARKDOWN
 # ==========================================
@@ -104,7 +129,7 @@ with open(md_path, 'w', encoding='utf-8') as f:
     f.write(f"# Informe Analitico de Marketing - Completo\n\n**Aviso: Este documento es un BORRADOR. Todos los datos contenidos aqui estan pendientes de verificacion.**\n\n*(Datos actualizados al {max_date_str})*\n\n")
     f.write("## Resumen Ejecutivo\n")
     if segmento == 'Grado_Pregrado':
-        f.write("*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*\n\n")
+        f.write("*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*\n\n")
     f.write(f"- Total Registros de Leads (Historico): {total_registros:,}\n")
     f.write(f"- Personas Unicas (Muestra para conversion): {total_personas_conv:,}\n")
     f.write(f"- Tasa de Conversion Global (deduplicada): {tasa_dedup:.2f}%\n")
@@ -360,3 +385,55 @@ pdf.output(pdf_path)
 print(f"\n-> PDF COMPLETO guardado en: {pdf_path}")
 print(f"   Paginas: {pdf.page_no()}")
 print("   Incluye: Portada + Resumen Ejecutivo + 16 graficos + Conclusiones")
+
+# ==========================================
+# MEMORIA TÉCNICA
+# ==========================================
+memoria = f"""# Memoria Técnica: PDF Informe Analítico Completo
+
+**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Segmento:** {segmento}
+**Script:** `07_pdf_completo.py`
+
+## Fuentes de Datos
+- Leads: `{leads_csv}`
+- Inscriptos: `{inscriptos_csv}`
+
+## Volúmenes Procesados
+| Métrica | Valor |
+|---|---|
+| Total registros de leads | {total_registros:,} |
+| Personas únicas evaluadas (cohorte) | {total_personas_conv:,} |
+| Personas convertidas (Exacto, dedup) | {personas_conv:,} |
+| Tasa conversión deduplicada | {tasa_dedup:.2f}% |
+| Matches Fuzzy (excluidos de tasa) | {total_fuzzy:,} |
+| Inscriptos exactos (desde tabla inscriptos) | {insc_exactos:,} |
+| Inscriptos directos (sin lead) | {insc_directos:,} |
+
+## Bot / Chatbot (FuenteLead=907)
+| Métrica | Valor |
+|---|---|
+| Leads capturados por Bot | {bot_leads:,} |
+| Leads Bot en cohorte evaluada | {bot_leads_conv:,} |
+| Inscripciones confirmadas (Bot) | {bot_insc:,} |
+| Tasa conversión Bot | {bot_tasa:.2f}% |
+
+## Tracking UTM
+| Categoría | Cantidad |
+|---|---|
+| Leads CON UTM | {con_utm:,} |
+| Leads SIN UTM | {sin_utm:,} |
+
+## Reglas de Negocio
+- **Clasificación Match_Tipo:** `'Exacto'` en el string = conversión confirmada; `'Posible Match Fuzzy'` = excluido de tasas
+- **Deduplicación de personas:** por `DNI` (pk primaria), fallback `Correo`
+- **Filtro cohorte:** {'Sí — leads desde 2025-09-01' if segmento == 'Grado_Pregrado' else 'No — todos los leads'}
+- **Fecha de corte:** `{max_date_str}`
+- **Páginas PDF generadas:** {pdf.page_no()}
+
+## Archivo de Salida
+- `{pdf_path}`
+"""
+with open(os.path.join(output_dir, 'memoria_tecnica_pdf.md'), 'w', encoding='utf-8') as f:
+    f.write(memoria)
+print(f"-> Memoria técnica PDF generada en: {output_dir}")

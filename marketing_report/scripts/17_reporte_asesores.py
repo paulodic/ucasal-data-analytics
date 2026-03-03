@@ -422,3 +422,47 @@ with open(md_file, "w", encoding="utf-8") as f:
     f.write("\n\n## 2. Top Vendedores (Sist. Financiero)\n\n")
     f.write(top_20_vend.to_markdown(index=False))
 
+# ==========================================
+# MEMORIA TÉCNICA
+# ==========================================
+memoria = f"""# Memoria Técnica: Reporte de Asesores y Canales de Venta
+
+**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Segmento:** {segmento}
+**Script:** `17_reporte_asesores.py`
+
+## Fuentes de Datos
+- Leads: `{leads_csv}`
+- Inscriptos: `{inscriptos_csv}`
+
+## Volúmenes Macro
+| Métrica | Valor |
+|---|---|
+| Total Leads históricos | {total_leads_macro:,} |
+| Total Inscriptos físicos | {total_inscriptos:,} |
+| Leads en Contact Center | {volumen_contact_center:,} ({pct_contact_center:.1f}%) |
+| Leads con Estado "Abierto" | {volumen_abiertos:,} ({pct_abiertos:.1f}%) |
+
+## Distribución de Estados (Top 10)
+{estados_globales.head(10).to_markdown(index=False)}
+
+## Origen de Inscripciones (Atribución por Canal)
+{origen_breakdown.to_markdown(index=False)}
+
+## Reglas de Negocio
+- **Propietario del lead:** Columna `Consulta: Nombre del propietario` (o equivalente), usada para agrupar por asesor
+- **Inscripciones atribuidas:** Leads con `Match_Tipo` que contenga `"Exacto"` se consideran inscripciones confirmadas
+- **Ranking de vendedores:** Basado en columna `Insc_Vendedor` de la base contable de inscriptos
+- **Montos en ARS:** Sumados desde la columna `Insc_Haber` de inscriptos matcheados
+
+## Archivos de Salida
+- PDF: `{os.path.join(output_dir_base, '17_reporte_asesores.pdf')}`
+- MD: `{md_file}`
+- CSV ranking asesores: `{csv_ranking_inscriptos}`
+- CSV estados: `{csv_informe_estados}`
+- CSV vendedores: `{csv_ranking_vendedores}`
+"""
+with open(os.path.join(output_dir_base, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
+    f.write(memoria)
+print(f"-> Memoria técnica generada en: {output_dir_base}")
+

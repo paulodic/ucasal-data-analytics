@@ -91,6 +91,31 @@ def clean_name(val):
     return str(val).strip().lower()
 
 # ==========================================
+# ESTANDARIZACIÓN DE COLUMNAS DE LEADS
+# ==========================================
+def standardize_leads_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliza el DataFrame de leads al esquema canónico del pipeline.
+
+    Problema resuelto: el "Informe General" de Salesforce exporta la columna
+    de nombre como 'Nombre' (sin 'Candidato'), mientras que los archivos
+    mensuales tienen ambas. Esta función garantiza que SIEMPRE existan
+    'Candidato' y 'Nombre' antes del cruce, evitando crashes en el dropna.
+
+    - Si falta 'Candidato', se crea como copia de 'Nombre'.
+    - Si falta 'Nombre', se crea como copia de 'Candidato'.
+    - Todas las columnas nuevas (Gestionados, Application, etc.) se preservan sin cambios.
+
+    Ver DATA_CONTRACT_LEADS.md sección 15 para mapeo completo del nuevo formato.
+    """
+    df = df.copy()
+    if 'Candidato' not in df.columns and 'Nombre' in df.columns:
+        df['Candidato'] = df['Nombre']
+    if 'Nombre' not in df.columns and 'Candidato' in df.columns:
+        df['Nombre'] = df['Candidato']
+    return df
+
+# ==========================================
 # MULTIPROCESSING WORKER PARA FUZZY MATCH
 # ==========================================
 def _fuzzy_worker(insc_tuple, choices_dict):
@@ -143,15 +168,28 @@ if __name__ == '__main__':
         try:
             engine = 'xlrd' if f.endswith('.xls') else None
             df = pd.read_excel(f, engine=engine)
+            df = standardize_leads_columns(df)  # garantiza 'Candidato' y 'Nombre'
             df_leads_list.append(df)
+            print(f"  Cargado: {os.path.basename(f)} ({len(df)} filas)")
         except Exception as e:
             print(f"Error cargando {f}: {e}")
     df_leads = pd.concat(df_leads_list, ignore_index=True) if df_leads_list else pd.DataFrame()
 
     if not df_leads.empty:
         initial_len = len(df_leads)
-        df_leads = df_leads.drop_duplicates()
-        print(f"Leads duplicados removidos: {initial_len - len(df_leads)}")
+        if 'Consulta: ID Consulta' in df_leads.columns:
+            # Dedup inteligente por clave única de Salesforce.
+            # groupby().first() toma el primer valor no-NaN por columna en cada grupo,
+            # complementando datos entre archivos con distinto schema (ej: mensual vs Informe General).
+            df_leads = (
+                df_leads
+                .groupby('Consulta: ID Consulta', sort=False)
+                .first()
+                .reset_index()
+            )
+        else:
+            df_leads = df_leads.drop_duplicates()
+        print(f"Leads después de dedup/complementación: {len(df_leads)} (removidos/fusionados: {initial_len - len(df_leads)})")
 
     inscriptos_files = glob.glob(os.path.join(inscriptos_dir, "*.xlsx")) + \
                        glob.glob(os.path.join(inscriptos_dir, "*.xls"))

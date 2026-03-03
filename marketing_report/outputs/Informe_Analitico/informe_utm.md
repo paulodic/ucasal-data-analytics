@@ -4,7 +4,7 @@
 | Métrica | Valor |
 |---------|-------|
 | Leads con UTM | 34,141 (15.7%) |
-| Leads sin UTM | 182,659 (84.3%) |
+| Leads sin UTM | 182,649 (84.3%) |
 
 ## Top 10 UTM Source
 ![UTM Source](chart_utm_source.png)

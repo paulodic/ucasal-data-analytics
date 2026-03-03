@@ -27,22 +27,23 @@ df = pd.read_csv(leads_csv, low_memory=False)
 df_insc = pd.read_csv(inscriptos_csv, low_memory=False)
 
 def get_max_date(df_i):
-    meses = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio", 
+    meses = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio",
              7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre"}
-    for col in ['Insc_Fecha Pago', 'Insc_Fecha Aplicación', 'Fecha Pago', 'Fecha Aplicación']:
+    for col in ['Insc_Fecha Pago', 'Fecha Pago']:
         if col in df_i.columns:
-            dates = pd.to_datetime(df_i[col], errors='coerce', dayfirst=True)
+            dates = pd.to_datetime(df_i[col], format='mixed', errors='coerce')
+            dates = dates[dates <= pd.Timestamp.now()]
             if not dates.isna().all():
                 d = dates.max()
-                return f"{d.day} de {meses[d.month]} de {d.year}"
-    d = datetime.now()
-    return f"{d.day} de {meses[d.month]} de {d.year}"
+                return (d, f"{d.day} de {meses[d.month]} de {d.year}")
+    d = pd.Timestamp.now()
+    return (d, f"{d.day} de {meses[d.month]} de {d.year}")
 
-max_date_str = get_max_date(df_insc)
+max_insc_ts, max_date_str = get_max_date(df_insc)
 
 def classify(v):
     s = str(v)
-    if 'Si (Lead -> Inscripto Exacto)' in s: return 'exacto'
+    if 'Exacto' in s: return 'exacto'
     if 'Posible Match Fuzzy' in s: return 'fuzzy'
     return 'no_match'
 

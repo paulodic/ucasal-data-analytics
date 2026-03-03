@@ -298,14 +298,84 @@ Causas típicas:
 
 ---
 
-## 14. Próximos pasos recomendados (para habilitar nuevos formatos de leads)
+## 14. Próximos pasos recomendados
 
-1. Extraer a una función `standardize_leads_columns(df_leads)` con un diccionario de sinónimos.
+1. ~~Extraer a una función `standardize_leads_columns(df_leads)`~~ — **IMPLEMENTADO** (ver sección 15).
 2. Agregar logging de cobertura:
    - % filas con `DNI_match` no nulo
    - % filas con `Email_match` no nulo
    - % filas con `Phone_match` no nulo
 3. Guardar un reporte de QA por corrida en `outputs/Calidad_Datos/`.
+
+---
+
+## 15. Formato "Informe General" de Salesforce (incorporado 2026-03-02)
+
+### 15.1 Archivo gatillante
+`data/1_raw/leads_salesforce/Informe General Mkt-2026-03-02-10-26-52.xlsx`
+
+Este tipo de reporte es un **export completo de Salesforce** que difiere de los exports mensuales en schema y alcance.
+
+### 15.2 Diferencias de columnas vs formato mensual
+
+**Columnas AUSENTES en "Informe General" (presentes en mensuales):**
+
+| Columna ausente | Solución implementada |
+|---|---|
+| `Candidato` | Se crea automáticamente copiando `Nombre` via `standardize_leads_columns()` |
+| `PrimeraCola` | Queda como NaN — no disponible en este formato |
+| `Matriculadas` | Queda como NaN — no disponible en este formato |
+| `Consulta: Nombre del propietario` | Reemplazado por `Consulta: Creado por` en el nuevo formato |
+
+**Columnas NUEVAS en "Informe General" (ausentes en mensuales):**
+
+| Columna nueva | Tipo | Descripción |
+|---|---|---|
+| `Gestionados` | string | Indica si el lead fue gestionado (`Si`/`No` o similar) |
+| `Grado de Consulta` | string | Temperatura del lead (ej: `2.Tibio`, `3.Frío`, `1.Caliente`) |
+| `Fecha de última interacción` | datetime | Última vez que hubo contacto con el lead |
+| `Application` | string | ID de la aplicación/solicitud en Salesforce (ej: `APP-181952`) |
+| `Consulta: Creado por` | string | Usuario de Salesforce que creó la consulta (reemplaza `Consulta: Nombre del propietario`) |
+
+**Columnas comunes (presentes en ambos formatos):**
+`Correo`, `Nombre`, `DNI`, `Telefono`, `Tipo de Carrera`, `Modo`, `Código Carrera`, `Carrera`, `CódigoSede`, `Sede Nombre`, `FuenteLead`, `UtmSource`, `UtmCampaign`, `UtmMedium`, `UtmTerm`, `UtmContent`, `ColaNombre`, `Estado`, `Consulta: Fecha de creación`, `Id. candidato/contacto`, `Consulta: ID Consulta`
+
+### 15.3 Estrategia de deduplicación y complementación
+
+**Clave única:** `Consulta: ID Consulta` — presente en TODOS los archivos de leads de Salesforce.
+
+**Algoritmo implementado en `02_cruce_datos.py`:**
+
+```python
+df_leads = (
+    df_leads
+    .groupby('Consulta: ID Consulta', sort=False)
+    .first()
+    .reset_index()
+)
+```
+
+`groupby().first()` usa `skipna=True` por defecto → toma el primer valor **no-NaN** por columna en cada grupo. Esto complementa automáticamente datos entre archivos:
+- Si el mensual tiene `Candidato` y el General no → se usa el del mensual
+- Si el General tiene `Gestionados` y el mensual no → se usa el del General
+
+### 15.4 Análisis de solapamiento (2026-03-02)
+
+| Archivo | Filas | Rango ID Consulta | Solapamiento con General |
+|---|---|---|---|
+| **Informe General** (nuevo) | 100,004 | 1,663,529 – 1,795,300 | — |
+| `provisorio febrero 2026.xlsx` | 36,718 | ≈ mismo rango | **36,644 IDs compartidos** |
+| `Leads enero 2026.xlsx` | 39,137 | diferente rango | 0 |
+| `Leads diciembre 2025.xlsx` | 31,565 | diferente rango | 0 |
+| `Leads noviembre 2025.xlsx` | 35,271 | diferente rango | 0 |
+| `Leads octubre 2025.xlsx` | 38,525 | diferente rango | 0 |
+| `Leads septiembre 2025.xlsx` | 33,721 | diferente rango | 0 |
+
+**63,356 IDs del General son registros completamente nuevos** (no estaban en ningún archivo mensual previo).
+
+### 15.5 Nota sobre `Septiembre_2025.xlsx`
+
+Este archivo NO es un export de leads de Salesforce — tiene un schema diferente (datos contables/académicos) y **no tiene** `Consulta: ID Consulta`. El pipeline lo lee pero no afecta el cruce porque sus columnas no coinciden con las claves canónicas del matching.
 
 ---
 
