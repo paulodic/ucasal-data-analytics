@@ -292,6 +292,8 @@ if 'Consulta: Fecha de creación' in df.columns:
         # --- 2b. DISTRIBUCIÓN POR RANGOS DE DÍAS ABSOLUTOS ---
         # Muestra cuántas personas se inscribieron en cada rango de días
         md_content += "### 2b. Distribución por Rangos de Días hasta Inscripción\n\n"
+        md_content += "**Nota Metodológica:** Este análisis calcula los días desde la **PRIMERA CONSULTA REGISTRADA** hasta el pago/inscripción. Si una persona consultó múltiples veces, el reloj comienza en el primer contacto registrado, independientemente de cuántas veces volvió a consultar después.\n\n"
+        md_content += "Esta métrica busca responder: **\"¿Cuánto tiempo desde que primero se interesó hasta que efectivamente se inscribió?\"** de forma conservadora y realista, midiendo la velocidad de conversión desde el primer contacto.\n\n"
         
         # Definir rangos: fine-grained para 0-30 días, luego uniforme ~30 días hasta 270
         bins_dias = [0, 1, 3, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, float('inf')]
@@ -511,7 +513,11 @@ if has_time_data:
     pdf.cell(0, 10, "2b. ¿Cuántos días tardan en inscribirse?", ln=True)
     pdf.set_font("Helvetica", size=10)
     pdf.multi_cell(0, 6, "Distribución de inscriptos por rangos de días. Los primeros rangos son detallados (0-30 días) "
-                         "y desde 30 hasta 270 días se usan intervalos uniformes de ~30 días para comparar a igual escala.")
+                         "y desde 30 hasta 270 días se usan intervalos uniformes de ~30 días para comparar a igual escala.\n\n"
+                         "NOTA: Se calcula desde la PRIMERA CONSULTA REGISTRADA (si una persona consultó múltiples veces, "
+                         "el reloj comienza en el primer contacto). Esto responde: '¿Cuánto tiempo desde que primero se "
+                         "interesó hasta que efectivamente se inscribió?', midiendo la velocidad de conversión de forma "
+                         "conservadora y realista.")
     pdf.ln(5)
     try:
         pdf.image(os.path.join(output_dir, 'distribucion_dias_inscripcion.png'), w=230)
@@ -620,11 +626,16 @@ if has_time_data:
     mt.set_font("Helvetica", size=9)
     mt.multi_cell(0, 5,
         f"Cálculo: Dias_Resolucion = Fecha_Pago - Primera_Consulta (en días)\n"
+        f"  - Primera_Consulta = MIN de todas las fechas de consulta por persona (la más antigua registrada)\n"
+        f"  - Fecha_Pago = fecha de pago/inscripción\n"
+        f"  - Si una persona consultó múltiples veces, se usa SIEMPRE la primera fecha registrada\n"
         f"Filtros aplicados: Solo Match_Tipo 'Exacto' | Consulta >= 2024-01-01 | Pago <= hoy\n"
         f"Rango aceptado: 0 a 180 días (> 180 se descarta como outlier)\n"
         f"Personas que pasan los filtros: {len(exactos_t):,}\n"
         f"Promedio: {avg_dias_exacto:.1f} días | Mediana: {mediana_exacto:.1f} días | Moda: {moda_exacto:.0f} días\n"
-        f"Mínimo: {exactos_t.min():.0f} días | Máximo: {exactos_t.max():.0f} días")
+        f"Mínimo: {exactos_t.min():.0f} días | Máximo: {exactos_t.max():.0f} días\n\n"
+        f"INTERPRETACIÓN: ¿Cuánto tiempo desde que primero se interesó hasta que efectivamente se inscribió?, "
+        f"independientemente de cuántas veces volvió a consultar.")
     mt.ln(3)
     mt.set_font("Helvetica", "B", 9)
     mt.cell(0, 6, "Muestreo de 20 registros individuales (datos crudos):", ln=True)
