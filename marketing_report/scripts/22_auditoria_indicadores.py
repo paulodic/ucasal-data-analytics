@@ -1,19 +1,27 @@
 """
 22_auditoria_indicadores.py
-Script global de auditoría de indicadores.
+Script global de auditoria de indicadores.
 Lee los CSVs maestros de los 3 segmentos, calcula KPIs clave,
-verifica consistencia interna y genera un reporte Excel.
+verifica consistencia interna y genera reportes comparativos.
 
-Salida: outputs/Auditoria_Indicadores/Auditoria_Indicadores.xlsx
+PROPOSITO: Verificar que los datos del pipeline son coherentes entre sí y con
+los reportes PDF generados. Detecta anomalias (tasa > 30%, Fuzzy excesivo, etc.)
+y compara KPIs entre segmentos.
+
+SALIDA (output_dir = outputs/Auditoria_Indicadores/):
+  - Auditoria_Indicadores.xlsx    -> Excel con 5 hojas (KPIs, canales, checks, alertas)
+  - Auditoria_Indicadores.pdf     -> Informe visual con KPIs y tabla de checks
+  - Auditoria_Indicadores.md      -> Documentacion textual con resumen ejecutivo
 """
 import pandas as pd
 import numpy as np
 import os
 import sys
 from datetime import datetime
+from fpdf import FPDF
 
 # ============================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN DE RUTAS Y CONSTANTES
 # ============================================================
 BASE_DIR = r"h:\Test-Antigravity\marketing_report"
 DB_DIR   = os.path.join(BASE_DIR, "outputs", "Data_Base")
@@ -36,9 +44,9 @@ FB_SPEND = {
 }
 
 COHORT_START = {
-    'Grado_Pregrado': '2025-09-01',
-    'Cursos': None,
-    'Posgrados': None,
+    'Grado_Pregrado': '2025-09-01',   # inicio cohorte Ingreso 2026
+    'Cursos': None,                    # sin restriccion de inicio
+    'Posgrados': None,                 # sin restriccion de inicio
 }
 
 # ============================================================
@@ -122,6 +130,7 @@ def classify_fuente(df: pd.DataFrame) -> pd.Series:
 # ============================================================
 # PROCESAMIENTO POR SEGMENTO
 # ============================================================
+# Para cada segmento: carga CSV, calcula KPIs, verifica consistencia, detecta alertas
 
 all_kpis       = []   # lista de dicts, uno por segmento
 all_canales    = []   # lista de dicts canal×segmento
@@ -140,27 +149,27 @@ for seg in SEGMENTOS:
     print(f"  Auditando: {seg}")
     print(f"{'='*55}")
 
-    # --- Carga ---
+    # Carga de datos: los CSVs maestros son grandes; se cargan completos para calcular métricas
     df_raw  = pd.read_csv(leads_path,  low_memory=False)
     df_insc = pd.read_csv(insc_path,   low_memory=False) if os.path.exists(insc_path) else pd.DataFrame()
     print(f"  Leads raw: {len(df_raw):,}  |  Inscriptos: {len(df_insc):,}")
 
-    # --- Clasificación match ---
+    # Clasificación del tipo de match
     df_raw['_mc'] = df_raw['Match_Tipo'].apply(classify_match)
 
-    # --- PK deduplicación ---
+    # Clave de deduplicación (DNI > Correo > ID Consulta)
     df_raw['_pk'] = make_pk(df_raw)
 
-    # --- Fecha de creación lead ---
+    # Parsear fecha de creación del lead (D/M/YYYY en los CSVs)
     df_raw['_fecha'] = pd.to_datetime(
         df_raw.get('Consulta: Fecha de creación', pd.Series(dtype=str)),
         format='mixed', dayfirst=True, errors='coerce'
     )
 
-    # --- Fecha max inscripto ---
+    # Fecha máxima de inscripciones (límite superior de la ventana de análisis)
     max_insc_ts = get_max_insc_date(df_insc) if not df_insc.empty else pd.Timestamp.now()
 
-    # --- Totales históricos ---
+    # Totales históricos (sin restricción de fechas)
     n_raw    = len(df_raw)
     n_exacto = (df_raw['_mc'] == 'Exacto').sum()
     n_fuzzy  = (df_raw['_mc'] == 'Fuzzy').sum()
@@ -176,7 +185,7 @@ for seg in SEGMENTOS:
     n_fuzzy_dedup  = (df_dedup['_mc'] == 'Fuzzy').sum()
     n_sin_dedup    = (df_dedup['_mc'] == 'Sin_Match').sum()
 
-    # --- Ventana cohorte ---
+    # Ventana de conversión: período relevante para calcular tasa de conversión
     start = COHORT_START.get(seg)
     if start:
         mask_ventana = (df_raw['_fecha'] >= start) & (df_raw['_fecha'] <= max_insc_ts)
@@ -191,7 +200,7 @@ for seg in SEGMENTOS:
 
     print(f"  Dedup historico: {n_dedup:,}  |  Ventana: {n_ventana:,}  |  Conv: {n_conv_ventana:,}  ({tasa_conv:.2f}%)")
 
-    # --- Canal ---
+    # Clasificación por canal de marketing (Google | Facebook | Bot | Organico | Otro)
     df_raw['_canal'] = classify_fuente(df_raw)
     df_dedup2 = df_sorted.drop_duplicates(subset='_pk').copy()
     df_dedup2['_canal'] = df_raw.reindex(df_dedup2.index)['_canal'].values
@@ -205,7 +214,7 @@ for seg in SEGMENTOS:
     df_canal.insert(0, 'Segmento', seg)
     all_canales.append(df_canal)
 
-    # --- Métricas inversión ---
+    # Métricas de inversión publicitaria: CPL, CPA y ROI por canal
     g_spend = GOOGLE_SPEND.get(seg, 0.0)
     f_spend = FB_SPEND.get(seg, 0.0)
 
@@ -238,7 +247,7 @@ for seg in SEGMENTOS:
     roi_google = safe_div(rev_google - g_spend, g_spend) * 100 if g_spend > 0 else None
     roi_fb     = safe_div(rev_fb - f_spend, f_spend) * 100 if f_spend > 0 else None
 
-    # --- Inscriptos en base de inscriptos ---
+    # Totales en la base de inscriptos (perspectiva del sistema contable)
     n_insc_base   = len(df_insc) if not df_insc.empty else 0
     n_insc_exacto = 0
     n_insc_directo= 0
@@ -284,10 +293,12 @@ for seg in SEGMENTOS:
     }
     all_kpis.append(kpi)
 
-    # --- Checks de consistencia ---
+    # ============================================================
+    # CHECKS DE CONSISTENCIA (detecta errores en el pipeline)
+    # ============================================================
     checks_seg = []
 
-    # 1. Suma raw
+    # 1. La suma de exacto + fuzzy + sin_match debe ser igual al total raw
     diff_raw = abs(kpi['Check_Raw_Sum'] - n_raw)
     checks_seg.append({
         'Segmento': seg, 'Check': 'Exacto+Fuzzy+SinMatch == Leads_Raw',
@@ -335,7 +346,9 @@ for seg in SEGMENTOS:
 
     all_checks.extend(checks_seg)
 
-    # --- Alertas ---
+    # ============================================================
+    # ALERTAS (valores fuera de rangos esperados)
+    # ============================================================
     if tasa_conv > 30:
         all_alertas.append({'Segmento': seg, 'Indicador': 'Tasa_Conv_%',
                              'Valor': f'{tasa_conv:.2f}%', 'Alerta': 'Tasa > 30% — revisar ventana cohorte'})
@@ -469,7 +482,7 @@ for sheet_name in wb.sheetnames:
 
 wb.save(out_file)
 size_mb = os.path.getsize(out_file) / 1_048_576
-print(f"\n-> Auditoria generada: {out_file}")
+print(f"\n-> Excel generado: {out_file}")
 print(f"   Tamano: {size_mb:.1f} MB")
 print(f"   Hojas: KPIs_Por_Segmento | Canal_X_Segmento | Checks_Consistencia | Alertas | KPIs_Horizontal")
 n_ok    = (df_checks['OK'] == 'SI').sum()
@@ -479,4 +492,153 @@ if not df_alertas.empty:
     print(f"ALERTAS GENERADAS: {len(df_alertas)}")
     for _, a in df_alertas.iterrows():
         print(f"  [{a['Segmento']}] {a['Indicador']}: {a['Alerta']}")
+
+# ============================================================
+# GENERAR PDF: RESUMEN VISUAL DE LA AUDITORÍA
+# ============================================================
+# Helvetica solo soporta latin-1: reemplazar caracteres fuera de rango
+def safe_pdf_text(s):
+    """Convierte texto a latin-1 safe para fpdf2 Helvetica."""
+    return (str(s)
+            .replace('\u2014', '-')   # em dash
+            .replace('\u2013', '-')   # en dash
+            .replace('\u2019', "'")   # comilla curva
+            .replace('\u201c', '"')
+            .replace('\u201d', '"')
+            .encode('latin-1', errors='replace').decode('latin-1'))
+
+print("\nGenerando PDF de auditoria...")
+pdf = FPDF()
+pdf.add_page()
+
+# Encabezado
+pdf.set_font('Helvetica', 'B', 15)
+pdf.cell(0, 10, 'Auditoria de Indicadores - UCASAL Marketing', ln=True, align='C')
+pdf.set_font('Helvetica', 'I', 9)
+pdf.cell(0, 6, f'Generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}  |  '
+               f'Segmentos: {", ".join(SEGMENTOS)}', ln=True, align='C')
+pdf.ln(5)
+
+# KPIs por segmento
+pdf.set_font('Helvetica', 'B', 11)
+pdf.cell(0, 8, '1. KPIs Clave por Segmento', ln=True)
+pdf.set_font('Helvetica', '', 9)
+# Métricas a mostrar en el PDF (subconjunto de todas las métricas del Excel)
+metricas_pdf = [
+    'Leads_Raw', 'Personas_Dedup', 'Exacto_Dedup',
+    'Leads_Ventana_Dedup', 'Conv_Ventana_Exacto', 'Tasa_Conv_%',
+    'Google_Spend_ARS', 'Facebook_Spend_ARS', 'CPL_Google', 'CPA_Google',
+    'CPL_Facebook', 'CPA_Facebook', 'ROI_Google_%', 'ROI_Facebook_%',
+]
+# Encabezado de tabla
+col_w_m = 65
+col_w_v = 55
+pdf.set_font('Helvetica', 'B', 8)
+pdf.set_fill_color(31, 78, 121)
+pdf.set_text_color(255, 255, 255)
+pdf.cell(col_w_m, 7, 'Metrica', border=1, fill=True)
+for seg in SEGMENTOS:
+    pdf.cell(col_w_v, 7, seg.replace('_', ' '), border=1, fill=True, align='C')
+pdf.ln()
+pdf.set_text_color(0, 0, 0)
+
+# Filas de métricas
+for i, metrica in enumerate(metricas_pdf):
+    fill = (i % 2 == 0)
+    if fill:
+        pdf.set_fill_color(235, 245, 255)
+    else:
+        pdf.set_fill_color(255, 255, 255)
+    pdf.set_font('Helvetica', '', 8)
+    pdf.cell(col_w_m, 6, metrica, border=1, fill=fill)
+    for kpi in all_kpis:
+        if kpi['Segmento'] in SEGMENTOS:
+            val = kpi.get(metrica, '')
+            if isinstance(val, float):
+                val_str = f"{val:,.2f}" if val < 1_000_000 else f"{val:,.0f}"
+            elif isinstance(val, int):
+                val_str = f"{val:,}"
+            else:
+                val_str = str(val) if val is not None else ''
+            pdf.cell(col_w_v, 6, val_str, border=1, fill=fill, align='R')
+    pdf.ln()
+
+pdf.ln(5)
+
+# Checks de consistencia
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 11)
+pdf.cell(0, 8, '2. Checks de Consistencia del Pipeline', ln=True)
+pdf.set_font('Helvetica', 'B', 8)
+pdf.set_fill_color(31, 78, 121)
+pdf.set_text_color(255, 255, 255)
+chk_ws = [30, 100, 25, 25, 20]
+chk_hs = ['Segmento', 'Check', 'Esperado', 'Obtenido', 'OK']
+for h, w in zip(chk_hs, chk_ws):
+    pdf.cell(w, 7, h, border=1, fill=True, align='C')
+pdf.ln()
+pdf.set_text_color(0, 0, 0)
+for i, (_, row) in enumerate(df_checks.iterrows()):
+    pdf.set_font('Helvetica', '', 7)
+    ok_val = str(row.get('OK', ''))
+    if ok_val == 'SI':
+        pdf.set_fill_color(198, 239, 206)   # verde
+    elif ok_val == 'NO':
+        pdf.set_fill_color(255, 199, 206)   # rojo
+    else:
+        pdf.set_fill_color(255, 235, 156)   # amarillo (ALERTA)
+    vals = [
+        safe_pdf_text(row.get('Segmento', '')),
+        safe_pdf_text(str(row.get('Check', ''))[:65]),
+        safe_pdf_text(str(row.get('Esperado', ''))[:18]),
+        safe_pdf_text(str(row.get('Obtenido', ''))[:18]),
+        ok_val,
+    ]
+    for v, w in zip(vals, chk_ws):
+        pdf.cell(w, 6, v, border=1, fill=True)
+    pdf.ln()
+    pdf.set_fill_color(255, 255, 255)
+
+# Alertas (si existen)
+if not df_alertas.empty:
+    pdf.ln(4)
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.cell(0, 8, '3. Alertas Detectadas', ln=True)
+    pdf.set_font('Helvetica', '', 9)
+    for _, a in df_alertas.iterrows():
+        pdf.set_fill_color(255, 235, 156)
+        pdf.cell(0, 6, safe_pdf_text(f"[{a['Segmento']}] {a['Indicador']}: {a['Alerta']}"), ln=True, fill=True)
+    pdf.set_fill_color(255, 255, 255)
+
+pdf_path = os.path.join(OUT_DIR, 'Auditoria_Indicadores.pdf')
+pdf.output(pdf_path)
+print(f"-> PDF generado: {pdf_path}")
+
+# ============================================================
+# DOCUMENTACIÓN MARKDOWN
+# ============================================================
+md_lines = [
+    "# Auditoria de Indicadores - UCASAL Marketing\n",
+    f"**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  \n",
+    f"**Script:** `22_auditoria_indicadores.py`  \n",
+    f"**Checks:** {n_ok} OK | {n_fail} con problemas  \n",
+    f"**Alertas:** {len(df_alertas)}  \n\n",
+    "## KPIs por Segmento\n\n",
+    df_kpis_v[['Metrica'] + SEGMENTOS].to_markdown(index=False),
+    "\n\n## Checks de Consistencia\n\n",
+    df_checks.to_markdown(index=False),
+]
+if not df_alertas.empty:
+    md_lines += ["\n\n## Alertas\n\n", df_alertas.to_markdown(index=False)]
+md_lines += [
+    "\n\n## Archivos de Salida\n",
+    "| Archivo | Descripcion |\n|---|---|\n",
+    f"| `Auditoria_Indicadores.xlsx` | Excel con 5 hojas (KPIs, canales, checks, alertas) |\n",
+    f"| `Auditoria_Indicadores.pdf` | Informe visual con KPIs y checks |\n",
+    f"| `Auditoria_Indicadores.md` | Este archivo |\n",
+]
+md_path = os.path.join(OUT_DIR, 'Auditoria_Indicadores.md')
+with open(md_path, 'w', encoding='utf-8') as f:
+    f.writelines(md_lines)
+print(f"-> MD generado: {md_path}")
 print("\nProceso finalizado.")

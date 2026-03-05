@@ -94,6 +94,19 @@ leads_convertidos_fuzzy = len(df_leads[df_leads['Match_Tipo'].astype(str).str.co
 leads_no_convertidos = len(df_leads[df_leads['Match_Tipo'] == 'No (Solo Lead)'])
 tasa_conversion_leads = (leads_convertidos_exact / total_leads_conv) * 100 if total_leads_conv > 0 else 0
 
+# Clasificación por campaña (usa Campana_Lead de 02_cruce_datos.py)
+# Se busca sobre TODOS los leads (df_leads), no solo los de la ventana de conversión,
+# porque el propósito es identificar inscriptos cuyo lead vino de campaña anterior.
+if 'Campana_Lead' in df_leads.columns:
+    label_campana_actual = 'Ingreso 2026' if segmento == 'Grado_Pregrado' else '2026'
+    all_exact = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')]
+    insc_campana_actual = len(all_exact[all_exact['Campana_Lead'] == label_campana_actual])
+    insc_campana_anterior = len(all_exact[all_exact['Campana_Lead'] == 'Campaña Anterior'])
+else:
+    label_campana_actual = ''
+    insc_campana_actual = 0
+    insc_campana_anterior = 0
+
 # Limpiar UTM y FuenteLead para calcular Meta y Google
 df_leads_conv['UtmSource_Clean'] = df_leads_conv['UtmSource'].astype(str).str.lower().str.strip()
 df_leads_conv['UtmCampaign_Clean'] = df_leads_conv['UtmCampaign'].astype(str).str.strip().replace('nan', '')
@@ -151,15 +164,92 @@ chart1_path = os.path.join(output_dir, "chart_1_conversion_leads.png")
 plt.savefig(chart1_path, bbox_inches='tight')
 plt.close()
 
-# Gráfico 2: Composición de Inscriptos (Atribuidos vs Directos)
-plt.figure(figsize=(6, 6))
-labels_insc = ['Atribuidos a Paid Ads', 'Sin trazabilidad']
-sizes_insc = [inscriptos_con_origen, inscriptos_directos]
-plt.pie(sizes_insc, labels=labels_insc, autopct='%1.1f%%', startangle=140, colors=sns.color_palette("pastel")[0:2])
-plt.title('Orígenes de Inscriptos')
+# Gráfico 2: Composición de Inscriptos por Canal — solo Campaña 2026
+# Se filtran inscriptos cuyo lead matcheó exactamente Y pertenece a la campaña actual.
+# Esto garantiza que el foco del informe sea exclusivamente la campaña vigente.
+if 'Campana_Lead' in df_leads_conv.columns:
+    df_insc_2026 = df_leads_conv[
+        (df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')) &
+        (df_leads_conv['Campana_Lead'] == label_campana_actual)
+    ].copy()
+    titulo_pie = f'Origenes de Inscriptos - Campana {label_campana_actual}'
+else:
+    df_insc_2026 = df_leads_conv[df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')].copy()
+    titulo_pie = 'Origenes de Inscriptos (Exacto)'
+
+# Clasificar por canal
+df_insc_2026['_utm_pie'] = df_insc_2026['UtmSource'].astype(str).str.lower().str.strip()
+df_insc_2026['_fl_pie'] = pd.to_numeric(df_insc_2026['FuenteLead'], errors='coerce')
+meta_kw = ['fb', 'facebook', 'ig', 'instagram', 'meta']
+m_google_pie = df_insc_2026['_utm_pie'].str.contains('google', na=False)
+m_fb_pie = df_insc_2026['_utm_pie'].str.contains('|'.join(meta_kw), na=False) | (df_insc_2026['_fl_pie'] == 18)
+m_bot_pie = df_insc_2026['_fl_pie'] == 907
+m_otros_pie = ~m_google_pie & ~m_fb_pie & ~m_bot_pie
+
+pie_data = {
+    'Google Ads': int(m_google_pie.sum()),
+    'Meta (FB/IG)': int(m_fb_pie.sum()),
+    'Bot (907)': int(m_bot_pie.sum()),
+    'Otros / Organico': int(m_otros_pie.sum()),
+}
+# Agregar inscriptos sin lead (directos) como categoría separada
+pie_data['Sin trazabilidad'] = inscriptos_directos
+# Filtrar categorías con 0
+pie_labels = [k for k, v in pie_data.items() if v > 0]
+pie_sizes = [v for v in pie_data.values() if v > 0]
+
+plt.figure(figsize=(7, 7))
+colors_pie = ['#3498db', '#e74c3c', '#9b59b6', '#f39c12', '#95a5a6']
+plt.pie(pie_sizes, labels=pie_labels, autopct=lambda p: f'{p:.1f}%\n({int(round(p*sum(pie_sizes)/100)):,})',
+        startangle=140, colors=colors_pie[:len(pie_labels)])
+plt.title(titulo_pie)
 chart2_path = os.path.join(output_dir, "chart_2_composicion_inscriptos.png")
 plt.savefig(chart2_path, bbox_inches='tight')
 plt.close()
+
+# Gráfico 2b: Comparativa Inscriptos por Canal — Campaña 2026 vs Anterior
+# Solo se genera si existe la columna Campana_Lead y hay inscriptos de ambas campañas.
+# Usa df_leads (todos los leads, no solo ventana) para ver ambas campañas.
+if 'Campana_Lead' in df_leads.columns and insc_campana_anterior > 0:
+    df_exact_all = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')].copy()
+    df_exact_all['_utm_cmp'] = df_exact_all['UtmSource'].astype(str).str.lower().str.strip()
+    df_exact_all['_fl_cmp'] = pd.to_numeric(df_exact_all['FuenteLead'], errors='coerce')
+
+    def classify_canal(row):
+        utm = str(row['_utm_cmp'])
+        fl = row['_fl_cmp']
+        if 'google' in utm: return 'Google Ads'
+        if any(k in utm for k in meta_kw) or fl == 18: return 'Meta (FB/IG)'
+        if fl == 907: return 'Bot (907)'
+        return 'Otros'
+
+    df_exact_all['_canal'] = df_exact_all.apply(classify_canal, axis=1)
+    cmp_table = df_exact_all.groupby(['Campana_Lead', '_canal']).size().unstack(fill_value=0)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    canales = ['Google Ads', 'Meta (FB/IG)', 'Bot (907)', 'Otros']
+    canales_present = [c for c in canales if c in cmp_table.columns]
+    x = np.arange(len(canales_present))
+    width = 0.35
+
+    vals_actual = [int(cmp_table.loc[label_campana_actual, c]) if label_campana_actual in cmp_table.index else 0 for c in canales_present]
+    vals_anterior = [int(cmp_table.loc['Campaña Anterior', c]) if 'Campaña Anterior' in cmp_table.index else 0 for c in canales_present]
+
+    bars1 = ax.bar(x - width/2, vals_actual, width, label=f'Campana {label_campana_actual}', color='#2ecc71')
+    bars2 = ax.bar(x + width/2, vals_anterior, width, label='Campana Anterior', color='#e67e22')
+    ax.set_xticks(x)
+    ax.set_xticklabels(canales_present)
+    ax.set_ylabel('Inscriptos (Exacto)')
+    ax.set_title(f'Comparativa Inscriptos por Canal: {label_campana_actual} vs Anterior')
+    ax.legend()
+    ax.bar_label(bars1, fmt='%d', padding=3)
+    ax.bar_label(bars2, fmt='%d', padding=3)
+    plt.tight_layout()
+    chart2b_path = os.path.join(output_dir, "chart_2b_campana_comparativa.png")
+    plt.savefig(chart2b_path, bbox_inches='tight')
+    plt.close()
+else:
+    chart2b_path = None
 
 # Gráfico 5: Procedencia Pagado vs Otros
 plt.figure(figsize=(6, 6))
@@ -231,6 +321,100 @@ if not df_tiempos.empty:
     report_tiempos += f"Comparativa gráfica de cuánto demora en inscribirse un prospecto según su origen (filtrado de 0 a 180 días).\n\n"
     report_tiempos += tiempos_agrupados.round(1).to_markdown() + "\n\n"
     report_tiempos += "![Tiempos Resolucion](chart_8_tiempos_resolucion.png)\n"
+
+# =========================================================
+# ANÁLISIS MULTI-TOUCH PARA INSCRIPTOS
+# =========================================================
+# Para cada inscripto (matcheado exacto), identifica TODOS los leads (consultas)
+# que esa persona generó a través de diferentes canales. Esto muestra el
+# comportamiento real: una persona puede consultar primero por Google, luego
+# por Bot, y finalmente inscribirse. El análisis multi-touch revela qué
+# combinaciones de canales son más efectivas.
+
+# Clave de persona: DNI limpio (sin decimal), fallback a Correo
+df_leads['_pk_mt'] = df_leads['DNI'].astype(str).str.split('.').str[0].str.strip()
+df_leads.loc[df_leads['_pk_mt'].isin(['nan', '', 'None']), '_pk_mt'] = \
+    df_leads.loc[df_leads['_pk_mt'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+
+# Identificar canal de cada lead
+df_leads['_utm_mt'] = df_leads['UtmSource'].astype(str).str.lower().str.strip()
+df_leads['_fl_mt'] = pd.to_numeric(df_leads['FuenteLead'], errors='coerce')
+
+def canal_mt(row):
+    utm = str(row['_utm_mt'])
+    fl = row['_fl_mt']
+    if 'google' in utm: return 'Google'
+    if any(k in utm for k in ['fb', 'facebook', 'ig', 'instagram', 'meta']) or fl == 18: return 'Meta'
+    if fl == 907: return 'Bot'
+    return 'Otros'
+
+df_leads['_canal_mt'] = df_leads.apply(canal_mt, axis=1)
+
+# Filtrar solo inscriptos exactos: buscar en df_leads (que tiene _pk_mt)
+# restringido a los que están en la ventana de conversión
+df_leads_conv_mt = df_leads[
+    (df_leads['Match_Tipo'].astype(str).str.contains('Exacto')) &
+    (df_leads['Fecha_Limpia_Consulta'] >= ('2025-09-01' if segmento == 'Grado_Pregrado' else '1900-01-01')) &
+    (df_leads['Fecha_Limpia_Consulta'] <= max_insc_ts)
+].copy()
+inscriptos_pks = set(df_leads_conv_mt['_pk_mt'].unique())
+
+# Para cada inscripto, obtener la lista de canales que consultó (sin repetir)
+df_insc_leads = df_leads[df_leads['_pk_mt'].isin(inscriptos_pks)].copy()
+canales_por_persona = df_insc_leads.groupby('_pk_mt')['_canal_mt'].apply(lambda x: sorted(set(x))).reset_index()
+canales_por_persona['n_canales'] = canales_por_persona['_canal_mt'].apply(len)
+canales_por_persona['combinacion'] = canales_por_persona['_canal_mt'].apply(lambda x: ' + '.join(x))
+
+# Estadísticas multi-touch
+n_multi = int((canales_por_persona['n_canales'] > 1).sum())
+n_single = int((canales_por_persona['n_canales'] == 1).sum())
+total_insc_mt = len(canales_por_persona)
+
+# Gráfico multi-touch: distribución de canales por inscripto
+mt_dist = canales_por_persona['n_canales'].value_counts().sort_index()
+plt.figure(figsize=(8, 5))
+bars = plt.bar(mt_dist.index.astype(str), mt_dist.values, color='#3498db')
+plt.xlabel('Cantidad de canales consultados')
+plt.ylabel('Cantidad de inscriptos')
+plt.title(f'Multi-Touch: Canales por Inscripto ({label_campana_actual if label_campana_actual else segmento})')
+for bar in bars:
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+             f'{int(bar.get_height()):,}', ha='center', fontsize=10)
+chart_mt1_path = os.path.join(output_dir, "chart_multitouch_canales.png")
+plt.savefig(chart_mt1_path, bbox_inches='tight')
+plt.close()
+
+# Gráfico multi-touch: top combinaciones de canales
+top_combos = canales_por_persona['combinacion'].value_counts().head(10)
+plt.figure(figsize=(10, 6))
+bars = plt.barh(top_combos.index[::-1], top_combos.values[::-1], color='#2ecc71')
+plt.xlabel('Cantidad de inscriptos')
+plt.title(f'Top 10 Combinaciones de Canales - Inscriptos ({label_campana_actual if label_campana_actual else segmento})')
+for bar in bars:
+    plt.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2,
+             f'{int(bar.get_width()):,}', va='center', fontsize=9)
+plt.tight_layout()
+chart_mt2_path = os.path.join(output_dir, "chart_multitouch_combinaciones.png")
+plt.savefig(chart_mt2_path, bbox_inches='tight')
+plt.close()
+
+# Markdown para multi-touch
+report_multitouch = f"""### Analisis Multi-Touch de Inscriptos
+Cada inscripto puede haber consultado por multiples canales antes de inscribirse.
+Este analisis revela el comportamiento real del journey.
+
+| Metrica | Valor |
+|---|---|
+| Inscriptos con 1 solo canal | {n_single:,} ({n_single/total_insc_mt*100:.1f}%) |
+| Inscriptos con 2+ canales (multi-touch) | {n_multi:,} ({n_multi/total_insc_mt*100:.1f}%) |
+| Total inscriptos analizados | {total_insc_mt:,} |
+
+#### Top Combinaciones de Canales
+{top_combos.reset_index().rename(columns={'index':'Combinacion', 'combinacion':'Combinacion', 'count':'Inscriptos'}).to_markdown(index=False)}
+
+![Multi-Touch Canales](chart_multitouch_canales.png)
+![Multi-Touch Combinaciones](chart_multitouch_combinaciones.png)
+"""
 
 # Gráfico 9: Curva de Consultas/Leads por Día
 # Consulta: Fecha de creación viene en D/M/YYYY desde Salesforce — requiere dayfirst=True
@@ -375,13 +559,24 @@ De igual manera, al observar solo las **{len(df_exactos):,} inscripciones (cruce
 
 *(Nota sobre Fuzzys: Existen {leads_convertidos_fuzzy:,} leads sospechosos de ser inscriptos ({inscriptos_con_origen_fuzzy:,} inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
 
+### Atribución por Campaña
+{'La columna `Campana_Lead` identifica si el lead que generó la inscripción pertenece a la campaña actual o a una anterior.' if insc_campana_actual > 0 or insc_campana_anterior > 0 else 'Columna Campana_Lead no disponible — ejecutar 02_cruce_datos.py para generarla.'}
+{'| Campaña | Inscriptos Exactos |' if (insc_campana_actual + insc_campana_anterior) > 0 else ''}
+{'|---|---|' if (insc_campana_actual + insc_campana_anterior) > 0 else ''}
+{'| Campaña actual (' + label_campana_actual + ') | ' + f'{insc_campana_actual:,}' + ' |' if (insc_campana_actual + insc_campana_anterior) > 0 else ''}
+{'| Campaña anterior (match histórico) | ' + f'{insc_campana_anterior:,}' + ' |' if (insc_campana_actual + insc_campana_anterior) > 0 else ''}
+
 ### Visualización de Tasas y Atribución
 ![Conversión Leads](chart_1_conversion_leads.png)
 ![Composición Inscriptos](chart_2_composicion_inscriptos.png)
 ![Pagados vs Otros Leads](chart_5_leads_pagos_vs_otros.png)
 ![Pagados vs Otros Inscriptos](chart_7_inscriptos_pagos_vs_otros.png)
 
+{'![Comparativa por Campana](chart_2b_campana_comparativa.png)' if insc_campana_anterior > 0 else ''}
+
 {report_tiempos}
+
+{report_multitouch}
 
 ## 2. Journey del Estudiante (Comportamiento)
 Analizando el número de veces que un usuario consulta antes de pagar su matrícula, observamos los siguientes patrones:
@@ -526,6 +721,17 @@ memoria = f"""# Memoria Técnica: Informe Analítico de Marketing
 |---|---|---|
 | Plataformas Pagas (UTM/Ads) | {total_pago:,} | {(total_pago/total_leads)*100:.1f}% |
 | Otros (Orgánico/Sin Tracking) | {total_otros:,} | {(total_otros/total_leads)*100:.1f}% |
+
+## Atribución por Campaña
+| Métrica | Valor |
+|---|---|
+| Inscriptos campaña actual ({label_campana_actual}) | {insc_campana_actual:,} |
+| Inscriptos campaña anterior (match histórico) | {insc_campana_anterior:,} |
+
+La columna `Campana_Lead` en el CSV maestro indica si la fecha de consulta del lead
+cae dentro de la ventana de la campaña actual o es anterior. Generada por `02_cruce_datos.py`.
+- Grado_Pregrado: >= 2025-09-01 = "Ingreso 2026", antes = "Campaña Anterior"
+- Cursos/Posgrados: >= 2026-01-01 = "2026", antes = "Campaña Anterior"
 
 ## Reglas de Negocio Aplicadas
 - **Filtro de cohorte (Grado_Pregrado):** {'Sí — leads desde 2025-09-01' if segmento == 'Grado_Pregrado' else 'No — se usan todos los leads'}

@@ -14,20 +14,32 @@ DESCUBRIMIENTO CLAVE:
   gmail.com.ar NO EXISTE como dominio. Es el error más común en Argentina
   (434 leads afectados). Ver README_DEV.md Lección 6.
 
-OUTPUT: outputs/Calidad_Datos/dominios_invalidos.[md/xlsx]
+SALIDA (output_dir = outputs/Calidad_Datos/):
+  - dominios_invalidos.pdf    -> Informe visual con tablas de typos y dominios sospechosos
+  - dominios_invalidos.md     -> Documentación markdown del análisis
+  - dominios_invalidos.xlsx   -> Datos en Excel (2 hojas: Typos_Conocidos, Dominios_Sospechosos)
+  - memoria_tecnica.md        -> Metadata del proceso
 """
 import pandas as pd
 import os
 from datetime import datetime
+from fpdf import FPDF
 
+# ============================================================
+# CONFIGURACIÓN DE RUTAS
+# ============================================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
 output_dir = os.path.join(base_dir, "outputs", "Calidad_Datos")
 os.makedirs(output_dir, exist_ok=True)
 base_output_dir = os.path.join(base_dir, "outputs", "Data_Base")
+# CSV consolidado (todos los segmentos)
 leads_csv = os.path.join(base_output_dir, "reporte_marketing_leads_completos.csv")
 inscriptos_csv = os.path.join(base_output_dir, "reporte_marketing_inscriptos_origenes.csv")
 
-# Dominios válidos comunes (los que realmente existen)
+# ============================================================
+# DOMINIOS DE REFERENCIA
+# ============================================================
+# Proveedores de correo comunes y válidos en Argentina
 DOMINIOS_VALIDOS = {
     'gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com', 'live.com',
     'hotmail.com.ar', 'yahoo.com.ar', 'outlook.com.ar', 'live.com.ar',
@@ -36,9 +48,9 @@ DOMINIOS_VALIDOS = {
     'ucasal.edu.ar'  # dominio institucional
 }
 
-# ======================================================
+# ============================================================
 # DICCIONARIO DE CORRECCIONES CONOCIDAS
-# ======================================================
+# ============================================================
 # Mapeo de dominios con errores de tipeo → dominio correcto.
 # Se agregan nuevos typos a medida que se descubren en la sección 2 del output.
 # NOTA: gmail.com.ar NO EXISTE como servicio de Google. Es un error
@@ -72,9 +84,9 @@ CORRECCIONES = {
     'icloud.con': 'icloud.com',
 }
 
-# ======================================================
+# ============================================================
 # CARGA Y PREPARACIÓN DE DATOS
-# ======================================================
+# ============================================================
 # Solo cargamos 3 columnas para evitar problemas de memoria con el CSV grande.
 print("Cargando datos...")
 try:
@@ -82,64 +94,70 @@ try:
 except Exception:
     df_leads = pd.read_csv(leads_csv, low_memory=False)
 
-# Limpiar correos: minúsculas, sin espacios
+# Limpiar correos: minúsculas y sin espacios para comparación homogénea
 df_leads = df_leads.dropna(subset=['Correo'])
 df_leads['Correo'] = df_leads['Correo'].astype(str).str.lower().str.strip()
 # Extraer dominio: todo lo que está después del '@'
 df_leads['Domain'] = df_leads['Correo'].apply(lambda x: x.split('@')[-1] if '@' in x else '')
 
-# Columna binaria: 1 si matcheo exacto, 0 si no
+# Columna binaria: 1 si matcheó exacto, 0 si no (para calcular tasas de match por dominio)
 df_leads['Es_Exacto'] = df_leads['Match_Tipo'].astype(str).str.contains('Exacto', case=False, na=False).astype(int)
 
 # Obtener todos los dominios y su frecuencia
 all_domains = df_leads['Domain'].value_counts().reset_index()
 all_domains.columns = ['Domain', 'Total_Leads']
 
-# Identificar dominios sospechosos (que son typos de dominios conocidos)
-print("Detectando dominios inválidos y sospechosos...")
+# ============================================================
+# ANÁLISIS DE TYPOS CONOCIDOS
+# ============================================================
+print("Detectando dominios invalidos y sospechosos...")
 
-# Encontrar dominios que están en las correcciones conocidas
+# Identificar dominios que coinciden con el diccionario de correcciones
 typo_domains = all_domains[all_domains['Domain'].isin(CORRECCIONES.keys())].copy()
 typo_domains['Dominio_Correcto'] = typo_domains['Domain'].map(CORRECCIONES)
 
-# También detectar dominios no comunes con pocas apariciones que se parezcan a comunes
-# Buscar dominios con < 50 leads que no estén en los válidos
+# ============================================================
+# ANÁLISIS DE DOMINIOS POCO COMUNES (SOSPECHOSOS)
+# ============================================================
+# Dominios con >= 5 leads que no son proveedores conocidos ni están en las correcciones
+# Pueden ser dominios corporativos, institucionales, o errores no catalogados
 small_domains = all_domains[
-    (all_domains['Total_Leads'] >= 5) & 
+    (all_domains['Total_Leads'] >= 5) &
     (~all_domains['Domain'].isin(DOMINIOS_VALIDOS)) &
     (all_domains['Domain'] != '') &
     (~all_domains['Domain'].isin(CORRECCIONES.keys()))
 ].copy()
 
-# Para los typos conocidos, analizar su impacto en el match
+# ============================================================
+# CÁLCULO DE IMPACTO POTENCIAL
+# ============================================================
+# Para cada typo, estimar cuántos matches se recuperarían si se corrigiera el dominio.
+# Método: aplicar la tasa de match del dominio correcto a los leads no matcheados del typo.
 print("Calculando impacto potencial...")
 
-md_content = "# Análisis de Dominios de Correo Inválidos\n\n"
-md_content += "Este informe identifica dominios de correo electrónico que no existen o son errores de tipeo, "
-md_content += "y estima cuántos leads podrían recuperarse si se corrigiesen.\n\n"
+md_content = "# Analisis de Dominios de Correo Invalidos\n\n"
+md_content += "Este informe identifica dominios de correo electronico que no existen o son errores de tipeo, "
+md_content += "y estima cuantos leads podrian recuperarse si se corrigiesen.\n\n"
 
-# Análisis detallado por typo
 results = []
 for _, row in typo_domains.iterrows():
     typo = row['Domain']
     correcto = row['Dominio_Correcto']
     total = row['Total_Leads']
-    
-    # Cuantos de este typo matchearon a pesar del error en el dominio
+
+    # Cuántos de este typo matchearon a pesar del error en el dominio
     leads_typo = df_leads[df_leads['Domain'] == typo]
     matcheados = leads_typo['Es_Exacto'].sum()
     no_matcheados = total - matcheados
-    
-    # Obtener la tasa de match del dominio CORRECTO como referencia
-    # Ej: si gmail.com tiene tasa de 3.67%, asumimos que los leads con gmail.con
-    # tendrían esa misma tasa si se les corrigiera el dominio
+
+    # Tasa de match del dominio correcto como referencia para la estimación
+    # Si gmail.com tiene 5.5% de tasa, aplicamos eso a los leads con gmail.con
     leads_correcto = df_leads[df_leads['Domain'] == correcto]
     tasa_correcto = (leads_correcto['Es_Exacto'].sum() / len(leads_correcto) * 100) if len(leads_correcto) > 0 else 0
-    
-    # Estimación conservadora: aplicar tasa del dominio correcto a los no matcheados
-    # Esto NO garantiza que matcheen, solo estima el potencial
+
+    # Estimación conservadora: solo se recuperarían los que hubieran matcheado con el dominio correcto
     matches_esperados = int(no_matcheados * tasa_correcto / 100)
-    
+
     results.append({
         'Dominio_Typo': typo,
         'Dominio_Correcto': correcto,
@@ -157,20 +175,19 @@ total_afectados = df_results['Total_Leads'].sum()
 
 md_content += "## 1. Dominios con Errores de Tipeo Conocidos\n\n"
 md_content += f"Se detectaron **{len(df_results)}** dominios con errores de tipeo, afectando **{total_afectados:,}** leads.\n"
-md_content += f"**Estimación de matches recuperables si se corrigiesen:** {total_recuperables:,} nuevos matches potenciales.\n\n"
+md_content += f"**Estimacion de matches recuperables si se corrigiesen:** {total_recuperables:,} nuevos matches potenciales.\n\n"
 md_content += df_results.to_markdown(index=False) + "\n\n"
 
-md_content += "### Cómo se calcula la estimación\n"
+md_content += "### Como se calcula la estimacion\n"
 md_content += "Se toma la tasa de match del dominio correcto (ej: gmail.com tiene ~5.5%) "
 md_content += "y se aplica a los leads no matcheados del dominio con typo. "
-md_content += "Esto da una estimación conservadora de cuántos matches se recuperarían.\n\n"
+md_content += "Esto da una estimacion conservadora de cuantos matches se recuperarian.\n\n"
 
 # Dominios sospechosos no clasificados
-md_content += "## 2. Otros Dominios Poco Comunes (Revisión Manual)\n\n"
-md_content += "Los siguientes dominios tienen 5 o más leads pero no son proveedores de correo comunes. "
-md_content += "Podrían ser dominios corporativos legítimos, institucionales, o errores.\n\n"
+md_content += "## 2. Otros Dominios Poco Comunes (Revision Manual)\n\n"
+md_content += "Los siguientes dominios tienen 5 o mas leads pero no son proveedores de correo comunes. "
+md_content += "Podrian ser dominios corporativos legitimos, institucionales, o errores.\n\n"
 
-# Agregar stats de match para estos
 susp_results = []
 for _, row in small_domains.head(30).iterrows():
     dom = row['Domain']
@@ -188,7 +205,9 @@ for _, row in small_domains.head(30).iterrows():
 df_sospechosos = pd.DataFrame(susp_results)
 md_content += df_sospechosos.to_markdown(index=False) + "\n\n"
 
-# Guardar
+# ============================================================
+# GUARDAR MARKDOWN Y EXCEL
+# ============================================================
 print("Guardando resultados...")
 with open(os.path.join(output_dir, 'dominios_invalidos.md'), 'w', encoding='utf-8') as f:
     f.write(md_content)
@@ -196,6 +215,136 @@ with open(os.path.join(output_dir, 'dominios_invalidos.md'), 'w', encoding='utf-
 with pd.ExcelWriter(os.path.join(output_dir, 'dominios_invalidos.xlsx')) as writer:
     df_results.to_excel(writer, sheet_name='Typos_Conocidos', index=False)
     df_sospechosos.to_excel(writer, sheet_name='Dominos_Sospechosos', index=False)
+
+# ============================================================
+# GENERAR PDF
+# ============================================================
+print("Generando PDF de calidad de datos...")
+
+pdf = FPDF()
+pdf.add_page()
+
+# Encabezado
+pdf.set_font('Helvetica', 'B', 15)
+pdf.cell(0, 10, 'Calidad de Datos: Dominios de Correo Invalidos', ln=True, align='C')
+pdf.set_font('Helvetica', 'I', 9)
+pdf.cell(0, 6, f'Generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}  |  '
+               f'Total leads analizados: {len(df_leads):,}', ln=True, align='C')
+pdf.ln(5)
+
+# Introduccion
+pdf.set_font('Helvetica', '', 10)
+pdf.multi_cell(0, 6,
+    "Este informe identifica dominios de correo electronico con errores de tipeo que impiden "
+    "el matcheo de leads con inscriptos. Por ejemplo: gmail.com.ar no existe como dominio "
+    "(Google no opera un servicio .com.ar), pero es un error muy comun en Argentina.")
+pdf.ln(4)
+
+# Resumen de impacto
+pdf.set_font('Helvetica', 'B', 11)
+pdf.cell(0, 8, '1. Resumen de Impacto', ln=True)
+pdf.set_font('Helvetica', '', 10)
+pdf.cell(0, 6, f'  Dominios con typos detectados: {len(df_results)}', ln=True)
+pdf.cell(0, 6, f'  Leads afectados por typos: {total_afectados:,}', ln=True)
+pdf.cell(0, 6, f'  Matches recuperables estimados: {total_recuperables:,}', ln=True)
+pdf.ln(4)
+
+# Tabla de typos conocidos
+pdf.set_font('Helvetica', 'B', 11)
+pdf.cell(0, 8, '2. Typos Conocidos y Matches Recuperables', ln=True)
+pdf.set_font('Helvetica', 'B', 8)
+col_ws = [40, 35, 22, 28, 28, 32, 30]
+headers = ['Dominio Typo', 'Correcto', 'Total Leads', 'Matcheados', 'No Match', 'Tasa Correcto %', 'Recuperables Est.']
+for h, w in zip(headers, col_ws):
+    pdf.cell(w, 7, h, border=1, align='C')
+pdf.ln()
+pdf.set_font('Helvetica', '', 8)
+for i, (_, r) in enumerate(df_results.iterrows()):
+    fill = (i % 2 == 0)
+    if fill:
+        pdf.set_fill_color(235, 245, 255)
+    vals = [
+        str(r['Dominio_Typo']), str(r['Dominio_Correcto']),
+        f"{int(r['Total_Leads']):,}", f"{int(r['Matcheados_Actuales']):,}",
+        f"{int(r['No_Matcheados']):,}", f"{r['Tasa_Dominio_Correcto_%']:.2f}%",
+        f"{int(r['Matches_Recuperables_Est']):,}",
+    ]
+    for v, w in zip(vals, col_ws):
+        pdf.cell(w, 6, v, border=1, fill=fill)
+    pdf.ln()
+    pdf.set_fill_color(255, 255, 255)
+
+pdf.ln(5)
+
+# Tabla de dominios sospechosos
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 11)
+pdf.cell(0, 8, '3. Dominios Poco Comunes (Revision Manual)', ln=True)
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    "Dominios con 5+ leads que no son proveedores comunes. Pueden ser corporativos, "
+    "institucionales o errores no catalogados. Revisar manualmente los de tasa > 0%.")
+pdf.ln(3)
+pdf.set_font('Helvetica', 'B', 8)
+col_ws2 = [65, 28, 28, 30]
+headers2 = ['Dominio', 'Total Leads', 'Matcheados', 'Tasa Match %']
+for h, w in zip(headers2, col_ws2):
+    pdf.cell(w, 7, h, border=1, align='C')
+pdf.ln()
+pdf.set_font('Helvetica', '', 8)
+for i, (_, r) in enumerate(df_sospechosos.iterrows()):
+    fill = (i % 2 == 0)
+    if fill:
+        pdf.set_fill_color(235, 245, 255)
+    vals = [
+        str(r['Domain'])[:35], f"{int(r['Total_Leads']):,}",
+        f"{int(r['Matcheados']):,}", f"{r['Tasa_Match_%']:.2f}%",
+    ]
+    for v, w in zip(vals, col_ws2):
+        pdf.cell(w, 6, v, border=1, fill=fill)
+    pdf.ln()
+    pdf.set_fill_color(255, 255, 255)
+
+pdf_path = os.path.join(output_dir, 'dominios_invalidos.pdf')
+pdf.output(pdf_path)
+print(f"-> PDF generado: {pdf_path}")
+
+# ============================================================
+# MEMORIA TÉCNICA
+# ============================================================
+memoria = f"""# Memoria Tecnica: Analisis de Dominios Invalidos
+
+**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Script:** `15_dominios_invalidos.py`
+
+## Fuente de Datos
+- Leads: `{leads_csv}` ({len(df_leads):,} registros con correo)
+
+## Metodologia
+- Se extrae el dominio del correo (parte despues del @)
+- Se cruza contra el diccionario de CORRECCIONES (typos conocidos)
+- Para cada typo, se estima cuantos matches se recuperarian corrigiendo el dominio
+- Estimacion conservadora: tasa_match_dominio_correcto * leads_no_matcheados_con_typo
+
+## Resultados Clave
+| Metrica | Valor |
+|---|---|
+| Total leads con correo | {len(df_leads):,} |
+| Typos distintos detectados | {len(df_results)} |
+| Leads afectados | {total_afectados:,} |
+| Matches recuperables estimados | {total_recuperables:,} |
+| Dominios sospechosos sin clasificar | {len(df_sospechosos)} |
+
+## Archivos de Salida
+| Archivo | Descripcion |
+|---|---|
+| `dominios_invalidos.pdf` | Informe visual con tablas |
+| `dominios_invalidos.md` | Documentacion textual |
+| `dominios_invalidos.xlsx` | Datos (Typos_Conocidos + Dominos_Sospechosos) |
+| `memoria_tecnica.md` | Este archivo |
+"""
+with open(os.path.join(output_dir, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
+    f.write(memoria)
 
 print(f"Proceso Finalizado. {len(df_results)} typos detectados, {total_recuperables:,} matches recuperables estimados.")
 print(f"Archivos guardados en outputs/Calidad_Datos/")

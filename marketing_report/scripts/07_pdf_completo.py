@@ -118,6 +118,24 @@ for col in ['UtmSource', 'UtmCampaign', 'UtmMedium']:
 con_utm = len(df_main[(df_main['UtmSource'] != '') | (df_main['UtmCampaign'] != '') | (df_main['UtmMedium'] != '')])
 sin_utm = total_registros - con_utm
 
+# ==========================================
+# CLASIFICACIÓN POR CAMPAÑA
+# ==========================================
+# Usa la columna Campana_Lead generada por 02_cruce_datos.py para separar
+# inscriptos que convirtieron desde la campaña actual vs campañas anteriores.
+if 'Campana_Lead' in df_main.columns:
+    label_campana_actual = 'Ingreso 2026' if segmento == 'Grado_Pregrado' else '2026'
+    # Inscriptos matcheados (exacto) — sobre TODOS los leads, no solo la ventana,
+    # para capturar inscriptos cuyo lead vino de la campaña anterior.
+    matcheados_all = df_main[df_main['_mc'] == 'exacto']
+    insc_campana_actual = len(matcheados_all[matcheados_all['Campana_Lead'] == label_campana_actual])
+    insc_campana_anterior = len(matcheados_all[matcheados_all['Campana_Lead'] == 'Campaña Anterior'])
+    print(f"Campana: {label_campana_actual}={insc_campana_actual:,} | Anterior={insc_campana_anterior:,}")
+else:
+    label_campana_actual = ''
+    insc_campana_actual = 0
+    insc_campana_anterior = 0
+
 print(f"Personas: {total_personas:,} | Conv: {personas_conv:,} ({tasa_dedup:.2f}%)")
 print(f"Bot: {bot_leads:,} -> {bot_insc:,} ({bot_tasa:.2f}%)")
 
@@ -141,6 +159,12 @@ with open(md_path, 'w', encoding='utf-8') as f:
     f.write(f"- Leads con UTM: {con_utm:,} ({(con_utm/total_registros)*100:.1f}%)\n")
     f.write(f"- Leads sin UTM: {sin_utm:,} ({(sin_utm/total_registros)*100:.1f}%)\n")
     f.write(f"- Registros Fuzzy Complementarios: {total_fuzzy:,}\n\n")
+    if insc_campana_actual > 0 or insc_campana_anterior > 0:
+        f.write("## Atribucion por Campana\n")
+        f.write(f"- Inscriptos campana actual ({label_campana_actual}): {insc_campana_actual:,}\n")
+        f.write(f"- Inscriptos campana anterior (match historico): {insc_campana_anterior:,}\n")
+        pct_ant = (insc_campana_anterior / personas_conv * 100) if personas_conv > 0 else 0
+        f.write(f"- % inscriptos con lead de campana anterior: {pct_ant:.1f}%\n\n")
     f.write("## Conclusiones y Recomendaciones\n")
     f.write("### 1. Atribucion de Marketing\n")
     f.write(f"Se logro trazar el origen exacto de {insc_exactos:,} inscriptos. La tasa de conversion real (deduplicada por persona) es de {tasa_dedup:.2f}%.\n\n")
@@ -243,6 +267,21 @@ table_row('Inscriptos Atribuidos a Paid Ads (exacto)', f'{insc_exactos:,}')
 table_row('Inscriptos sin trazabilidad (sin lead previo)', f'{insc_directos:,}')
 table_row('Coincidencias Fuzzy (informe complementario)', f'{total_fuzzy:,}')
 
+# Sección Atribución por Campaña (solo si la columna existe)
+if insc_campana_actual > 0 or insc_campana_anterior > 0:
+    pdf.ln(3)
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.set_fill_color(22, 160, 133)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(180, 9, '  Atribucion por Campana', border=1, fill=True)
+    pdf.cell(80, 9, '  Valor', border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(0, 0, 0)
+
+    table_row(f'Inscriptos campana actual ({label_campana_actual})', f'{insc_campana_actual:,}')
+    table_row('Inscriptos campana anterior (match historico)', f'{insc_campana_anterior:,}')
+    pct_anterior = (insc_campana_anterior / personas_conv * 100) if personas_conv > 0 else 0
+    table_row('% inscriptos con lead de campana anterior', f'{pct_anterior:.1f}%')
+
 pdf.ln(3)
 pdf.set_font('Helvetica', 'B', 10)
 pdf.set_fill_color(155, 89, 182)
@@ -273,7 +312,8 @@ sections = [
     # (titulo de seccion, lista de (archivo, titulo grafico))
     ('Analisis de Conversion General', [
         ('chart_1_conversion_leads.png', 'Conversion General de Leads'),
-        ('chart_2_composicion_inscriptos.png', 'Composicion de Inscriptos (Atribuidos vs Sin trazabilidad)'),
+        ('chart_2_composicion_inscriptos.png', 'Origenes de Inscriptos por Canal (Campana Actual)'),
+        ('chart_2b_campana_comparativa.png', 'Comparativa Inscriptos: Campana Actual vs Anterior'),
         ('chart_5_leads_pagos_vs_otros.png', 'Distribucion de Leads Totales: Pagados vs Otros'),
         ('chart_7_inscriptos_pagos_vs_otros.png', 'Distribucion de Inscriptos (Atribuidos): Pagados vs Otros'),
         ('chart_8_tiempos_resolucion.png', 'Tiempos de Resolucion (Pagados vs Otros)'),
@@ -285,6 +325,10 @@ sections = [
     ('Analisis por Modalidad', [
         ('chart_5_distribucion_modalidad.png', 'Distribucion de Leads por Modalidad'),
         ('chart_6_conversion_modalidad.png', 'Tasa de Conversion por Modalidad'),
+    ]),
+    ('Analisis Multi-Touch de Inscriptos', [
+        ('chart_multitouch_canales.png', 'Cantidad de Canales Consultados por Inscripto'),
+        ('chart_multitouch_combinaciones.png', 'Top Combinaciones de Canales (Multi-Touch)'),
     ]),
     ('Journey del Estudiante', [
         ('chart_9_consultas_por_dia.png', 'Volumen de Consultas (Leads) a traves del Tiempo (Diario)'),

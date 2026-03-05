@@ -1,3 +1,17 @@
+"""
+18_analisis_promociones.py
+Analiza la concentracion de inscripciones por tramo promocional (bloques de descuento).
+
+SALIDA (output_dir = outputs/{segmento}/Reporte_Promociones/):
+  - 18_reporte_promociones.pdf          -> Informe visual (3 graficos + tabla)
+  - 18_reporte_promociones.xlsx         -> Datos de cada tramo + resumen
+  - 18_reporte_promociones.md           -> Documentacion textual
+  - 18_tabla_promociones.csv            -> Tabla cruda de volumenes por tramo
+  - memoria_tecnica.md                  -> Metadata del proceso
+  - chart_barras_promo.png              -> Grafico barras horizontales
+  - chart_curva_promo_cierres.png       -> Curva diaria con cierres superpuestos
+  - 18_grafica_inscripciones_dias_semana.png -> Patron por dia de la semana
+"""
 import pandas as pd
 import os
 import matplotlib
@@ -8,6 +22,10 @@ from fpdf import FPDF
 from datetime import datetime
 
 import sys
+
+# ============================================================
+# CONFIGURACIÓN
+# ============================================================
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
 
 base_dir = r"h:\Test-Antigravity\marketing_report"
@@ -15,13 +33,15 @@ output_dir_base = os.path.join(base_dir, "outputs", segmento, "Reporte_Promocion
 os.makedirs(output_dir_base, exist_ok=True)
 inscriptos_csv = os.path.join(base_dir, "outputs", "Data_Base", segmento, "reporte_marketing_inscriptos_origenes.csv")
 
-print("Generando Reporte de Inscriptos por Tramos de Promoción...")
+print("Generando Reporte de Inscriptos por Tramos de Promocion...")
 
 df_insc = pd.read_csv(inscriptos_csv, low_memory=False)
 
-# Determinar columna de fecha
+# ============================================================
+# DETERMINAR COLUMNA DE FECHA
+# ============================================================
+# IMPORTANTE: usar Fecha Pago (transaccion real), NO Fecha Aplicacion (inicio cursado, futura)
 date_col = None
-# PRIORITY: We need the actual transaction date (Pago), NOT the academic cohort application date (Aplicación)
 for col in ['Insc_Fecha Pago', 'Fecha Pago', 'Insc_Fecha']:
     if col in df_insc.columns:
         date_col = col
@@ -80,14 +100,34 @@ resumen_tramos = df_insc.groupby('Tramo_Promocional', observed=False).size().res
 
 print(resumen_tramos.to_string(index=False))
 
-# Exportar tabla a CSV
+# ============================================================
+# EXPORTAR TABLA A CSV Y EXCEL
+# ============================================================
+# CSV: tabla cruda para uso programático
 csv_promociones_path = os.path.join(output_dir_base, '18_tabla_promociones.csv')
 resumen_tramos.to_csv(csv_promociones_path, index=False)
 print(f"-> Exportada tabla promociones a: {csv_promociones_path}")
 
-# =========================================================
-# GRÁFICA 1: BARRAS HORIZONTALES POR TRAMO
-# =========================================================
+# Excel: incluye tabla de tramos + metadata de cada tramo (fechas, descuento)
+xlsx_path = os.path.join(output_dir_base, '18_reporte_promociones.xlsx')
+with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+    # Hoja 1: volumen por tramo (el resumen principal)
+    resumen_tramos.to_excel(writer, sheet_name='Volumen_Por_Tramo', index=False)
+    # Hoja 2: detalle de cada tramo (fechas + descuento)
+    df_tramos_detalle = pd.DataFrame([{
+        'Tramo': t['Tramo'],
+        'Descuento_%': t['Descuento'],
+        'Inicio': t['Inicio'].strftime('%Y-%m-%d'),
+        'Fin': t['Fin'].strftime('%Y-%m-%d'),
+        'Dias_Duracion': (t['Fin'] - t['Inicio']).days + 1,
+    } for t in tramos_fechas])
+    df_tramos_detalle.to_excel(writer, sheet_name='Calendario_Tramos', index=False)
+print(f"-> Excel generado: {xlsx_path}")
+
+# ============================================================
+# GRÁFICOS PNG
+# ============================================================
+# Gráfica 1: Barras horizontales por tramo (resumen volumétrico)
 plt.figure(figsize=(10, 6))
 # Excluir 'Sin Fecha Registrada' si no nos sirve para el plot, pero lo mostramos para completitud
 sns.barplot(data=resumen_tramos[resumen_tramos['Tramo_Promocional'] != 'Sin Fecha Registrada'], 
@@ -105,9 +145,7 @@ chart_tramos_path = os.path.join(output_dir_base, 'chart_barras_promo.png')
 plt.savefig(chart_tramos_path)
 plt.close()
 
-# =========================================================
-# GRÁFICA 2: CURVA DE TIEMPO CON LÍNEAS DE CIERRE
-# =========================================================
+# Gráfica 2: Curva temporal con líneas de cierre de cada tramo
 # Solo inscriptos dentro del rango de promo
 rango_inicio = tramos_fechas[0]['Inicio']
 rango_fin = tramos_fechas[-1]['Fin'] + pd.Timedelta(days=5) # un piquito mas para ver
@@ -136,9 +174,8 @@ chart_curva_path = os.path.join(output_dir_base, 'chart_curva_promo_cierres.png'
 plt.savefig(chart_curva_path)
 plt.close()
 
-# =========================================================
-# GRÁFICA 3: SUPERPOSICIÓN POR DÍAS DE LA SEMANA
-# ==========================================
+# Gráfica 3: Superposición por día de la semana (detecta el patrón FOMO de cierres)
+# Cada semana es una línea gris; las semanas de cierre se colorean
 # Preparar datos agregando número de semana y día de la semana
 insc_por_dia['Dia_Semana'] = insc_por_dia['Fecha_Clean'].dt.dayofweek # 0=Lunes, 6=Domingo
 insc_por_dia['Num_Semana'] = insc_por_dia['Fecha_Clean'].dt.isocalendar().week
@@ -203,9 +240,9 @@ chart_semana_path = os.path.join(output_dir_base, '18_grafica_inscripciones_dias
 plt.savefig(chart_semana_path)
 plt.close()
 
-# =========================================================
+# ============================================================
 # GENERACIÓN DE PDF
-# =========================================================
+# ============================================================
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font('Helvetica', 'B', 16)
@@ -326,9 +363,13 @@ memoria = f"""# Memoria Técnica: Reporte de Promociones
 - **Aplica solo a:** Segmento Grado_Pregrado
 
 ## Archivos de Salida
-- PDF: `{pdf_file}`
-- MD: `{md_file}`
-- CSV: `{csv_promociones_path}`
+| Archivo | Descripcion |
+|---|---|
+| `18_reporte_promociones.pdf` | Informe visual con 3 graficos |
+| `18_reporte_promociones.xlsx` | Datos tramos + calendario |
+| `18_reporte_promociones.md` | Documentacion textual |
+| `18_tabla_promociones.csv` | Tabla cruda volumen por tramo |
+| `memoria_tecnica.md` | Este archivo |
 """
 with open(os.path.join(output_dir_base, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
     f.write(memoria)

@@ -1,3 +1,20 @@
+"""
+17_reporte_asesores.py
+Analiza el volumen de leads y conversiones por asesor/propietario del CRM.
+Segmenta en: Asesores UCASAL (Central) | Sedes / Delegaciones | Sistemas.
+
+SALIDA (output_dir = outputs/{segmento}/Reporte_Asesores/):
+  - 17_reporte_asesores.pdf            -> Informe visual multi-página
+  - 17_reporte_asesores.xlsx           -> Datos consolidados (4 hojas)
+  - 17_reporte_asesores.md             -> Documentacion textual (top rankings)
+  - memoria_tecnica.md                 -> Metadata del proceso
+  - chart_volumen_grupos.png           -> Leads por grupo de asesores
+  - chart_estados_grupos.png           -> Distribucion de estados por grupo
+  - chart_ranking_inscriptos.png       -> Top 20 asesores por inscriptos
+  - chart_ranking_vendedores.png       -> Top 20 vendedores financieros
+  - chart_ranking_empresas.png         -> Top 20 empresas (si existe columna)
+  - chart_origen_inscriptos_pie.png    -> Pie chart origen de inscriptos
+"""
 import pandas as pd
 import os
 import matplotlib
@@ -8,7 +25,7 @@ from fpdf import FPDF
 from datetime import datetime
 
 import locale
-# Intentar setear locale para formateo de moneda, fallback a formateo manual si falla
+# Intentar setear locale para formateo de moneda; fallback a formateo manual si falla
 try:
     locale.setlocale(locale.LC_ALL, 'es_AR.UTF-8')
 except locale.Error:
@@ -30,6 +47,10 @@ def formato_pesos_arg(valor):
         return f"$ {valor}"
 
 import sys
+
+# ============================================================
+# CONFIGURACIÓN DE RUTAS
+# ============================================================
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
 
 base_dir = r"h:\Test-Antigravity\marketing_report"
@@ -40,15 +61,17 @@ inscriptos_csv = os.path.join(base_dir, "outputs", "Data_Base", segmento, "repor
 
 print("Generando Reporte de Asesores por Estado del Lead...")
 
+# ============================================================
+# CARGA Y CLASIFICACIÓN DE ASESORES
+# ============================================================
 df = pd.read_csv(leads_csv, low_memory=False)
 
-# Limpieza Básica
+# Normalizar columnas clave
 df['Propietario'] = df['Consulta: Nombre del propietario'].fillna('Sin Asignar').astype(str)
 df['Estado'] = df['Estado'].fillna('No Especificado').astype(str)
 
-# Determinar UCASAL vs Sedes
-# Basado en la inspección lógica, los agentes que pertenecen a "Sede_X" o la cola "SALTA - CASTAÑARES..." etc suelen ser de universidad central.
-# A falta de un diccionario de IDs, vamos a utilizar la nomenclatura o la pertenencia por volumen para simplificar a Nivel Propietario.
+# Clasificar asesor en grupo: la nomenclatura de colas en Salesforce diferencia
+# central (nombre de persona) vs sedes (contienen "sede" o "delegacion")
 def clasificar_asesor(nombre):
     nombre_lower = nombre.lower()
     if 'sede' in nombre_lower or 'delegacion' in nombre_lower or 'delegación' in nombre_lower:
@@ -61,7 +84,10 @@ def clasificar_asesor(nombre):
 
 df['Grupo_Asesor'] = df['Propietario'].apply(clasificar_asesor)
 
-# 1. Analisis Macro por Grupo de Asesores
+# ============================================================
+# MÉTRICAS MACRO
+# ============================================================
+# Distribución de estados por grupo de asesor
 grupo_estado = df.groupby(['Grupo_Asesor', 'Estado']).size().reset_index(name='Cantidad')
 
 # Analisis Estadistico Adicional (Contact Center y Estados Globales)
@@ -75,7 +101,10 @@ pct_contact_center = (volumen_contact_center / total_leads_macro) * 100 if total
 volumen_abiertos = len(df[df['Estado'] == 'Abierto'])
 pct_abiertos = (volumen_abiertos / total_leads_macro) * 100 if total_leads_macro > 0 else 0
 
-# Gráfica 1: UCASAL vs Sedes (Total Leads)
+# ============================================================
+# GRÁFICOS PNG
+# ============================================================
+# Gráfica 1: volumen total de leads por grupo de asesores
 plt.figure(figsize=(8, 5))
 sns.countplot(data=df, x='Grupo_Asesor', order=df['Grupo_Asesor'].value_counts().index, palette='crest')
 plt.title('Volumen Total de Leads asignados por Grupo de Asesores')
@@ -86,9 +115,9 @@ chart1_path = os.path.join(output_dir_base, 'chart_volumen_grupos.png')
 plt.savefig(chart1_path)
 plt.close()
 
-# Gráfica 2: Estados por Grupo
+# Gráfica 2: distribución de los top 6 estados más comunes por grupo de asesor
 plt.figure(figsize=(12, 6))
-# Filtramos a los top 6 estados mas comunes para que la grafica no quede ilegible
+# Top 6 para que la grafica no quede ilegible con demasiados estados
 top_estados = df['Estado'].value_counts().head(6).index
 df_top_estados = df[df['Estado'].isin(top_estados)]
 
@@ -102,9 +131,8 @@ chart2_path = os.path.join(output_dir_base, 'chart_estados_grupos.png')
 plt.savefig(chart2_path)
 plt.close()
 
-# ----------------- NUEVO: RANKING DE INSCRIPTOS POR ASESOR -----------------
-# Filtrar solo los Leads que se convirtieron exitosamente en Inscriptos físicos reales
-# Según la indicación estricta, `Match_Tipo` DEBE contener "Si" únicamente (Cruces Exactos), excluyendo Fuzzys.
+# Gráfica 3: ranking de asesores por cantidad de inscriptos cerrados (solo exactos)
+# Solo Leads con Match_Tipo exacto (excluye Fuzzy para pureza en la atribucion comercial)
 df_inscriptos_por_asesor = df[df['Match_Tipo'].astype(str).str.contains('Si') & ~df['Match_Tipo'].astype(str).str.contains('Fuzzy')]
 
 # Agrupar por asesor y contar el volumen de Inscriptos ganados
@@ -126,7 +154,11 @@ plt.savefig(chart3_path)
 plt.close()
 # --------------------------------------------------------------------------
 
-# ----------------- NUEVO: RANKING GENERAL VENDEDORES INSCRIPTOS -----------------
+# ============================================================
+# RANKING DE VENDEDORES (BASE INSCRIPTOS)
+# ============================================================
+# Diferente al ranking de asesores: el vendedor es quien cobró (sistema financiero),
+# no quien gestionó el lead en el CRM. Son perspectivas complementarias.
 df_insc = pd.read_csv(inscriptos_csv, low_memory=False)
 col_vend = 'Insc_Vendedor' if 'Insc_Vendedor' in df_insc.columns else 'Vendedor'
 col_haber = 'Insc_Haber' if 'Insc_Haber' in df_insc.columns else 'Haber'
@@ -140,7 +172,10 @@ ranking_vend = df_insc.groupby(col_vend).agg(
 ranking_vend = ranking_vend.sort_values(by='Total_Pagados', ascending=False)
 top_20_vend = ranking_vend.head(20)
 
-# ----------------- NUEVO: RANKING GENERAL POR EMPRESA (GRUPO COMERCIAL) -----------------
+# ============================================================
+# RANKING POR EMPRESA / GRUPO COMERCIAL
+# ============================================================
+# Consolida vendedores bajo su empresa/franquicia para una visión institucional
 col_empresa = 'Insc_Empresa' if 'Insc_Empresa' in df_insc.columns else 'Empresa'
 if col_empresa in df_insc.columns:
     df_insc[col_empresa] = df_insc[col_empresa].fillna('Desconocido / Sin Entidad').astype(str)
@@ -404,7 +439,10 @@ pdf_file = os.path.join(output_dir_base, '17_reporte_asesores.pdf')
 pdf.output(pdf_file)
 print(f"\\n>>> Reporte de Asesores generado con éxito en: {pdf_file}")
 
-# CSV and MD Exports
+# ============================================================
+# EXPORTAR DATOS: CSV + EXCEL
+# ============================================================
+# CSVs: tablas crudas para uso programático
 csv_ranking_inscriptos = os.path.join(output_dir_base, '17_ranking_asesores.csv')
 ranking_inscriptos.to_csv(csv_ranking_inscriptos, index=False)
 
@@ -413,6 +451,24 @@ grupo_estado.to_csv(csv_informe_estados, index=False)
 
 csv_ranking_vendedores = os.path.join(output_dir_base, '17_ranking_vendedores_inscriptos.csv')
 ranking_vend.to_csv(csv_ranking_vendedores, index=False)
+
+# Excel consolidado: todas las tablas en un solo archivo multi-hoja
+xlsx_path = os.path.join(output_dir_base, '17_reporte_asesores.xlsx')
+with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+    # Hoja 1: ranking de asesores CRM por inscriptos cerrados (exactos)
+    ranking_inscriptos.to_excel(writer, sheet_name='Ranking_Asesores_CRM', index=False)
+    # Hoja 2: distribución de estados por grupo de asesor
+    grupo_estado.to_excel(writer, sheet_name='Estados_Por_Grupo', index=False)
+    # Hoja 3: ranking de vendedores financieros (base inscriptos)
+    ranking_vend.to_excel(writer, sheet_name='Ranking_Vendedores', index=False)
+    # Hoja 4: distribución de origen de inscriptos (con/sin trazabilidad CRM)
+    origen_breakdown.to_excel(writer, sheet_name='Origen_Inscriptos', index=False)
+    # Hoja 5: distribución de estados globales de todos los leads
+    estados_globales.to_excel(writer, sheet_name='Estados_Globales', index=False)
+    # Hoja 6: ranking por empresa (si existe la columna)
+    if top_20_empresa is not None:
+        ranking_empresa.to_excel(writer, sheet_name='Ranking_Empresas', index=False)
+print(f"-> Excel generado: {xlsx_path}")
 
 md_file = os.path.join(output_dir_base, '17_reporte_asesores.md')
 with open(md_file, "w", encoding="utf-8") as f:
@@ -456,11 +512,15 @@ memoria = f"""# Memoria Técnica: Reporte de Asesores y Canales de Venta
 - **Montos en ARS:** Sumados desde la columna `Insc_Haber` de inscriptos matcheados
 
 ## Archivos de Salida
-- PDF: `{os.path.join(output_dir_base, '17_reporte_asesores.pdf')}`
-- MD: `{md_file}`
-- CSV ranking asesores: `{csv_ranking_inscriptos}`
-- CSV estados: `{csv_informe_estados}`
-- CSV vendedores: `{csv_ranking_vendedores}`
+| Archivo | Descripcion |
+|---|---|
+| `17_reporte_asesores.pdf` | Informe visual multi-pagina |
+| `17_reporte_asesores.xlsx` | Datos consolidados (5-6 hojas) |
+| `17_reporte_asesores.md` | Documentacion textual (top rankings) |
+| `17_ranking_asesores.csv` | Ranking asesores CRM |
+| `17_informe_estados_asesor.csv` | Estados por grupo de asesor |
+| `17_ranking_vendedores_inscriptos.csv` | Ranking vendedores financieros |
+| `memoria_tecnica.md` | Este archivo |
 """
 with open(os.path.join(output_dir_base, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
     f.write(memoria)

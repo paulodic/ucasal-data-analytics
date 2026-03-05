@@ -496,11 +496,41 @@ if __name__ == '__main__':
     df_final_inscriptos.drop(columns=[c for c in cols_to_drop if c in df_final_inscriptos.columns], inplace=True, errors='ignore')
 
     # ==========================================
-    # 6. SEGMENTACIÓN Y EXPORTACIÓN POR NIVEL ACADÉMICO
+    # 6. CLASIFICACIÓN POR CAMPAÑA (FECHA DE CONSULTA)
+    # ==========================================
+    # Cada lead se clasifica según si su fecha de consulta cae dentro de la
+    # ventana de la campaña actual o corresponde a una campaña anterior.
+    # La ventana depende del segmento académico:
+    #   - Grado_Pregrado: desde 2025-09-01 (Cohorte Ingreso 2026)
+    #   - Cursos/Posgrados: desde 2026-01-01 (Año Calendario 2026)
+    # Esta columna permite a los informes downstream separar inscriptos
+    # que convirtieron desde la campaña actual vs campañas anteriores.
+
+    PERIODO_INICIO_CAMPANA = {
+        'Grado_Pregrado': pd.Timestamp('2025-09-01'),
+        'Cursos':         pd.Timestamp('2026-01-01'),
+        'Posgrados':      pd.Timestamp('2026-01-01'),
+        'Desconocido':    pd.Timestamp('2025-09-01'),  # fallback conservador
+    }
+
+    CAMPANA_LABEL = {
+        'Grado_Pregrado': 'Ingreso 2026',
+        'Cursos':         '2026',
+        'Posgrados':      '2026',
+        'Desconocido':    'Ingreso 2026',
+    }
+
+    # Parsear fecha de consulta una sola vez (formato D/M/YYYY)
+    df_final_leads['_fecha_consulta'] = pd.to_datetime(
+        df_final_leads['Consulta: Fecha de creación'],
+        format='mixed', dayfirst=True, errors='coerce')
+
+    # ==========================================
+    # 7. SEGMENTACIÓN Y EXPORTACIÓN POR NIVEL ACADÉMICO
     # ==========================================
     print("Segmentando y exportando informes a CSV según Nivel Académico...")
-    
-    # Función para estandarizar la clasificación 
+
+    # Función para estandarizar la clasificación
     def segmentar_tipcar(tipcar_val):
         val = str(tipcar_val).lower()
         if 'curso' in val: 
@@ -538,13 +568,31 @@ if __name__ == '__main__':
          # Si el segmento es "Desconocido" y está vacío, lo salteamos
          if segmento == 'Desconocido' and sub_inscriptos.empty and sub_leads.empty:
              continue
-             
+
+         # Clasificar cada lead según la campaña de su fecha de consulta
+         inicio = PERIODO_INICIO_CAMPANA[segmento]
+         label_actual = CAMPANA_LABEL[segmento]
+         sub_leads = sub_leads.copy()
+         sub_leads['Campana_Lead'] = sub_leads['_fecha_consulta'].apply(
+             lambda d: label_actual if pd.notna(d) and d >= inicio else 'Campaña Anterior'
+         )
+
+         # Estadísticas de campaña para este segmento
+         n_actual = int((sub_leads['Campana_Lead'] == label_actual).sum())
+         n_anterior = int((sub_leads['Campana_Lead'] == 'Campaña Anterior').sum())
+         # Contar inscriptos matcheados por campaña
+         matcheados = sub_leads[sub_leads['Match_Tipo'].str.contains('Exacto', na=False)]
+         n_insc_actual = int((matcheados['Campana_Lead'] == label_actual).sum())
+         n_insc_anterior = int((matcheados['Campana_Lead'] == 'Campaña Anterior').sum())
+         print(f"  [{segmento}] Campaña: {label_actual}={n_actual:,} | Anterior={n_anterior:,} | "
+               f"Inscriptos matcheados: {label_actual}={n_insc_actual:,}, Anterior={n_insc_anterior:,}")
+
          out_insc = os.path.join(segment_dir, "reporte_marketing_inscriptos_origenes.csv")
          out_leads = os.path.join(segment_dir, "reporte_marketing_leads_completos.csv")
-         
+
          sub_inscriptos.drop(columns=['Segmento_Acad']).to_csv(out_insc, index=False)
-         sub_leads.drop(columns=['Segmento_Acad']).to_csv(out_leads, index=False)
+         sub_leads.drop(columns=['Segmento_Acad', '_fecha_consulta']).to_csv(out_leads, index=False)
          
          print(f"[{segmento}] -> Exportados: {len(sub_inscriptos)} inscriptos reales y {len(sub_leads)} leads.")
-    
+
     print("¡Proceso finalizado con éxito! Datos distribuidos correctamente.")
