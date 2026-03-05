@@ -329,6 +329,7 @@ sections = [
     ('Analisis Multi-Touch de Inscriptos', [
         ('chart_multitouch_canales.png', 'Cantidad de Canales Consultados por Inscripto'),
         ('chart_multitouch_combinaciones.png', 'Top Combinaciones de Canales (Multi-Touch)'),
+        ('chart_anytouch_participacion.png', 'Any-Touch: En cuantas inscripciones intervino cada canal'),
     ]),
     ('Journey del Estudiante', [
         ('chart_9_consultas_por_dia.png', 'Volumen de Consultas (Leads) a traves del Tiempo (Diario)'),

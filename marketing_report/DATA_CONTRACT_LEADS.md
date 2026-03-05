@@ -264,6 +264,28 @@ Gráficos generados:
 - `chart_multitouch_combinaciones.png` — Top 10 combinaciones de canales
 - `chart_2b_campana_comparativa.png` — Barras comparando inscriptos por canal entre campañas
 
+### 10b.5 Análisis Any-Touch (participación por canal)
+
+Responde a la pregunta: **"¿En cuántas inscripciones intervino cada canal?"**
+
+A diferencia de los modelos First-Touch o Last-Touch (que asignan la inscripción a UN solo canal),
+el modelo Any-Touch cuenta un inscripto en CADA canal por el que tuvo al menos 1 contacto.
+Esto revela la participación real de cada canal en el journey completo.
+
+| Canal | Criterio de clasificación |
+|---|---|
+| `Bot` | `FuenteLead == 907` |
+| `Google` | `UtmSource` contiene "google" |
+| `Meta` | `UtmSource` contiene fb/facebook/ig/instagram/meta, o `FuenteLead == 18` |
+| `Otros` | Todo lo que no es Bot, Google ni Meta |
+
+**Importante:** La suma de inscriptos por canal supera el 100% del total, porque un inscripto
+multi-touch se cuenta en cada canal que consultó. Por ejemplo, una persona que consultó por
+Google y luego por Bot aparece en ambos canales.
+
+Gráfico generado:
+- `chart_anytouch_participacion.png` — Barras horizontales: inscriptos donde intervino cada canal (con %)
+
 ---
 
 ## 11. Checklist QA (antes y después de correr)

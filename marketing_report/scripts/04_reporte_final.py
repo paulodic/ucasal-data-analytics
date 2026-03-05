@@ -416,6 +416,63 @@ Este analisis revela el comportamiento real del journey.
 ![Multi-Touch Combinaciones](chart_multitouch_combinaciones.png)
 """
 
+# =========================================================
+# ANÁLISIS ANY-TOUCH POR CANAL
+# =========================================================
+# Responde a: "En cuantas inscripciones intervino el Bot / Google / Meta?"
+# Para cada inscripto, se revisa si tuvo AL MENOS 1 contacto con cada canal,
+# sin importar si fue primero, ultimo o intermedio. Esto es independiente del
+# modelo de atribucion (FT/LT) — mide participacion real del canal.
+
+# canales_por_persona ya tiene la lista de canales por inscripto (set)
+at_bot    = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Bot' in cs).sum())
+at_google = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Google' in cs).sum())
+at_meta   = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Meta' in cs).sum())
+at_otros  = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Otros' in cs).sum())
+
+at_data = {
+    'Bot':    at_bot,
+    'Google Ads': at_google,
+    'Meta (FB/IG)': at_meta,
+    'Otros / Organico': at_otros,
+}
+
+# Grafico any-touch: barras horizontales con % de participacion
+fig, ax = plt.subplots(figsize=(10, 5))
+canales_at = list(at_data.keys())
+valores_at = list(at_data.values())
+pcts_at = [v / total_insc_mt * 100 if total_insc_mt > 0 else 0 for v in valores_at]
+colors_at = ['#9b59b6', '#3498db', '#e74c3c', '#f39c12']
+bars_at = ax.barh(canales_at[::-1], valores_at[::-1], color=colors_at[::-1])
+for bar, pct in zip(bars_at, pcts_at[::-1]):
+    ax.text(bar.get_width() + max(valores_at)*0.01, bar.get_y() + bar.get_height()/2,
+            f'{int(bar.get_width()):,} ({pct:.1f}%)', va='center', fontsize=10)
+ax.set_xlabel('Inscriptos donde intervino el canal')
+ax.set_title(f'Any-Touch: Participacion por Canal en Inscripciones ({label_campana_actual if label_campana_actual else segmento})')
+ax.set_xlim(0, max(valores_at) * 1.25 if valores_at else 1)
+plt.tight_layout()
+chart_at_path = os.path.join(output_dir, "chart_anytouch_participacion.png")
+plt.savefig(chart_at_path, bbox_inches='tight')
+plt.close()
+
+# Markdown any-touch
+report_multitouch += f"""
+### Analisis Any-Touch: Participacion por Canal
+Para cada inscripto se verifica si tuvo **al menos 1 contacto** con cada canal,
+sin importar el orden. Un inscripto puede aparecer en varios canales a la vez.
+
+| Canal | Inscriptos donde intervino | % del total ({total_insc_mt:,}) |
+|---|---|---|
+| **Bot** | {at_bot:,} | {at_bot/total_insc_mt*100:.1f}% |
+| **Google Ads** | {at_google:,} | {at_google/total_insc_mt*100:.1f}% |
+| **Meta (FB/IG)** | {at_meta:,} | {at_meta/total_insc_mt*100:.1f}% |
+| **Otros / Organico** | {at_otros:,} | {at_otros/total_insc_mt*100:.1f}% |
+
+> Nota: La suma supera el 100% porque un inscripto multi-touch se cuenta en cada canal que consulto.
+
+![Any-Touch Participacion](chart_anytouch_participacion.png)
+"""
+
 # Gráfico 9: Curva de Consultas/Leads por Día
 # Consulta: Fecha de creación viene en D/M/YYYY desde Salesforce — requiere dayfirst=True
 df_leads['Fecha_Limpia_Consulta'] = pd.to_datetime(
