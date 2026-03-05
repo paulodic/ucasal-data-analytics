@@ -350,14 +350,19 @@ def canal_mt(row):
 
 df_leads['_canal_mt'] = df_leads.apply(canal_mt, axis=1)
 
-# Filtrar solo inscriptos exactos: buscar en df_leads (que tiene _pk_mt)
-# restringido a los que están en la ventana de conversión
-df_leads_conv_mt = df_leads[
-    (df_leads['Match_Tipo'].astype(str).str.contains('Exacto')) &
-    (df_leads['Fecha_Limpia_Consulta'] >= ('2025-09-01' if segmento == 'Grado_Pregrado' else '1900-01-01')) &
-    (df_leads['Fecha_Limpia_Consulta'] <= max_insc_ts)
-].copy()
-inscriptos_pks = set(df_leads_conv_mt['_pk_mt'].unique())
+# Identificar inscriptos exactos (todos) y asignarles su campaña
+# Un inscripto se clasifica según la Campana_Lead de su lead matcheado.
+df_exact_mt = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')].copy()
+# Para cada persona, tomar la campaña del lead más reciente (prioridad actual)
+if 'Campana_Lead' in df_exact_mt.columns and label_campana_actual:
+    campana_por_pk = (df_exact_mt
+        .sort_values('Fecha_Limpia_Consulta', ascending=False)
+        .drop_duplicates(subset='_pk_mt', keep='first')
+        [['_pk_mt', 'Campana_Lead']])
+else:
+    campana_por_pk = pd.DataFrame(columns=['_pk_mt', 'Campana_Lead'])
+
+inscriptos_pks = set(df_exact_mt['_pk_mt'].unique())
 
 # Para cada inscripto, obtener la lista de canales que consultó (sin repetir)
 df_insc_leads = df_leads[df_leads['_pk_mt'].isin(inscriptos_pks)].copy()
@@ -365,18 +370,63 @@ canales_por_persona = df_insc_leads.groupby('_pk_mt')['_canal_mt'].apply(lambda 
 canales_por_persona['n_canales'] = canales_por_persona['_canal_mt'].apply(len)
 canales_por_persona['combinacion'] = canales_por_persona['_canal_mt'].apply(lambda x: ' + '.join(x))
 
-# Estadísticas multi-touch
-n_multi = int((canales_por_persona['n_canales'] > 1).sum())
-n_single = int((canales_por_persona['n_canales'] == 1).sum())
-total_insc_mt = len(canales_por_persona)
+# Merge campaña a canales_por_persona
+if not campana_por_pk.empty:
+    canales_por_persona = canales_por_persona.merge(campana_por_pk, on='_pk_mt', how='left')
+    canales_por_persona['Campana_Lead'] = canales_por_persona['Campana_Lead'].fillna('Campaña Anterior')
+else:
+    canales_por_persona['Campana_Lead'] = 'Total'
 
-# Gráfico multi-touch: distribución de canales por inscripto
-mt_dist = canales_por_persona['n_canales'].value_counts().sort_index()
+# =========================================================
+# FUNCIÓN HELPER: calcular stats multi-touch + any-touch para un subset
+# =========================================================
+def calc_mt_at(df_sub, label):
+    """Calcula estadísticas multi-touch y any-touch para un DataFrame de canales_por_persona."""
+    total = len(df_sub)
+    if total == 0:
+        return {'total': 0, 'n_single': 0, 'n_multi': 0,
+                'top_combos': pd.Series(dtype='int64'),
+                'mt_dist': pd.Series(dtype='int64'),
+                'at': {'Bot': 0, 'Google': 0, 'Meta': 0, 'Otros': 0}}
+    n_s = int((df_sub['n_canales'] == 1).sum())
+    n_m = int((df_sub['n_canales'] > 1).sum())
+    tc = df_sub['combinacion'].value_counts().head(10)
+    md = df_sub['n_canales'].value_counts().sort_index()
+    at = {
+        'Bot':    int(df_sub['_canal_mt'].apply(lambda cs: 'Bot' in cs).sum()),
+        'Google': int(df_sub['_canal_mt'].apply(lambda cs: 'Google' in cs).sum()),
+        'Meta':   int(df_sub['_canal_mt'].apply(lambda cs: 'Meta' in cs).sum()),
+        'Otros':  int(df_sub['_canal_mt'].apply(lambda cs: 'Otros' in cs).sum()),
+    }
+    return {'total': total, 'n_single': n_s, 'n_multi': n_m,
+            'top_combos': tc, 'mt_dist': md, 'at': at}
+
+# Calcular para total, campaña actual y campaña anterior
+stats_total = calc_mt_at(canales_por_persona, 'Total')
+total_insc_mt = stats_total['total']
+n_multi = stats_total['n_multi']
+n_single = stats_total['n_single']
+
+if label_campana_actual and 'Campana_Lead' in canales_por_persona.columns:
+    cp_actual = canales_por_persona[canales_por_persona['Campana_Lead'] == label_campana_actual]
+    cp_anterior = canales_por_persona[canales_por_persona['Campana_Lead'] == 'Campaña Anterior']
+    stats_actual = calc_mt_at(cp_actual, label_campana_actual)
+    stats_anterior = calc_mt_at(cp_anterior, 'Campaña Anterior')
+    has_campaign_split = stats_actual['total'] > 0
+else:
+    stats_actual = calc_mt_at(canales_por_persona, 'Total')
+    stats_anterior = calc_mt_at(pd.DataFrame(), 'Anterior')
+    has_campaign_split = False
+
+# =========================================================
+# GRÁFICOS MULTI-TOUCH (TOTAL)
+# =========================================================
+mt_dist = stats_total['mt_dist']
 plt.figure(figsize=(8, 5))
 bars = plt.bar(mt_dist.index.astype(str), mt_dist.values, color='#3498db')
 plt.xlabel('Cantidad de canales consultados')
 plt.ylabel('Cantidad de inscriptos')
-plt.title(f'Multi-Touch: Canales por Inscripto ({label_campana_actual if label_campana_actual else segmento})')
+plt.title(f'Multi-Touch: Canales por Inscripto - Total ({segmento.replace("_"," ")})')
 for bar in bars:
     plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
              f'{int(bar.get_height()):,}', ha='center', fontsize=10)
@@ -384,12 +434,11 @@ chart_mt1_path = os.path.join(output_dir, "chart_multitouch_canales.png")
 plt.savefig(chart_mt1_path, bbox_inches='tight')
 plt.close()
 
-# Gráfico multi-touch: top combinaciones de canales
-top_combos = canales_por_persona['combinacion'].value_counts().head(10)
+top_combos = stats_total['top_combos']
 plt.figure(figsize=(10, 6))
 bars = plt.barh(top_combos.index[::-1], top_combos.values[::-1], color='#2ecc71')
 plt.xlabel('Cantidad de inscriptos')
-plt.title(f'Top 10 Combinaciones de Canales - Inscriptos ({label_campana_actual if label_campana_actual else segmento})')
+plt.title(f'Top 10 Combinaciones de Canales - Total ({segmento.replace("_"," ")})')
 for bar in bars:
     plt.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2,
              f'{int(bar.get_width()):,}', va='center', fontsize=9)
@@ -398,46 +447,42 @@ chart_mt2_path = os.path.join(output_dir, "chart_multitouch_combinaciones.png")
 plt.savefig(chart_mt2_path, bbox_inches='tight')
 plt.close()
 
-# Markdown para multi-touch
-report_multitouch = f"""### Analisis Multi-Touch de Inscriptos
-Cada inscripto puede haber consultado por multiples canales antes de inscribirse.
-Este analisis revela el comportamiento real del journey.
+# =========================================================
+# GRÁFICO MULTI-TOUCH DESAGREGADO POR CAMPAÑA
+# =========================================================
+if has_campaign_split and stats_anterior['total'] > 0:
+    # Barras agrupadas: cantidad de canales por inscripto, split por campaña
+    all_n = sorted(set(list(stats_actual['mt_dist'].index) + list(stats_anterior['mt_dist'].index)))
+    vals_act = [int(stats_actual['mt_dist'].get(n, 0)) for n in all_n]
+    vals_ant = [int(stats_anterior['mt_dist'].get(n, 0)) for n in all_n]
 
-| Metrica | Valor |
-|---|---|
-| Inscriptos con 1 solo canal | {n_single:,} ({n_single/total_insc_mt*100:.1f}%) |
-| Inscriptos con 2+ canales (multi-touch) | {n_multi:,} ({n_multi/total_insc_mt*100:.1f}%) |
-| Total inscriptos analizados | {total_insc_mt:,} |
-
-#### Top Combinaciones de Canales
-{top_combos.reset_index().rename(columns={'index':'Combinacion', 'combinacion':'Combinacion', 'count':'Inscriptos'}).to_markdown(index=False)}
-
-![Multi-Touch Canales](chart_multitouch_canales.png)
-![Multi-Touch Combinaciones](chart_multitouch_combinaciones.png)
-"""
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = np.arange(len(all_n))
+    w = 0.35
+    b1 = ax.bar(x - w/2, vals_act, w, label=f'{label_campana_actual}', color='#2ecc71')
+    b2 = ax.bar(x + w/2, vals_ant, w, label='Campana Anterior', color='#e67e22')
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(n) for n in all_n])
+    ax.set_xlabel('Cantidad de canales consultados')
+    ax.set_ylabel('Inscriptos')
+    ax.set_title(f'Multi-Touch por Campana: Canales por Inscripto ({segmento.replace("_"," ")})')
+    ax.legend()
+    ax.bar_label(b1, fmt='%d', padding=2, fontsize=8)
+    ax.bar_label(b2, fmt='%d', padding=2, fontsize=8)
+    plt.tight_layout()
+    chart_mt_camp_path = os.path.join(output_dir, "chart_multitouch_por_campana.png")
+    plt.savefig(chart_mt_camp_path, bbox_inches='tight')
+    plt.close()
+else:
+    chart_mt_camp_path = None
 
 # =========================================================
-# ANÁLISIS ANY-TOUCH POR CANAL
+# GRÁFICO ANY-TOUCH TOTAL
 # =========================================================
-# Responde a: "En cuantas inscripciones intervino el Bot / Google / Meta?"
-# Para cada inscripto, se revisa si tuvo AL MENOS 1 contacto con cada canal,
-# sin importar si fue primero, ultimo o intermedio. Esto es independiente del
-# modelo de atribucion (FT/LT) — mide participacion real del canal.
+at = stats_total['at']
+at_data = {'Bot': at['Bot'], 'Google Ads': at['Google'],
+           'Meta (FB/IG)': at['Meta'], 'Otros / Organico': at['Otros']}
 
-# canales_por_persona ya tiene la lista de canales por inscripto (set)
-at_bot    = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Bot' in cs).sum())
-at_google = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Google' in cs).sum())
-at_meta   = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Meta' in cs).sum())
-at_otros  = int(canales_por_persona['_canal_mt'].apply(lambda cs: 'Otros' in cs).sum())
-
-at_data = {
-    'Bot':    at_bot,
-    'Google Ads': at_google,
-    'Meta (FB/IG)': at_meta,
-    'Otros / Organico': at_otros,
-}
-
-# Grafico any-touch: barras horizontales con % de participacion
 fig, ax = plt.subplots(figsize=(10, 5))
 canales_at = list(at_data.keys())
 valores_at = list(at_data.values())
@@ -448,29 +493,82 @@ for bar, pct in zip(bars_at, pcts_at[::-1]):
     ax.text(bar.get_width() + max(valores_at)*0.01, bar.get_y() + bar.get_height()/2,
             f'{int(bar.get_width()):,} ({pct:.1f}%)', va='center', fontsize=10)
 ax.set_xlabel('Inscriptos donde intervino el canal')
-ax.set_title(f'Any-Touch: Participacion por Canal en Inscripciones ({label_campana_actual if label_campana_actual else segmento})')
+ax.set_title(f'Any-Touch: Participacion por Canal - Total ({segmento.replace("_"," ")})')
 ax.set_xlim(0, max(valores_at) * 1.25 if valores_at else 1)
 plt.tight_layout()
 chart_at_path = os.path.join(output_dir, "chart_anytouch_participacion.png")
 plt.savefig(chart_at_path, bbox_inches='tight')
 plt.close()
 
-# Markdown any-touch
-report_multitouch += f"""
+# =========================================================
+# GRÁFICO ANY-TOUCH DESAGREGADO POR CAMPAÑA
+# =========================================================
+if has_campaign_split and stats_anterior['total'] > 0:
+    canal_names = ['Bot', 'Google', 'Meta', 'Otros']
+    canal_labels = ['Bot', 'Google Ads', 'Meta (FB/IG)', 'Otros']
+    vals_at_act = [stats_actual['at'][c] for c in canal_names]
+    vals_at_ant = [stats_anterior['at'][c] for c in canal_names]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x = np.arange(len(canal_labels))
+    w = 0.35
+    b1 = ax.bar(x - w/2, vals_at_act, w, label=f'{label_campana_actual}', color='#2ecc71')
+    b2 = ax.bar(x + w/2, vals_at_ant, w, label='Campana Anterior', color='#e67e22')
+    ax.set_xticks(x)
+    ax.set_xticklabels(canal_labels)
+    ax.set_ylabel('Inscriptos donde intervino')
+    ax.set_title(f'Any-Touch por Campana ({segmento.replace("_"," ")})')
+    ax.legend()
+
+    # Labels con valor y % sobre su base
+    for bars_grp, base in [(b1, stats_actual['total']), (b2, stats_anterior['total'])]:
+        for bar in bars_grp:
+            h = int(bar.get_height())
+            pct = h / base * 100 if base > 0 else 0
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                    f'{h:,}\n({pct:.0f}%)', ha='center', va='bottom', fontsize=8)
+
+    plt.tight_layout()
+    chart_at_camp_path = os.path.join(output_dir, "chart_anytouch_por_campana.png")
+    plt.savefig(chart_at_camp_path, bbox_inches='tight')
+    plt.close()
+else:
+    chart_at_camp_path = None
+
+# =========================================================
+# MARKDOWN MULTI-TOUCH + ANY-TOUCH (con desagregado por campaña)
+# =========================================================
+def _pct(n, t): return f'{n/t*100:.1f}%' if t > 0 else '0%'
+
+report_multitouch = f"""### Analisis Multi-Touch de Inscriptos
+Cada inscripto puede haber consultado por multiples canales antes de inscribirse.
+
+| Metrica | Total | {label_campana_actual} | Campana Anterior |
+|---|---|---|---|
+| Inscriptos con 1 canal | {n_single:,} ({_pct(n_single, total_insc_mt)}) | {stats_actual['n_single']:,} ({_pct(stats_actual['n_single'], stats_actual['total'])}) | {stats_anterior['n_single']:,} ({_pct(stats_anterior['n_single'], stats_anterior['total'])}) |
+| Inscriptos con 2+ canales | {n_multi:,} ({_pct(n_multi, total_insc_mt)}) | {stats_actual['n_multi']:,} ({_pct(stats_actual['n_multi'], stats_actual['total'])}) | {stats_anterior['n_multi']:,} ({_pct(stats_anterior['n_multi'], stats_anterior['total'])}) |
+| **Total inscriptos** | **{total_insc_mt:,}** | **{stats_actual['total']:,}** | **{stats_anterior['total']:,}** |
+
+#### Top Combinaciones (Total)
+{top_combos.reset_index().rename(columns={top_combos.name if hasattr(top_combos,'name') else 'count':'Inscriptos', 'index':'Combinacion', 'combinacion':'Combinacion'}).to_markdown(index=False)}
+
+![Multi-Touch Canales](chart_multitouch_canales.png)
+![Multi-Touch Combinaciones](chart_multitouch_combinaciones.png)
+{'![Multi-Touch por Campana](chart_multitouch_por_campana.png)' if chart_mt_camp_path else ''}
+
 ### Analisis Any-Touch: Participacion por Canal
-Para cada inscripto se verifica si tuvo **al menos 1 contacto** con cada canal,
-sin importar el orden. Un inscripto puede aparecer en varios canales a la vez.
+Para cada inscripto se verifica si tuvo **al menos 1 contacto** con cada canal.
+Un inscripto puede aparecer en varios canales a la vez (la suma supera 100%).
 
-| Canal | Inscriptos donde intervino | % del total ({total_insc_mt:,}) |
-|---|---|---|
-| **Bot** | {at_bot:,} | {at_bot/total_insc_mt*100:.1f}% |
-| **Google Ads** | {at_google:,} | {at_google/total_insc_mt*100:.1f}% |
-| **Meta (FB/IG)** | {at_meta:,} | {at_meta/total_insc_mt*100:.1f}% |
-| **Otros / Organico** | {at_otros:,} | {at_otros/total_insc_mt*100:.1f}% |
-
-> Nota: La suma supera el 100% porque un inscripto multi-touch se cuenta en cada canal que consulto.
+| Canal | Total | {label_campana_actual} | Campana Anterior |
+|---|---|---|---|
+| **Bot** | {at['Bot']:,} ({_pct(at['Bot'], total_insc_mt)}) | {stats_actual['at']['Bot']:,} ({_pct(stats_actual['at']['Bot'], stats_actual['total'])}) | {stats_anterior['at']['Bot']:,} ({_pct(stats_anterior['at']['Bot'], stats_anterior['total'])}) |
+| **Google Ads** | {at['Google']:,} ({_pct(at['Google'], total_insc_mt)}) | {stats_actual['at']['Google']:,} ({_pct(stats_actual['at']['Google'], stats_actual['total'])}) | {stats_anterior['at']['Google']:,} ({_pct(stats_anterior['at']['Google'], stats_anterior['total'])}) |
+| **Meta (FB/IG)** | {at['Meta']:,} ({_pct(at['Meta'], total_insc_mt)}) | {stats_actual['at']['Meta']:,} ({_pct(stats_actual['at']['Meta'], stats_actual['total'])}) | {stats_anterior['at']['Meta']:,} ({_pct(stats_anterior['at']['Meta'], stats_anterior['total'])}) |
+| **Otros** | {at['Otros']:,} ({_pct(at['Otros'], total_insc_mt)}) | {stats_actual['at']['Otros']:,} ({_pct(stats_actual['at']['Otros'], stats_actual['total'])}) | {stats_anterior['at']['Otros']:,} ({_pct(stats_anterior['at']['Otros'], stats_anterior['total'])}) |
 
 ![Any-Touch Participacion](chart_anytouch_participacion.png)
+{'![Any-Touch por Campana](chart_anytouch_por_campana.png)' if chart_at_camp_path else ''}
 """
 
 # Gráfico 9: Curva de Consultas/Leads por Día

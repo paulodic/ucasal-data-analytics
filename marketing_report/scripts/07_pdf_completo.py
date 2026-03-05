@@ -327,9 +327,11 @@ sections = [
         ('chart_6_conversion_modalidad.png', 'Tasa de Conversion por Modalidad'),
     ]),
     ('Analisis Multi-Touch de Inscriptos', [
-        ('chart_multitouch_canales.png', 'Cantidad de Canales Consultados por Inscripto'),
-        ('chart_multitouch_combinaciones.png', 'Top Combinaciones de Canales (Multi-Touch)'),
-        ('chart_anytouch_participacion.png', 'Any-Touch: En cuantas inscripciones intervino cada canal'),
+        ('chart_multitouch_canales.png', 'Cantidad de Canales Consultados por Inscripto (Total)'),
+        ('chart_multitouch_combinaciones.png', 'Top Combinaciones de Canales (Total)'),
+        ('chart_multitouch_por_campana.png', 'Multi-Touch: Desagregado por Campana'),
+        ('chart_anytouch_participacion.png', 'Any-Touch: Participacion por Canal (Total)'),
+        ('chart_anytouch_por_campana.png', 'Any-Touch: Desagregado por Campana'),
     ]),
     ('Journey del Estudiante', [
         ('chart_9_consultas_por_dia.png', 'Volumen de Consultas (Leads) a traves del Tiempo (Diario)'),
