@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Asesores y Canales de Venta
 
-**Generado:** 2026-03-03 08:18:29
+**Generado:** 2026-03-03 10:23:13
 **Segmento:** Cursos
 **Script:** `17_reporte_asesores.py`
 

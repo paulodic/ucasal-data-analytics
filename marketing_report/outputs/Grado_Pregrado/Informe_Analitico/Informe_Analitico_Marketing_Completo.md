@@ -11,13 +11,18 @@
 - Personas Unicas (Muestra para conversion): 152,095
 - Tasa de Conversion Global (deduplicada): 3.87%
 - Inscriptos Atribuidos a Paid Ads (exacto): 6,926
-- Inscriptos sin trazabilidad (sin lead previo): 1,641
+- Inscriptos sin trazabilidad (sin lead previo): 1,643
 - Bot - Leads captados (historico): 8,447
 - Bot - Inscriptos confirmados (muestra): 396
 - Bot - Tasa de conversion: 6.40%
 - Leads con UTM: 64,953 (17.6%)
 - Leads sin UTM: 304,007 (82.4%)
-- Registros Fuzzy Complementarios: 188
+- Registros Fuzzy Complementarios: 186
+
+## Atribucion por Campana
+- Inscriptos campana actual (Ingreso 2026): 8,808
+- Inscriptos campana anterior (match historico): 2,660
+- % inscriptos con lead de campana anterior: 45.1%
 
 ## Conclusiones y Recomendaciones
 ### 1. Atribucion de Marketing
@@ -30,7 +35,7 @@ El Bot presenta una tasa de conversion de 6.40%, superior al promedio general de
 64,953 leads (17.6%) tienen informacion de UTM, lo que permite rastrear las campanas digitales. El 82.4% restante no tiene UTM asociado.
 
 ### 4. Calidad de Datos
-188 registros requirieron cruce fuzzy (similitud de nombres) y se presentan en un informe complementario aparte para verificacion humana.
+186 registros requirieron cruce fuzzy (similitud de nombres) y se presentan en un informe complementario aparte para verificacion humana.
 
 ### 5. Recomendaciones
 - Implementar UTMs en todas las campanas para mejorar la trazabilidad.

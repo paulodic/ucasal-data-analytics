@@ -1,6 +1,6 @@
 # Memoria Técnica: PDF Informe Analítico Completo
 
-**Generado:** 2026-03-03 08:11:58
+**Generado:** 2026-03-04 22:42:29
 **Segmento:** Grado_Pregrado
 **Script:** `07_pdf_completo.py`
 
@@ -15,9 +15,9 @@
 | Personas únicas evaluadas (cohorte) | 152,095 |
 | Personas convertidas (Exacto, dedup) | 5,892 |
 | Tasa conversión deduplicada | 3.87% |
-| Matches Fuzzy (excluidos de tasa) | 188 |
+| Matches Fuzzy (excluidos de tasa) | 186 |
 | Inscriptos exactos (desde tabla inscriptos) | 6,926 |
-| Inscriptos directos (sin lead) | 1,641 |
+| Inscriptos directos (sin lead) | 1,643 |
 
 ## Bot / Chatbot (FuenteLead=907)
 | Métrica | Valor |
@@ -38,7 +38,7 @@
 - **Deduplicación de personas:** por `DNI` (pk primaria), fallback `Correo`
 - **Filtro cohorte:** Sí — leads desde 2025-09-01
 - **Fecha de corte:** `17 de febrero de 2026`
-- **Páginas PDF generadas:** 18
+- **Páginas PDF generadas:** 23
 
 ## Archivo de Salida
 - `h:\Test-Antigravity\marketing_report\outputs\Grado_Pregrado\Informe_Analitico\Informe_Analitico_Marketing_Completo.pdf`

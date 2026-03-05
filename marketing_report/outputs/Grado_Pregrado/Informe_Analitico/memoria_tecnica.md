@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-03 08:11:52
+**Generado:** 2026-03-04 22:38:14
 **Segmento:** Grado_Pregrado
 **Script:** `04_reporte_final.py`
 
@@ -12,27 +12,38 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total Leads cargados | 369,148 |
-| Leads en período de conversión | 186,964 |
+| Total Leads cargados | 369,146 |
+| Leads en período de conversión | 186,963 |
 | Total Inscriptos | 8,755 |
 | Leads convertidos (Exacto) | 8,586 |
-| Leads convertidos (Fuzzy) | 188 |
+| Leads convertidos (Fuzzy) | 186 |
 | Leads no convertidos | 357,492 |
 | Inscriptos atribuidos a Lead (Exacto) | 6,926 |
-| Inscriptos sin trazabilidad | 1,641 |
+| Inscriptos sin trazabilidad | 1,643 |
 
 ## Tasas de Conversión Calculadas
 | Ecosistema | Universo | Convertidos | Tasa |
 |---|---|---|---|
-| **General** | 186,964 | 8,586 | 4.59% |
+| **General** | 186,963 | 8,586 | 4.59% |
 | **Google Ads** | 24,206 | 1,551 | 6.41% |
-| **Meta (FB/IG)** | 131,671 | 1,329 | 1.01% |
+| **Meta (FB/IG)** | 131,670 | 1,329 | 1.01% |
 
 ## Procedencia de Leads
 | Categoría | Cantidad | Porcentaje |
 |---|---|---|
-| Plataformas Pagas (UTM/Ads) | 298,731 | 80.9% |
+| Plataformas Pagas (UTM/Ads) | 298,729 | 80.9% |
 | Otros (Orgánico/Sin Tracking) | 70,417 | 19.1% |
+
+## Atribución por Campaña
+| Métrica | Valor |
+|---|---|
+| Inscriptos campaña actual (Ingreso 2026) | 8,808 |
+| Inscriptos campaña anterior (match histórico) | 2,660 |
+
+La columna `Campana_Lead` en el CSV maestro indica si la fecha de consulta del lead
+cae dentro de la ventana de la campaña actual o es anterior. Generada por `02_cruce_datos.py`.
+- Grado_Pregrado: >= 2025-09-01 = "Ingreso 2026", antes = "Campaña Anterior"
+- Cursos/Posgrados: >= 2026-01-01 = "2026", antes = "Campaña Anterior"
 
 ## Reglas de Negocio Aplicadas
 - **Filtro de cohorte (Grado_Pregrado):** Sí — leads desde 2025-09-01

@@ -40,7 +40,15 @@ Se filtran únicamente registros con fechas en el rango razonable (2024 en adela
 - **Mediana:** 22 días
 - **Moda (Valor Más Frecuente):** 0 días
 
+**Nota:** Las gráficas 2a y 2b utilizan los mismos rangos de días para garantizar coherencia. La gráfica 2a muestra la distribución como histograma continuo, mientras que 2b presenta los datos como barras categóricas con porcentajes y acumulados.
+
 ### 2b. Distribución por Rangos de Días hasta Inscripción
+
+**Nota Metodológica:** Este análisis calcula los días desde la **PRIMERA CONSULTA REGISTRADA** hasta el pago/inscripción. Si una persona consultó múltiples veces, el reloj comienza en el primer contacto registrado, independientemente de cuántas veces volvió a consultar después.
+
+Esta métrica busca responder: **"¿Cuánto tiempo desde que primero se interesó hasta que efectivamente se inscribió?"** de forma conservadora y realista, midiendo la velocidad de conversión desde el primer contacto.
+
+**Definición de rangos:** 'Mismo día' incluye personas que se inscribieron el mismo día o el día siguiente de su primera consulta (0-1 días). Los demás rangos son acumulativos hasta cada límite superior.
 
 | Rango           |   Personas |    % |   % Acumulado |
 |:----------------|-----------:|-----:|--------------:|
@@ -99,4 +107,10 @@ Esta tabla muestra, para los 15 dominios con más volumen de leads, qué porcent
 | gmail.com.ar   |           655 |        10 |          778 |                 1.53 |
 | gmail.con      |           524 |        15 |          595 |                 2.86 |
 | outlook.com.ar |           371 |        11 |          449 |                 2.96 |
+
+## 3b. Distribución Granular: Día a Día hasta Inscripción
+
+Esta gráfica complementa la sección 2b mostrando un **histograma continuo día a día**, donde cada barra representa un intervalo pequeño de días. Permite visualizar con mayor detalle los picos y la forma de la distribución, especialmente en los primeros días donde se concentra la mayor cantidad de inscripciones.
+
+**Personas analizadas:** 3,169 (mismas que sección 2)
 

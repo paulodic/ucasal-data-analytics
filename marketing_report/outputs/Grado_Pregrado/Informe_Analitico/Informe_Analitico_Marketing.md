@@ -7,14 +7,14 @@
 Este informe consolida el análisis generado a partir del cruce de bases de datos de **Consultas (Leads en Salesforce)** e **Inscriptos**, unificando los orígenes y calculando el "Journey" de las personas. Durante la lectura de las bases de datos originales se aplicaron procesos de **deduplicación** para garantizar que los solapamientos de archivos no duplicaran los registros.
 
 ## 1. Resumen Ejecutivo
-Se analizaron un total de **369,148** leads únicos y **8,755** inscriptos únicos para identificar qué campañas e interacciones previas generaron las inscripciones finales.
+Se analizaron un total de **369,146** leads únicos y **8,755** inscriptos únicos para identificar qué campañas e interacciones previas generaron las inscripciones finales.
 
 | Métrica | Valor |
 |---------|-------|
-| Total Leads | 369,148 |
+| Total Leads | 369,146 |
 | Total Inscriptos | 8,755 |
 | Inscriptos Atribuidos a un Lead (Exacto) | 6,926 (79.1% del total) |
-| Inscriptos sin trazabilidad | 1,641 |
+| Inscriptos sin trazabilidad | 1,643 |
 | **Tasa de Conversión General Leads (Exacta)** | **4.59%** |
 
 ### Desglose por Ecosistema Principal
@@ -23,24 +23,33 @@ Se analizaron un total de **369,148** leads únicos y **8,755** inscriptos únic
 | Ecosistema | Total Leads Analizados | Inscriptos Atribuidos | Tasa de Conversión |
 |------------|------------------------|-----------------------|--------------------|
 | **Google Ads** | 24,206 | 1,551 | **6.41%** |
-| **Meta (FB/IG)** | 131,671 | 1,329 | **1.01%** |
+| **Meta (FB/IG)** | 131,670 | 1,329 | **1.01%** |
 
 ### Procedencia de Leads (Pagado vs Orgánico/Desconocido)
-De los 369,148 leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
-- **Plataformas Pagadas Confirmadas:** 298,731 leads (80.9%)
+De los 369,146 leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
+- **Plataformas Pagadas Confirmadas:** 298,729 leads (80.9%)
 - **Otros (Orgánico / Sin Tracking ID):** 70,417 leads (19.1%)
 
 De igual manera, al observar solo las **11,468 inscripciones (cruces exactos)** logradas a partir de leads, la distribución de origen es:
 - **Inscripciones Pagadas (Meta/UTM):** 3,928 (34.3%)
 - **Inscripciones Orgánicas/Directas:** 7,540 (65.7%)
 
-*(Nota sobre Fuzzys: Existen 188 leads sospechosos de ser inscriptos (188 inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
+*(Nota sobre Fuzzys: Existen 186 leads sospechosos de ser inscriptos (186 inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
+
+### Atribución por Campaña
+La columna `Campana_Lead` identifica si el lead que generó la inscripción pertenece a la campaña actual o a una anterior.
+| Campaña | Inscriptos Exactos |
+|---|---|
+| Campaña actual (Ingreso 2026) | 8,808 |
+| Campaña anterior (match histórico) | 2,660 |
 
 ### Visualización de Tasas y Atribución
 ![Conversión Leads](chart_1_conversion_leads.png)
 ![Composición Inscriptos](chart_2_composicion_inscriptos.png)
 ![Pagados vs Otros Leads](chart_5_leads_pagos_vs_otros.png)
 ![Pagados vs Otros Inscriptos](chart_7_inscriptos_pagos_vs_otros.png)
+
+![Comparativa por Campana](chart_2b_campana_comparativa.png)
 
 ### Análisis de Tiempos de Resolución (Inscriptos Exactos)
 Comparativa gráfica de cuánto demora en inscribirse un prospecto según su origen (filtrado de 0 a 180 días).
@@ -56,6 +65,34 @@ Comparativa gráfica de cuánto demora en inscribirse un prospecto según su ori
 
 ![Volumen Consultas Dia](chart_9_consultas_por_dia.png)
 
+
+
+### Analisis Multi-Touch de Inscriptos
+Cada inscripto puede haber consultado por multiples canales antes de inscribirse.
+Este analisis revela el comportamiento real del journey.
+
+| Metrica | Valor |
+|---|---|
+| Inscriptos con 1 solo canal | 4,870 (82.7%) |
+| Inscriptos con 2+ canales (multi-touch) | 1,022 (17.3%) |
+| Total inscriptos analizados | 5,892 |
+
+#### Top Combinaciones de Canales
+| Combinacion           |   Inscriptos |
+|:----------------------|-------------:|
+| Otros                 |         3327 |
+| Google                |          768 |
+| Meta                  |          615 |
+| Google + Otros        |          415 |
+| Meta + Otros          |          209 |
+| Bot                   |          160 |
+| Bot + Otros           |          134 |
+| Google + Meta         |           73 |
+| Google + Meta + Otros |           59 |
+| Bot + Google          |           39 |
+
+![Multi-Touch Canales](chart_multitouch_canales.png)
+![Multi-Touch Combinaciones](chart_multitouch_combinaciones.png)
 
 
 ## 2. Journey del Estudiante (Comportamiento)

@@ -1,6 +1,6 @@
 # Memoria Técnica: Auditoría CRM Matriculadas
 
-**Generado:** 2026-03-03 08:18:27
+**Generado:** 2026-03-03 10:23:11
 **Segmento:** Cursos
 **Script:** `16_analisis_matriculadas.py`
 
