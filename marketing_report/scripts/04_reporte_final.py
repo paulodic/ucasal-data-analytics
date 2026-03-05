@@ -365,10 +365,13 @@ else:
 inscriptos_pks = set(df_exact_mt['_pk_mt'].unique())
 
 # Para cada inscripto, obtener la lista de canales que consultó (sin repetir)
+# y la cantidad total de consultas (leads) que generó.
 df_insc_leads = df_leads[df_leads['_pk_mt'].isin(inscriptos_pks)].copy()
+consultas_por_persona = df_insc_leads.groupby('_pk_mt').size().rename('n_consultas')
 canales_por_persona = df_insc_leads.groupby('_pk_mt')['_canal_mt'].apply(lambda x: sorted(set(x))).reset_index()
 canales_por_persona['n_canales'] = canales_por_persona['_canal_mt'].apply(len)
 canales_por_persona['combinacion'] = canales_por_persona['_canal_mt'].apply(lambda x: ' + '.join(x))
+canales_por_persona = canales_por_persona.merge(consultas_por_persona, on='_pk_mt', how='left')
 
 # Merge campaña a canales_por_persona
 if not campana_por_pk.empty:
@@ -385,11 +388,15 @@ def calc_mt_at(df_sub, label):
     total = len(df_sub)
     if total == 0:
         return {'total': 0, 'n_single': 0, 'n_multi': 0,
+                'n_1consulta': 0, 'avg_consultas': 0,
                 'top_combos': pd.Series(dtype='int64'),
                 'mt_dist': pd.Series(dtype='int64'),
                 'at': {'Bot': 0, 'Google': 0, 'Meta': 0, 'Otros': 0}}
     n_s = int((df_sub['n_canales'] == 1).sum())
     n_m = int((df_sub['n_canales'] > 1).sum())
+    # Consultas únicas: cuántas personas hicieron exactamente 1 consulta
+    n_1c = int((df_sub['n_consultas'] == 1).sum())
+    avg_c = float(df_sub['n_consultas'].mean())
     tc = df_sub['combinacion'].value_counts().head(10)
     md = df_sub['n_canales'].value_counts().sort_index()
     at = {
@@ -399,6 +406,7 @@ def calc_mt_at(df_sub, label):
         'Otros':  int(df_sub['_canal_mt'].apply(lambda cs: 'Otros' in cs).sum()),
     }
     return {'total': total, 'n_single': n_s, 'n_multi': n_m,
+            'n_1consulta': n_1c, 'avg_consultas': avg_c,
             'top_combos': tc, 'mt_dist': md, 'at': at}
 
 # Calcular para total, campaña actual y campaña anterior
@@ -545,6 +553,8 @@ Cada inscripto puede haber consultado por multiples canales antes de inscribirse
 
 | Metrica | Total | {label_campana_actual} | Campana Anterior |
 |---|---|---|---|
+| Inscriptos con 1 sola consulta | {stats_total['n_1consulta']:,} ({_pct(stats_total['n_1consulta'], total_insc_mt)}) | {stats_actual['n_1consulta']:,} ({_pct(stats_actual['n_1consulta'], stats_actual['total'])}) | {stats_anterior['n_1consulta']:,} ({_pct(stats_anterior['n_1consulta'], stats_anterior['total'])}) |
+| Promedio consultas por inscripto | {stats_total['avg_consultas']:.1f} | {stats_actual['avg_consultas']:.1f} | {stats_anterior['avg_consultas']:.1f} |
 | Inscriptos con 1 canal | {n_single:,} ({_pct(n_single, total_insc_mt)}) | {stats_actual['n_single']:,} ({_pct(stats_actual['n_single'], stats_actual['total'])}) | {stats_anterior['n_single']:,} ({_pct(stats_anterior['n_single'], stats_anterior['total'])}) |
 | Inscriptos con 2+ canales | {n_multi:,} ({_pct(n_multi, total_insc_mt)}) | {stats_actual['n_multi']:,} ({_pct(stats_actual['n_multi'], stats_actual['total'])}) | {stats_anterior['n_multi']:,} ({_pct(stats_anterior['n_multi'], stats_anterior['total'])}) |
 | **Total inscriptos** | **{total_insc_mt:,}** | **{stats_actual['total']:,}** | **{stats_anterior['total']:,}** |
