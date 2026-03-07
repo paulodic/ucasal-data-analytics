@@ -36,6 +36,7 @@ scripts_globales = [
     "generate_eda_pdf.py",
     "20_presupuesto_roi.py",
     "22_auditoria_indicadores.py",
+    "23_embudo_conversion.py",
 ]
 
 def run_script(script_path, args=None, label=""):
