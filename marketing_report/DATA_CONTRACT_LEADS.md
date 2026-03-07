@@ -312,8 +312,9 @@ El script `04_reporte_final.py` genera además un análisis multi-touch que mues
 Los canales se clasifican como: `Google`, `Meta`, `Bot`, `Otros`.
 
 Gráficos generados:
-- `chart_multitouch_canales.png` — Distribución de cantidad de canales por inscripto
-- `chart_multitouch_combinaciones.png` — Top 10 combinaciones de canales
+- `chart_multitouch_canales.png` — Distribución de cantidad de canales por inscripto (total)
+- `chart_multitouch_combinaciones.png` — Top 10 combinaciones de canales (total)
+- `chart_multitouch_por_campana.png` — Distribución de canales desagregada por campaña actual vs anterior
 - `chart_2b_campana_comparativa.png` — Barras comparando inscriptos por canal entre campañas
 
 ### 10b.5 Análisis Any-Touch (participación por canal)
@@ -335,8 +336,28 @@ Esto revela la participación real de cada canal en el journey completo.
 multi-touch se cuenta en cada canal que consultó. Por ejemplo, una persona que consultó por
 Google y luego por Bot aparece en ambos canales.
 
-Gráfico generado:
-- `chart_anytouch_participacion.png` — Barras horizontales: inscriptos donde intervino cada canal (con %)
+Gráficos generados:
+- `chart_anytouch_participacion.png` — Barras horizontales: inscriptos donde intervino cada canal (con %) — total
+- `chart_anytouch_por_campana.png` — Barras agrupadas: participación por canal separada por campaña actual vs anterior
+
+### 10b.6 Ventana de conversión por informe: Filtrada vs Histórica
+
+> **IMPORTANTE:** No existe un solo criterio de ventana de conversión. Cada informe la usa de forma distinta según su propósito analítico.
+
+| Script | Ventana de conversión | Propósito |
+|---|---|---|
+| `02_cruce_datos.py` | **Sin filtro** — cruza TODOS los leads históricos contra inscriptos | Generar la base maestra completa. El matching debe ser exhaustivo sin restricciones de fecha |
+| `04_reporte_final.py` | **Grado_Pregrado:** ≥ 2025-09-01. **Cursos/Posgrados:** sin filtro de inicio (todos los leads históricos hasta `max(Insc_Fecha Pago)`) | Calcular tasas de conversión generales. Para Cursos/Posgrados se incluye el histórico completo porque permite evaluar la influencia acumulada de campañas anteriores en las inscripciones actuales |
+| `20_presupuesto_roi.py` | **Grado_Pregrado:** ≥ 2025-09-01. **Cursos:** ≥ 2026-01-01. **Posgrados:** ≥ 2026-01-01 | Calcular ROI de la campaña actual SOLAMENTE. Se filtra estrictamente por ventana de campaña para que los KPIs financieros (CPL, CPA, ROI) reflejen el rendimiento de la inversión del período analizado |
+| `23_embudo_conversion.py` | Usa todos los leads con DNI, sin filtro de fecha | Embudo completo Consulta→Boleta→Pago. Incluye todo el histórico para dimensionar el funnel total |
+
+**¿Por qué difieren?**
+
+- **Para ajustar la campaña actual** → usar `20_presupuesto_roi.py` con ventana filtrada. Responde: "¿cuánto costó cada inscripto de ESTA campaña?"
+- **Para ver la influencia de campañas anteriores** → usar `04_reporte_final.py` con columna `Campana_Lead`, que desagrega inscriptos entre campaña actual y anterior. Responde: "¿cuántos inscriptos provienen de leads que consultaron en campañas previas?"
+- **Para el matching exhaustivo** → `02_cruce_datos.py` siempre usa todos los leads, ya que un lead de 2024 puede inscribirse en 2026.
+
+> **Regla general:** La columna `Campana_Lead` (generada por `02_cruce_datos.py`) es la que permite discriminar leads por campaña en CUALQUIER informe downstream. Los filtros de fecha solo ajustan el denominador de las tasas.
 
 ---
 

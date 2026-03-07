@@ -35,6 +35,7 @@ scripts_globales = [
     "15_carreras.py",
     "generate_eda_pdf.py",
     "20_presupuesto_roi.py",
+    "21_atribucion_causal.py",
     "22_auditoria_indicadores.py",
     "23_embudo_conversion.py",
 ]

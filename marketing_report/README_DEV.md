@@ -91,12 +91,9 @@ Se ejecutan una sola vez, sin argumento de segmento:
 20. **`15_carreras.py`**: Análisis de carreras.
 21. **`generate_eda_pdf.py`**: PDF de análisis exploratorio de datos (EDA).
 22. **`20_presupuesto_roi.py`**: Inversión publicitaria y ROI. Cruza costos de Google Ads (hardcodeado) y Facebook Ads (archivos) con conversiones. KPIs: CPL, CPA, Revenue, ROI. Modelos Last-Touch y First-Touch.
-23. **`22_auditoria_indicadores.py`**: Auditoría de indicadores de calidad del pipeline.
-24. **`23_embudo_conversion.py`**: Embudo Consulta → Boleta → Inscripción. Lee boletas raw, cruza por DNI. Genera embudo por segmento, desglose por canal/campaña, y **diagramas Sankey** (canal → boleta → pago) con Plotly.
-
-### Scripts manuales (NO incluidos en `00_run_all.py`)
-
-- **`21_atribucion_causal.py`**: Variante causal de `20`: solo cuenta como conversión consultas ANTERIORES al pago. Genera comparativa Estándar vs Causal. Se ejecuta manualmente cuando se necesita.
+23. **`21_atribucion_causal.py`**: Variante causal del ROI: solo cuenta como conversión consultas ANTERIORES al pago. Genera comparativa Estándar vs Causal, incluyendo modelo Any-Touch Causal.
+24. **`22_auditoria_indicadores.py`**: Auditoría de indicadores de calidad del pipeline.
+25. **`23_embudo_conversion.py`**: Embudo Consulta → Boleta → Inscripción. Lee boletas raw, cruza por DNI. Genera embudo por segmento, desglose por canal/campaña, y **diagramas Sankey** (canal → boleta → pago) con Plotly.
 
 ---
 
@@ -111,13 +108,15 @@ Se ejecutan una sola vez, sin argumento de segmento:
 
 ## 📅 Formato de Fechas por Columna y Tabla
 
-> **IMPORTANTE:** Todas las fechas en los CSVs de salida están almacenadas como strings en formato `YYYY-MM-DD` (ISO 8601). Sin embargo, al parsearlas con `pd.to_datetime()`, usar `dayfirst=True` puede generar errores silenciosos cuando el formato ya es ISO. Se recomienda usar `format='mixed'` o parsear sin `dayfirst`.
+> **IMPORTANTE — FORMATOS MIXTOS:** Las columnas de fecha en los CSVs de salida **NO comparten un único formato**. La columna `Consulta: Fecha de creación` mantiene el formato raw `D/M/YYYY` de Salesforce (ej: `2/3/2026` = 2 de marzo), mientras que las columnas `Insc_*`, `Fecha Pago` y `Fecha Aplicación` usan `YYYY-MM-DD` (ISO 8601). Ver tabla abajo para detalle por columna.
+>
+> **Riesgo si no se maneja:** Parsear `Consulta: Fecha de creación` sin `dayfirst=True` pierde el 87% de las filas donde el día > 12 (pandas las interpreta como mes inválido y devuelve `NaT`).
 
 ### Tabla: `reporte_marketing_leads_completos.csv` (Leads)
 
 | Columna | Formato en CSV | Ejemplo | Origen | Observaciones |
 |---------|---------------|---------|--------|---------------|
-| `Consulta: Fecha de creación` | `YYYY-MM-DD` | `2024-12-01` | Salesforce (Leads `.xlsx`) | Fecha en que se creó la consulta del lead |
+| `Consulta: Fecha de creación` | **`D/M/YYYY`** | `2/3/2026` | Salesforce (Leads `.xlsx`) | **⚠️ FORMATO NO ISO.** Se exporta tal cual llega de Salesforce, sin conversión. Parsear siempre con `dayfirst=True` |
 | `Fecha Pago` | `YYYY-MM-DD` | `2025-10-23` | Inscriptos (`.xls`) | Solo presente si el lead matcheó con un inscripto. Es la fecha de pago del inscripto matcheado |
 | `Fecha Aplicación` | `YYYY-MM-DD` | `2026-03-10` | Inscriptos (`.xls`) | Fecha de inicio de cursado. Puede ser futura si el alumno se anotó para un ciclo próximo |
 | `Insc_Fecha Pago` | `YYYY-MM-DD` | `2025-10-23` | Inscriptos (`.xls`) | Idéntica a `Fecha Pago` pero con prefijo `Insc_`. Generada por el cruce `02_cruce_datos.py` |
@@ -127,7 +126,7 @@ Se ejecutan una sola vez, sin argumento de segmento:
 
 | Columna | Formato en CSV | Ejemplo | Origen | Observaciones |
 |---------|---------------|---------|--------|---------------|
-| `Consulta: Fecha de creación` | `YYYY-MM-DD` | `2024-12-01` | Salesforce | La consulta que originó al inscripto |
+| `Consulta: Fecha de creación` | **`D/M/YYYY`** | `2/3/2026` | Salesforce | **⚠️ FORMATO NO ISO.** La consulta que originó al inscripto. Parsear con `dayfirst=True` |
 | `Fecha Pago` | `YYYY-MM-DD` | `2025-10-23` | Sistema de Inscriptos | Cuándo pagó la boleta |
 | `Fecha Aplicación` | `YYYY-MM-DD` | `2026-03-10` | Sistema de Inscriptos | Cuándo empieza a cursar |
 | `Insc_Fecha Pago` | `YYYY-MM-DD` | `2025-10-23` | Cruce `02` | Copia de `Fecha Pago` generada por merge |
@@ -143,11 +142,18 @@ Se ejecutan una sola vez, sin argumento de segmento:
 ### Cómo parsear correctamente
 
 ```python
-# ✅ CORRECTO: usar format='mixed' para manejar variaciones
-pd.to_datetime(df['Columna'], format='mixed', dayfirst=True, errors='coerce')
+# ✅ CORRECTO para Consulta: Fecha de creación (formato D/M/YYYY raw de Salesforce)
+pd.to_datetime(df['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
 
-# ⚠️ PRECAUCIÓN: dayfirst=True con formato YYYY-MM-DD genera un Warning
-# porque pandas detecta que el formato ya es ISO y lo ignora igualmente.
+# ✅ CORRECTO para columnas Insc_Fecha Pago, Fecha Pago (formato ISO YYYY-MM-DD)
+pd.to_datetime(df['Insc_Fecha Pago'], format='mixed', errors='coerce')
+
+# ❌ MAL — pierde el 87% de las fechas de Consulta donde día > 12
+pd.to_datetime(df['Consulta: Fecha de creación'], errors='coerce')
+
+# ⚠️ NOTA: usar dayfirst=True con columnas ISO genera un UserWarning
+# (pandas detecta el formato ISO y lo ignora), pero NO causa errores de datos.
+# Por seguridad se puede usar format='mixed' con dayfirst=True en TODAS las columnas.
 
 # ✅ VALIDACIÓN DE RANGO: siempre filtrar fechas fuera de rango razonable
 fecha_min = pd.Timestamp('2024-01-01')
