@@ -1,3 +1,23 @@
+"""
+02_cruce_datos.py — Script maestro de cruce Leads ↔ Inscriptos ↔ Boletas
+
+Pipeline principal que:
+  1. Lee y deduplica leads de Salesforce (por Consulta: ID Consulta)
+  2. Lee y deduplica inscriptos del sistema académico
+  3. Cruza leads con inscriptos: exacto (DNI→Email→Tel×6) + fuzzy email + fuzzy nombre
+  4. Cruza leads sin inscripto contra boletas sin pago (mismo cruce exacto)
+  5. Clasifica cada lead por campaña según fecha de consulta vs ventana del segmento
+  6. Segmenta por nivel académico (Grado_Pregrado/Cursos/Posgrados) y exporta CSVs
+
+Outputs por segmento en outputs/Data_Base/<Segmento>/:
+  - reporte_marketing_leads_completos.csv      (todos los leads + columnas Insc_* y Bol_*)
+  - reporte_marketing_inscriptos_origenes.csv   (inscriptos + datos del lead que matcheó)
+  - reporte_marketing_boletas_sin_pago.csv      (boletas que no pagaron, para embudo)
+
+Dependencias: pandas, rapidfuzz (o thefuzz), Levenshtein, multiprocessing
+Ver DATA_CONTRACT_LEADS.md para documentación completa del contrato de datos.
+"""
+
 import pandas as pd
 import glob
 import os
@@ -41,12 +61,18 @@ def clean_email(val):
     return s if s else pd.NA
 
 def clean_phone(val):
+    """
+    Normaliza teléfonos argentinos a un formato comparable de ~10 dígitos.
+    Maneja: prefijos duplicados (54-549...), código de área duplicado (2901-2901...),
+    prefijo internacional (54/549), cero inicial, '15' móvil intercalado,
+    y trunca a últimos 10 dígitos si excede.
+    """
     if pd.isna(val) or val == '':
         return pd.NA
-    
+
     s = str(val).split('.')[0].strip()
-    
-    # Manejar posibles codigos duplos separados por guion: 
+
+    # Manejar posibles codigos duplos separados por guion:
     # e.g. "54 - 549388...", "2901 - 2901407680", "3444 - 3444423965"
     if '-' in s:
         parts = [p.strip() for p in s.split('-')]
@@ -155,6 +181,57 @@ def _fuzzy_worker(insc_tuple, choices_dict):
                 return (insc_id, best_match_key, score)
     return None
 
+def cruce_exacto(df_leads, df_target, prefix, lead_id='Lead_Tmp_ID', target_id=None, match_col='Match_Tipo'):
+    """
+    Cruce exacto genérico Lead ↔ Target (Inscripto o Boleta).
+    Matching secuencial: DNI → Email → Tel×4 combinaciones.
+    Cada paso excluye IDs ya matcheados.
+
+    Args:
+        df_leads: DataFrame de leads con columnas *_match
+        df_target: DataFrame target con columnas {prefix}_*_match
+        prefix: 'Insc' o 'Bol'
+        lead_id: columna ID en leads
+        target_id: columna ID en target
+        match_col: nombre de la columna donde escribir el tipo de match
+
+    Returns: (df_matched, matched_lead_ids, matched_target_ids)
+    """
+    if target_id is None:
+        target_id = f'{prefix}_Tmp_ID'
+
+    steps = [
+        ('DNI_match',      f'{prefix}_DNI_match',   'Exacto (DNI)'),
+        ('Email_match',    f'{prefix}_Email_match',  'Exacto (Email)'),
+        ('Phone_match',    f'{prefix}_Phone_match',  'Exacto (Teléfono)'),
+        ('Phone_match',    f'{prefix}_Cel_match',    'Exacto (Celular)'),
+        ('Cel_lead_match', f'{prefix}_Phone_match',  'Exacto (Celular)'),
+        ('Cel_lead_match', f'{prefix}_Cel_match',    'Exacto (Celular)'),
+    ]
+
+    matched_leads = set()
+    matched_targets = set()
+    all_merges = []
+
+    for left_on, right_on, label in steps:
+        if left_on not in df_leads.columns or right_on not in df_target.columns:
+            continue
+        rem_l = df_leads[~df_leads[lead_id].isin(matched_leads)]
+        rem_t = df_target[~df_target[target_id].isin(matched_targets)]
+        l = rem_l[rem_l[left_on].notna()]
+        t = rem_t[rem_t[right_on].notna()]
+        if l.empty or t.empty:
+            continue
+        m = pd.merge(l, t, left_on=left_on, right_on=right_on, how='inner')
+        m[match_col] = label
+        matched_leads.update(m[lead_id])
+        matched_targets.update(m[target_id])
+        all_merges.append(m)
+
+    df_matched = pd.concat(all_merges, ignore_index=True) if all_merges else pd.DataFrame()
+    return df_matched, matched_leads, matched_targets
+
+
 if __name__ == '__main__':
     # ==========================================
     # 1. LECTURA Y DEDUPLICACIÓN DE DATOS
@@ -241,101 +318,49 @@ if __name__ == '__main__':
     # ==========================================
     print("Limpiando claves de cruce...")
 
+    # Leads: generar claves de matching normalizadas
+    # Nota: los leads tienen 'Correo' (no 'Email') y pueden tener 'Celular' (Informe General)
     df_leads['DNI_match'] = df_leads.get('DNI', pd.Series(dtype='object')).apply(clean_dni)
     df_leads['Email_match'] = df_leads.get('Correo', pd.Series(dtype='object')).apply(clean_email)
     df_leads['Phone_match']   = df_leads.get('Telefono', pd.Series(dtype='object')).apply(clean_phone)
     df_leads['Cel_lead_match'] = df_leads.get('Celular', pd.Series(dtype='object')).apply(clean_phone)
     df_leads['Nombre_match']  = df_leads.get('Nombre', pd.Series(dtype='object')).apply(clean_name)
 
+    # IDs temporales para tracking durante el cruce (se eliminan al final)
     df_inscriptos['Inscripto_Tmp_ID'] = df_inscriptos.index.astype(str)
     df_leads['Lead_Tmp_ID'] = df_leads.index.astype(str)
 
+    # Inscriptos: generar claves de matching normalizadas
+    # Nota: inscriptos tienen 'Email' (no 'Correo'), 'Telefono' y 'Celular'
     df_inscriptos['DNI_match'] = df_inscriptos.get('DNI', pd.Series(dtype='object')).apply(clean_dni)
     df_inscriptos['Email_match'] = df_inscriptos.get('Email', pd.Series(dtype='object')).apply(clean_email)
     df_inscriptos['Phone_match'] = df_inscriptos.get('Telefono', pd.Series(dtype='object')).apply(clean_phone)
     df_inscriptos['Cel_match'] = df_inscriptos.get('Celular', pd.Series(dtype='object')).apply(clean_phone)
     df_inscriptos['Nombre_match'] = df_inscriptos.get('Apellido y Nombre', pd.Series(dtype='object')).apply(clean_name)
 
+    # Renombrar columnas de inscriptos con prefijo Insc_ para evitar colisiones en el merge
+    # (excepto Inscripto_Tmp_ID que se usa como clave de tracking)
     rename_dict = {col: f"Insc_{col}" for col in df_inscriptos.columns if col not in ['Inscripto_Tmp_ID']}
     df_inscriptos_renamed = df_inscriptos.rename(columns=rename_dict)
 
+    # ==========================================
+    # 3. CRUCE EXACTO LEAD ↔ INSCRIPTO
+    # ==========================================
+    # Secuencia de matching (en orden de prioridad, cada paso excluye ya matcheados):
+    #   1. DNI lead vs DNI inscripto                    → Exacto (DNI)
+    #   2. Email lead vs Email inscripto                → Exacto (Email)
+    #   3. Telefono lead vs Telefono inscripto          → Exacto (Teléfono)
+    #   4. Telefono lead vs Celular inscripto           → Exacto (Celular)
+    #   5. Celular lead vs Telefono inscripto           → Exacto (Celular)
+    #   6. Celular lead vs Celular inscripto            → Exacto (Celular)
     print("Realizando cruce exacto de datos (DNI, Email, Teléfono)...")
+    df_matched_exact, matched_leads_ids, matched_insc_ids = cruce_exacto(
+        df_leads, df_inscriptos_renamed, 'Insc', target_id='Inscripto_Tmp_ID')
 
-    # ==========================================
-    # 3. LÓGICA DE CRUCE EXACTO
-    # ==========================================
-    matched_leads_ids = set()
-    matched_insc_ids = set()
-
-    # Match 1: DNI
-    leads_dni = df_leads[df_leads['DNI_match'].notna()]
-    insc_dni = df_inscriptos_renamed[df_inscriptos_renamed['Insc_DNI_match'].notna()]
-    merge1 = pd.merge(leads_dni, insc_dni, left_on='DNI_match', right_on='Insc_DNI_match', how='inner')
-    merge1['Match_Tipo'] = 'Exacto (DNI)'
-
-    matched_leads_ids.update(merge1['Lead_Tmp_ID'])
-    matched_insc_ids.update(merge1['Inscripto_Tmp_ID'])
-
-    # Match 2: Email
-    leads_rem_1 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
-    insc_rem_1 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
-
-    leads_email = leads_rem_1[leads_rem_1['Email_match'].notna()]
-    insc_email = insc_rem_1[insc_rem_1['Insc_Email_match'].notna()]
-    merge2 = pd.merge(leads_email, insc_email, left_on='Email_match', right_on='Insc_Email_match', how='inner')
-    merge2['Match_Tipo'] = 'Exacto (Email)'
-
-    matched_leads_ids.update(merge2['Lead_Tmp_ID'])
-    matched_insc_ids.update(merge2['Inscripto_Tmp_ID'])
-
-    # Match 3: Teléfono 
-    # Insc Telefono
-    leads_rem_2 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
-    insc_rem_2 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
-
-    leads_phone = leads_rem_2[leads_rem_2['Phone_match'].notna()]
-    insc_phone = insc_rem_2[insc_rem_2['Insc_Phone_match'].notna()]
-    merge3a = pd.merge(leads_phone, insc_phone, left_on='Phone_match', right_on='Insc_Phone_match', how='inner')
-    merge3a['Match_Tipo'] = 'Exacto (Teléfono)'
-
-    matched_leads_ids.update(merge3a['Lead_Tmp_ID'])
-    matched_insc_ids.update(merge3a['Inscripto_Tmp_ID'])
-
-    # Match 3b: lead Telefono vs insc Celular
-    leads_rem_3 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
-    insc_rem_3 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
-
-    leads_cel = leads_rem_3[leads_rem_3['Phone_match'].notna()]
-    insc_cel = insc_rem_3[insc_rem_3['Insc_Cel_match'].notna()]
-    merge3b = pd.merge(leads_cel, insc_cel, left_on='Phone_match', right_on='Insc_Cel_match', how='inner')
-    merge3b['Match_Tipo'] = 'Exacto (Celular)'
-
-    matched_leads_ids.update(merge3b['Lead_Tmp_ID'])
-    matched_insc_ids.update(merge3b['Inscripto_Tmp_ID'])
-
-    # Match 3c: lead Celular vs insc Telefono
-    leads_rem_4 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
-    insc_rem_4 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
-
-    leads_cel2 = leads_rem_4[leads_rem_4['Cel_lead_match'].notna()]
-    insc_phone2 = insc_rem_4[insc_rem_4['Insc_Phone_match'].notna()]
-    merge3c = pd.merge(leads_cel2, insc_phone2, left_on='Cel_lead_match', right_on='Insc_Phone_match', how='inner')
-    merge3c['Match_Tipo'] = 'Exacto (Celular)'
-
-    matched_leads_ids.update(merge3c['Lead_Tmp_ID'])
-    matched_insc_ids.update(merge3c['Inscripto_Tmp_ID'])
-
-    # Match 3d: lead Celular vs insc Celular
-    leads_rem_5 = df_leads[~df_leads['Lead_Tmp_ID'].isin(matched_leads_ids)]
-    insc_rem_5 = df_inscriptos_renamed[~df_inscriptos_renamed['Inscripto_Tmp_ID'].isin(matched_insc_ids)]
-
-    leads_cel3 = leads_rem_5[leads_rem_5['Cel_lead_match'].notna()]
-    insc_cel2 = insc_rem_5[insc_rem_5['Insc_Cel_match'].notna()]
-    merge3d = pd.merge(leads_cel3, insc_cel2, left_on='Cel_lead_match', right_on='Insc_Cel_match', how='inner')
-    merge3d['Match_Tipo'] = 'Exacto (Celular)'
-
-    matched_leads_ids.update(merge3d['Lead_Tmp_ID'])
-    matched_insc_ids.update(merge3d['Inscripto_Tmp_ID'])
+    n_dni = len(df_matched_exact[df_matched_exact['Match_Tipo'] == 'Exacto (DNI)']) if not df_matched_exact.empty else 0
+    n_email = len(df_matched_exact[df_matched_exact['Match_Tipo'] == 'Exacto (Email)']) if not df_matched_exact.empty else 0
+    n_tel = len(df_matched_exact[df_matched_exact['Match_Tipo'].isin(['Exacto (Teléfono)', 'Exacto (Celular)'])]) if not df_matched_exact.empty else 0
+    print(f"  DNI: {n_dni} | Email: {n_email} | Tel/Cel: {n_tel} | Total exactos: {len(df_matched_exact)}")
 
     # ==========================================
     # 3.5 LÓGICA DE CRUCE FUZZY EMAIL (OPTIMIZADO CON INDICES DE LONGITUD)
@@ -455,10 +480,10 @@ if __name__ == '__main__':
     # ==========================================
     # 5. CONSOLIDACIÓN FINAL
     # ==========================================
+    # Se arman dos reportes:
+    #   a) df_final_leads: TODOS los leads (matcheados + solos) con columnas Insc_* si matchearon
+    #   b) df_final_inscriptos: TODOS los inscriptos (matcheados + solos) con datos del lead si matchearon
     print("Consolidando resultados...")
-
-    # Leads Exactos (DNI + Email + Teléfono×4 combinaciones)
-    df_matched_exact = pd.concat([merge1, merge2, merge3a, merge3b, merge3c, merge3d], ignore_index=True)
 
     # Juntar exactos + fuzzy
     frames_matched = [df_matched_exact]
@@ -486,10 +511,113 @@ if __name__ == '__main__':
     df_final_inscriptos = pd.concat([df_all_matched, df_final_unmatched_inscriptos], ignore_index=True)
     df_final_inscriptos = df_final_inscriptos.drop_duplicates(subset=['Inscripto_Tmp_ID'])
 
-    # Limpieza columnas
+    # ==========================================
+    # 5b. CRUCE LEADS ↔ BOLETAS (PREINSCRIPTOS SIN PAGO)
+    # ==========================================
+    # Las boletas son el paso intermedio: Lead → Boleta → Inscripto.
+    # Solo se cruzan contra leads SIN inscripto (Match_Tipo == 'No (Solo Lead)').
+    # Boletas cuyo DNI ya aparece en inscriptos se excluyen (ya pagaron).
+    # El cruce usa la misma función cruce_exacto() con prefijo 'Bol_'.
+    # Resultado: columnas Bol_* se agregan al df_final_leads vía merge.
+    boletas_dir = os.path.join(raw_dir, "boletas")
+    boletas_files = glob.glob(os.path.join(boletas_dir, "*.xlsx")) + \
+                    glob.glob(os.path.join(boletas_dir, "*.xls"))
+
+    df_final_boletas = pd.DataFrame()  # para exportación
+
+    if boletas_files:
+        print("\n--- Procesando Boletas (preinscriptos sin pago) ---")
+        df_boletas_list = []
+        for f in boletas_files:
+            try:
+                engine = 'xlrd' if f.endswith('.xls') else None
+                df = pd.read_excel(f, engine=engine)
+                df_boletas_list.append(df)
+                print(f"  Cargado: {os.path.basename(f)} ({len(df)} filas)")
+            except Exception as e:
+                print(f"Error cargando {f}: {e}")
+
+        df_boletas = pd.concat(df_boletas_list, ignore_index=True) if df_boletas_list else pd.DataFrame()
+
+        if not df_boletas.empty:
+            # Dedup por Nro Transac
+            initial_len = len(df_boletas)
+            if 'Nro Transac' in df_boletas.columns:
+                df_boletas = df_boletas.drop_duplicates(subset=['Nro Transac'])
+            else:
+                df_boletas = df_boletas.drop_duplicates()
+            print(f"Boletas después de dedup: {len(df_boletas)} (removidas: {initial_len - len(df_boletas)})")
+
+            # Separar Apellido y Nombre (mismo formato que inscriptos)
+            if 'Apellido y Nombre' in df_boletas.columns:
+                sep = df_boletas['Apellido y Nombre'].str.split(',', n=1, expand=True)
+                if len(sep.columns) == 2:
+                    df_boletas['Apellido'] = sep[0].str.strip()
+                    df_boletas['Nombres'] = sep[1].str.strip()
+                else:
+                    df_boletas['Apellido'] = df_boletas['Apellido y Nombre']
+                    df_boletas['Nombres'] = ''
+
+            # Limpiar claves de cruce (mismas funciones que inscriptos)
+            df_boletas['DNI_match'] = df_boletas.get('DNI', pd.Series(dtype='object')).apply(clean_dni)
+            df_boletas['Email_match'] = df_boletas.get('Email', pd.Series(dtype='object')).apply(clean_email)
+            df_boletas['Phone_match'] = df_boletas.get('Telefono', pd.Series(dtype='object')).apply(clean_phone)
+            df_boletas['Cel_match'] = df_boletas.get('Celular', pd.Series(dtype='object')).apply(clean_phone)
+            df_boletas['Nombre_match'] = df_boletas.get('Apellido y Nombre', pd.Series(dtype='object')).apply(clean_name)
+            df_boletas['Boleta_Tmp_ID'] = df_boletas.index.astype(str)
+
+            # Excluir boletas de personas que YA son inscriptos (ya pagaron)
+            inscripto_dnis = set(df_inscriptos['DNI_match'].dropna())
+            mask_ya_pago = df_boletas['DNI_match'].isin(inscripto_dnis)
+            n_ya_pago = int(mask_ya_pago.sum())
+            df_boletas_sin_pago = df_boletas[~mask_ya_pago].copy()
+            print(f"Boletas excluidas (ya pagaron): {n_ya_pago} | Boletas sin pago: {len(df_boletas_sin_pago)}")
+
+            # Renombrar con prefijo Bol_
+            rename_bol = {col: f"Bol_{col}" for col in df_boletas_sin_pago.columns
+                          if col not in ['Boleta_Tmp_ID', 'DNI_match', 'Email_match',
+                                         'Phone_match', 'Cel_match', 'Nombre_match']}
+            df_boletas_renamed = df_boletas_sin_pago.rename(columns=rename_bol)
+            # Agregar prefijo a las columnas _match del target
+            df_boletas_renamed = df_boletas_renamed.rename(columns={
+                'DNI_match': 'Bol_DNI_match', 'Email_match': 'Bol_Email_match',
+                'Phone_match': 'Bol_Phone_match', 'Cel_match': 'Bol_Cel_match',
+                'Nombre_match': 'Bol_Nombre_match'})
+
+            # Cruzar leads no matcheados contra boletas (misma función de cruce exacto)
+            df_leads_sin_match = df_final_leads[df_final_leads['Match_Tipo'] == 'No (Solo Lead)'].copy()
+            print(f"Cruzando {len(df_leads_sin_match)} leads sin inscripto contra {len(df_boletas_renamed)} boletas...")
+
+            df_boleta_matched, boleta_lead_ids, _ = cruce_exacto(
+                df_leads_sin_match, df_boletas_renamed, 'Bol',
+                target_id='Boleta_Tmp_ID', match_col='Bol_Match_Tipo')
+
+            if not df_boleta_matched.empty:
+                df_boleta_matched = df_boleta_matched.drop_duplicates(subset=['Lead_Tmp_ID'])
+                # Seleccionar columnas Bol_ para merge al df_final_leads
+                bol_data_cols = [c for c in df_boleta_matched.columns if c.startswith('Bol_')]
+                bol_info = df_boleta_matched[['Lead_Tmp_ID'] + bol_data_cols].copy()
+                df_final_leads = df_final_leads.merge(bol_info, on='Lead_Tmp_ID', how='left')
+                n_bol_dni = len(df_boleta_matched[df_boleta_matched['Bol_Match_Tipo'] == 'Exacto (DNI)'])
+                n_bol_email = len(df_boleta_matched[df_boleta_matched['Bol_Match_Tipo'] == 'Exacto (Email)'])
+                n_bol_tel = len(df_boleta_matched[df_boleta_matched['Bol_Match_Tipo'].isin(['Exacto (Teléfono)', 'Exacto (Celular)'])])
+                print(f"  Boleta matches: DNI={n_bol_dni} | Email={n_bol_email} | Tel/Cel={n_bol_tel} | Total={len(df_boleta_matched)}")
+            else:
+                print("  No se encontraron matches con boletas.")
+
+            # Preparar df de boletas para exportación por segmento
+            df_final_boletas = df_boletas_sin_pago.copy()
+            # Limpiar columnas internas de match
+            bol_match_cols = ['DNI_match', 'Email_match', 'Phone_match', 'Cel_match', 'Nombre_match', 'Boleta_Tmp_ID']
+            df_final_boletas.drop(columns=[c for c in bol_match_cols if c in df_final_boletas.columns], inplace=True, errors='ignore')
+    else:
+        print("\nNo se encontraron archivos de boletas en data/1_raw/boletas/")
+
+    # Limpieza de columnas internas de matching (no se exportan al CSV final)
     cols_to_drop = [
         'DNI_match', 'Email_match', 'Phone_match', 'Cel_lead_match', 'Nombre_match', 'Lead_Tmp_ID', 'Inscripto_Tmp_ID',
-        'Insc_DNI_match', 'Insc_Email_match', 'Insc_Phone_match', 'Insc_Cel_match', 'Insc_Nombre_match'
+        'Insc_DNI_match', 'Insc_Email_match', 'Insc_Phone_match', 'Insc_Cel_match', 'Insc_Nombre_match',
+        'Bol_DNI_match', 'Bol_Email_match', 'Bol_Phone_match', 'Bol_Cel_match', 'Bol_Nombre_match', 'Boleta_Tmp_ID'
     ]
 
     df_final_leads.drop(columns=[c for c in cols_to_drop if c in df_final_leads.columns], inplace=True, errors='ignore')
@@ -544,17 +672,23 @@ if __name__ == '__main__':
 
     # Clasificar inscriptos (usan Insc_Tipcar)
     df_final_inscriptos['Segmento_Acad'] = df_final_inscriptos['Insc_Tipcar'].apply(segmentar_tipcar)
-    
-    # Clasificar leads (Si matchearon, heredan Insc_Tipcar para estricta consistencia. Si no, usan 'Tipo de Carrera' original de CRM)
+
+    # Clasificar leads: si matchearon con inscripto, heredan Insc_Tipcar para
+    # consistencia exacta con el segmento del inscripto. Si no matchearon,
+    # usan 'Tipo de Carrera' del CRM (puede tener nomenclatura diferente).
     def get_lead_segment(row):
         insc_tip = str(row.get('Insc_Tipcar', 'nan'))
         if insc_tip != 'nan' and insc_tip.strip() != '' and insc_tip != 'None':
              return segmentar_tipcar(insc_tip)
-             
+
         local_tip = str(row.get('Tipo de Carrera', 'nan'))
         return segmentar_tipcar(local_tip)
-        
+
     df_final_leads['Segmento_Acad'] = df_final_leads.apply(get_lead_segment, axis=1)
+
+    # Clasificar boletas por segmento (usan Tipcar directo)
+    if not df_final_boletas.empty:
+        df_final_boletas['Segmento_Acad'] = df_final_boletas['Tipcar'].apply(segmentar_tipcar)
 
     # Exportar cada grupo a su propio directorio
     for segmento in ['Grado_Pregrado', 'Cursos', 'Posgrados', 'Desconocido']:
@@ -592,7 +726,16 @@ if __name__ == '__main__':
 
          sub_inscriptos.drop(columns=['Segmento_Acad']).to_csv(out_insc, index=False)
          sub_leads.drop(columns=['Segmento_Acad', '_fecha_consulta']).to_csv(out_leads, index=False)
-         
-         print(f"[{segmento}] -> Exportados: {len(sub_inscriptos)} inscriptos reales y {len(sub_leads)} leads.")
+
+         # Exportar boletas sin pago (si existen)
+         msg_boletas = ""
+         if not df_final_boletas.empty:
+             sub_boletas = df_final_boletas[df_final_boletas['Segmento_Acad'] == segmento]
+             if not sub_boletas.empty:
+                 out_bol = os.path.join(segment_dir, "reporte_marketing_boletas_sin_pago.csv")
+                 sub_boletas.drop(columns=['Segmento_Acad']).to_csv(out_bol, index=False)
+                 msg_boletas = f" y {len(sub_boletas)} boletas sin pago"
+
+         print(f"[{segmento}] -> Exportados: {len(sub_inscriptos)} inscriptos, {len(sub_leads)} leads{msg_boletas}.")
 
     print("¡Proceso finalizado con éxito! Datos distribuidos correctamente.")
