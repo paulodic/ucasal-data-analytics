@@ -1,11 +1,11 @@
 # 🚀 Marketing Report Automation - DEV HANDOVER
 
-**Última actualización:** 28 de Febrero de 2026
-**Estado del Proyecto:** ✅ **Estable y Funcional (Fase 3 Completada)**
+**Última actualización:** 6 de Marzo de 2026
+**Estado del Proyecto:** ✅ **Estable y Funcional (Fase 4 — Boletas + Embudo)**
 
 ## 📌 Estado Actual del Desarrollo
-El esquema de reportes está 100% automatizado, procesando bases de datos de Leads e Inscriptos mediante 12 scripts secuenciales.
-Se ha completado la integración de todos los componentes gráficos, PDF y Excel, así como los reportes avanzados de **UTMs, Google Ads, Fuzzy Matching y Análisis de Leads No Matcheados**. Toda la salida de datos ahora se organiza dinámicamente en subcarpetas dentro de `outputs/`.
+El esquema de reportes está 100% automatizado, procesando bases de datos de Leads, Inscriptos y Boletas mediante ~20 scripts secuenciales.
+Se ha completado la integración de todos los componentes gráficos, PDF y Excel, incluyendo reportes avanzados de **UTMs, Google Ads, Fuzzy Matching, Análisis de Leads No Matcheados, Presupuesto/ROI, Atribución Causal, Bot Consolidado y Embudo de Conversión con Sankeys**. Toda la salida de datos se organiza dinámicamente en subcarpetas dentro de `outputs/`.
 
 ---
 
@@ -15,7 +15,8 @@ h:\Test-Antigravity\marketing_report\
 ├── data/
 │   └── 1_raw/          <- (Datasets originales Excel de Salesforce/Sistemas)
 │       ├── leads_salesforce/
-│       └── inscriptos/
+│       ├── inscriptos/
+│       └── boletas/        <- Boletas generadas sin pago (paso previo a inscripción)
 ├── outputs/            <- (GENERADO POR LOS SCRIPTS. No tocar manualmente salvo para auditoria)
 │   ├── Data_Base/
 │   ├── Informe_Analitico/
@@ -24,9 +25,15 @@ h:\Test-Antigravity\marketing_report\
 │   ├── Facebook_Deep_Dive/
 │   ├── Bot_Deep_Dive/
 │   ├── Analisis_No_Matcheados/
-│   └── Calidad_Datos/
+│   ├── Calidad_Datos/
+│   ├── Bot_Consolidado/
+│   ├── Presupuesto_ROI/
+│   ├── Presupuesto_ROI_Causal/
+│   ├── Embudo_Conversion/
+│   ├── Reporte_Asesores/
+│   └── Reporte_Promociones/
 └── scripts/            <- (Lógica Core)
-    ├── 01_... a 15_... .py
+    ├── 00_run_all.py ... 23_embudo_conversion.py
 ```
 
 ---
@@ -36,26 +43,60 @@ Para ejecutar la pipeline de principio a fin, asegúrate de tener instaladas las
 - `pandas` y `numpy`
 - `thefuzz` y `Levenshtein` (Para lógica de strings y Fuzzy Matches)
 - `matplotlib`, `seaborn` y `plotly.graph_objects` (Para Sankey y visuales)
+- `kaleido` (Para exportar gráficos Plotly a PNG — requerido por `23_embudo_conversion.py`)
 - `fpdf2` (¡Importante! Usar `fpdf2` y no `fpdf` heredado para soporte de tablas complejas y UTF-8)
 - `tabulate` (Para conversión rápida de pandas a Markdown)
+- `openpyxl` y `xlrd` (Para lectura/escritura de Excel `.xlsx` y `.xls`)
 
 ---
 
 ## 📜 Secuencia de Ejecución (Pipeline)
 
-La ejecución debe darse en orden numérico para evitar fallas por falta de datos maestros:
+La ejecución consta de dos fases:
 
-1. **`02_cruce_datos.py`**: Limpia y unifica las bases raw. Genera las bases maestras en `outputs/Data_Base/`. Aplica cruce exacto y fuzzy-multiprocessing inicial.
-2. **`03_journey_sankey.py` a `06_sankeys_extras.py`**: Generadores de visualizaciones Sankey (Generales, Bot, Flow de Ventas, etc).
-3. **`04_reporte_final.py` y `05_mapeo_y_reportes.py`**: Generan tablas intermedias y Markdown ejecutivos.
-4. **`07_pdf_completo.py`**: Compila el Gran Informe Analítico general de 24 páginas en formato Apaisado (Landscape).
-5. **`08_fuzzy_correos.py`**: Script de auditoría de Data Quality. Chequea correos huérfanos con 1 caracter de diferencia y guarda en `outputs/Calidad_Datos/control_manual_correos.xlsx`. *Nota: Tiene lógica de Skip persistente si detecta filas ya validadas por humanos.*
-6. **`09_utm_conversion.py` y `10_google_ads_deep_dive.py`**: Aislan el rendimiento UTM y de Google Ads enviándolo a carpetas separadas con sus propios PDFs.
-7. **`11_exportar_tablas_excel.py`**: Consolidación batch de todos los dataframes.
-8. **`12_analisis_no_matcheados.py`**: Estudia demográfica y estadísticamente el residuo de ventas (leads sin inscripción) vs leads de éxito. PDF horizontal.
-9. **`13_facebook_deep_dive.py`**: Informe exclusivo de tráfico Meta (Facebook/Instagram). Filtra por UTM de Meta + `FuenteLead = 18` (Facebook Lead Ads).
-10. **`14_bot_deep_dive.py`**: Informe exclusivo del Bot/Chatbot. Filtra por `FuenteLead = 907`. Genera PDF horizontal, gráficos y Excel.
-11. **`15_dominios_invalidos.py`**: Detecta dominios de correo con errores de tipeo (ej: `gmail.con`, `gmail.com.ar`) y estima cuántos matches se recuperarían.
+### Fase 0 — Generación de bases maestras (manual)
+
+**`02_cruce_datos.py`** — Se ejecuta PRIMERO, manualmente. Limpia y unifica las bases raw de leads, inscriptos y boletas. Genera CSVs maestros en `outputs/Data_Base/`. Aplica cruce exacto (DNI→Email→Tel×6) + fuzzy email + fuzzy nombre con multiprocessing. También cruza leads sin inscripto contra boletas sin pago.
+
+> **IMPORTANTE:** `00_run_all.py` NO ejecuta `02_cruce_datos.py`. Siempre correrlo primero.
+
+### Fase 1 — Scripts analíticos por segmento (via `00_run_all.py`)
+
+Cada script recibe el nombre del segmento como argumento y se ejecuta 3 veces (Grado_Pregrado, Cursos, Posgrados):
+
+1. **`03_journey_sankey.py`**: Journey del estudiante — agrupa leads por persona, construye ruta de fuentes y tiempos hasta inscripción.
+2. **`16_analisis_matriculadas.py`**: Análisis de leads matriculadas por segmento.
+3. **`18_analisis_promociones.py`**: Análisis de promociones (**solo Grado_Pregrado**, se omite para otros segmentos).
+4. **`17_reporte_asesores.py`**: Reporte de rendimiento por asesor/propietario de consulta.
+5. **`04_reporte_final.py`**: Tablas resumen, análisis multi-touch, composición de inscriptos, gráficos comparativos por campaña.
+6. **`07_pdf_completo.py`**: Compila el Gran Informe Analítico general (~24 páginas, landscape).
+7. **`09_utm_conversion.py`**: Análisis de conversión por UTM Source/Medium/Campaign.
+8. **`10_google_ads_deep_dive.py`**: Informe exclusivo de rendimiento Google Ads.
+9. **`13_facebook_deep_dive.py`**: Informe exclusivo de tráfico Meta (Facebook/Instagram). Filtra por UTM + `FuenteLead = 18`.
+10. **`14_bot_deep_dive.py`**: Informe exclusivo del Bot/Chatbot. Filtra por `FuenteLead = 907`.
+11. **`11_exportar_tablas_excel.py`**: Consolidación batch de dataframes a Excel.
+12. **`05_mapeo_y_reportes.py`**: Tablas intermedias y Markdown ejecutivos.
+13. **`08_tabla_utm.py`**: Tabla detallada de UTMs y sus conversiones.
+14. **`12_analisis_no_matcheados.py`**: Análisis demográfico/estadístico de leads sin inscripción vs leads exitosos.
+15. **`21_exportar_matcheo_completo.py`**: Resumen del matcheo completo a Excel con métricas por tipo de match.
+
+### Fase 2 — Scripts globales (via `00_run_all.py`)
+
+Se ejecutan una sola vez, sin argumento de segmento:
+
+16. **`19_bot_consolidado.py`**: Informe consolidado del Bot. Cruza todas las fuentes, verifica causalidad (consulta previa a inscripción). PDF/Excel/MD.
+17. **`06_sankeys_extras.py`**: Sankeys adicionales (Bot, Flow de Ventas, etc.).
+18. **`08_fuzzy_correos.py`**: Auditoría de Data Quality. Chequea correos huérfanos con 1 caracter de diferencia. Tiene lógica de Skip persistente para filas ya validadas.
+19. **`15_dominios_invalidos.py`**: Detecta dominios de correo con errores de tipeo (ej: `gmail.con`, `gmail.com.ar`).
+20. **`15_carreras.py`**: Análisis de carreras.
+21. **`generate_eda_pdf.py`**: PDF de análisis exploratorio de datos (EDA).
+22. **`20_presupuesto_roi.py`**: Inversión publicitaria y ROI. Cruza costos de Google Ads (hardcodeado) y Facebook Ads (archivos) con conversiones. KPIs: CPL, CPA, Revenue, ROI. Modelos Last-Touch y First-Touch.
+23. **`22_auditoria_indicadores.py`**: Auditoría de indicadores de calidad del pipeline.
+24. **`23_embudo_conversion.py`**: Embudo Consulta → Boleta → Inscripción. Lee boletas raw, cruza por DNI. Genera embudo por segmento, desglose por canal/campaña, y **diagramas Sankey** (canal → boleta → pago) con Plotly.
+
+### Scripts manuales (NO incluidos en `00_run_all.py`)
+
+- **`21_atribucion_causal.py`**: Variante causal de `20`: solo cuenta como conversión consultas ANTERIORES al pago. Genera comparativa Estándar vs Causal. Se ejecuta manualmente cuando se necesita.
 
 ---
 
@@ -124,8 +165,8 @@ Se formatea como texto en español: `"DD de [Mes] de YYYY"` (ej: `"26 de diciemb
 
 ## 🧠 Lecciones Aprendidas / Aclaraciones Críticas para Futuros Devs
 
-### 1. ⚠️ `Fecha Aplicación` ≠ fecha histórica — ES FUTURA
-**Descubrimiento:** La columna `Fecha Aplicación` / `Insc_Fecha Aplicación` NO es una fecha pasada. Representa la **fecha de inicio de cursado** del alumno, que puede estar hasta **10 meses en el futuro** (ej: un alumno paga en febrero 2026 pero empieza a cursar en diciembre 2026).
+### 1. ⚠️ `Fecha Aplicación` ≠ fecha histórica — ES FUTURA, el año de cursado de la carrera.
+**Descubrimiento:** La columna `Fecha Aplicación` / `Insc_Fecha Aplicación` NO es una fecha pasada. Representa la **fecha de inicio de cursado** del alumno, que puede estar hasta **7 meses en el futuro** (ej: un alumno paga en septiembre 2025 pero empieza a cursar en marzo 2026).
 
 **Consecuencia directa:** Si usas `max()` sobre todas las columnas "fecha" incluyendo `Fecha Aplicación`, obtendrás una fecha futura incorrecta (ej: "diciembre 2026" cuando estamos en febrero 2026). **Siempre usar solo `Fecha Pago` / `Insc_Fecha Pago`** para determinar la fecha de corte del informe, y además filtrar `<= hoy` por seguridad.
 
