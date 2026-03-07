@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-04 22:38:14
+**Generado:** 2026-03-05 14:04:44
 **Segmento:** Grado_Pregrado
 **Script:** `04_reporte_final.py`
 

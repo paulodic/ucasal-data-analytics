@@ -69,30 +69,46 @@ Comparativa gráfica de cuánto demora en inscribirse un prospecto según su ori
 
 ### Analisis Multi-Touch de Inscriptos
 Cada inscripto puede haber consultado por multiples canales antes de inscribirse.
-Este analisis revela el comportamiento real del journey.
 
-| Metrica | Valor |
-|---|---|
-| Inscriptos con 1 solo canal | 4,870 (82.7%) |
-| Inscriptos con 2+ canales (multi-touch) | 1,022 (17.3%) |
-| Total inscriptos analizados | 5,892 |
+| Metrica | Total | Ingreso 2026 | Campana Anterior |
+|---|---|---|---|
+| Inscriptos con 1 sola consulta | 4,606 (65.6%) | 3,857 (64.7%) | 749 (70.9%) |
+| Promedio consultas por inscripto | 1.7 | 1.7 | 1.5 |
+| Inscriptos con 1 canal | 5,889 (83.9%) | 4,940 (82.8%) | 949 (89.8%) |
+| Inscriptos con 2+ canales | 1,131 (16.1%) | 1,023 (17.2%) | 108 (10.2%) |
+| **Total inscriptos** | **7,020** | **5,963** | **1,057** |
 
-#### Top Combinaciones de Canales
+#### Top Combinaciones (Total)
 | Combinacion           |   Inscriptos |
 |:----------------------|-------------:|
-| Otros                 |         3327 |
-| Google                |          768 |
-| Meta                  |          615 |
-| Google + Otros        |          415 |
-| Meta + Otros          |          209 |
-| Bot                   |          160 |
+| Otros                 |         4011 |
+| Google                |          950 |
+| Meta                  |          752 |
+| Google + Otros        |          499 |
+| Meta + Otros          |          223 |
+| Bot                   |          176 |
 | Bot + Otros           |          134 |
-| Google + Meta         |           73 |
-| Google + Meta + Otros |           59 |
+| Google + Meta         |           81 |
+| Google + Meta + Otros |           61 |
 | Bot + Google          |           39 |
 
 ![Multi-Touch Canales](chart_multitouch_canales.png)
 ![Multi-Touch Combinaciones](chart_multitouch_combinaciones.png)
+![Multi-Touch por Campana](chart_multitouch_por_campana.png)
+
+### Analisis Any-Touch: Participacion por Canal
+Para cada inscripto se verifica si tuvo **al menos 1 contacto** con cada canal.
+Un inscripto puede aparecer en varios canales a la vez (la suma supera 100%).
+
+| Canal | Total | Ingreso 2026 | Campana Anterior |
+|---|---|---|---|
+| **Bot** | 443 (6.3%) | 442 (7.4%) | 1 (0.1%) |
+| **Google Ads** | 1,679 (23.9%) | 1,406 (23.6%) | 273 (25.8%) |
+| **Meta (FB/IG)** | 1,178 (16.8%) | 1,025 (17.2%) | 153 (14.5%) |
+| **Otros** | 4,983 (71.0%) | 4,244 (71.2%) | 739 (69.9%) |
+
+![Any-Touch Participacion](chart_anytouch_participacion.png)
+![Any-Touch por Campana](chart_anytouch_por_campana.png)
 
 
 ## 2. Journey del Estudiante (Comportamiento)

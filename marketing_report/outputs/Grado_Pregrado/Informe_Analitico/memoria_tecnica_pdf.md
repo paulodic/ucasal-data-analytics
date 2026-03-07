@@ -1,6 +1,6 @@
 # Memoria Técnica: PDF Informe Analítico Completo
 
-**Generado:** 2026-03-04 22:42:29
+**Generado:** 2026-03-05 13:58:51
 **Segmento:** Grado_Pregrado
 **Script:** `07_pdf_completo.py`
 
@@ -38,7 +38,7 @@
 - **Deduplicación de personas:** por `DNI` (pk primaria), fallback `Correo`
 - **Filtro cohorte:** Sí — leads desde 2025-09-01
 - **Fecha de corte:** `17 de febrero de 2026`
-- **Páginas PDF generadas:** 23
+- **Páginas PDF generadas:** 26
 
 ## Archivo de Salida
 - `h:\Test-Antigravity\marketing_report\outputs\Grado_Pregrado\Informe_Analitico\Informe_Analitico_Marketing_Completo.pdf`
