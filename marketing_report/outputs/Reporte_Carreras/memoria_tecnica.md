@@ -1,6 +1,6 @@
 # Memoria Tecnica: Ranking de Carreras
 
-**Generado:** 2026-03-04 17:36:17
+**Generado:** 2026-03-06 23:44:03
 **Script:** `15_carreras.py`
 
 ## Fuentes de Datos

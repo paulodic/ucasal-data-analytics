@@ -1,6 +1,6 @@
 # Memoria Técnica — 23_embudo_conversion.py
 
-Generado: 2026-03-06 13:45
+Generado: 2026-03-06 23:44
 
 ## Fuentes
 - Boletas raw: 8768 únicas

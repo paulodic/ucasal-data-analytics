@@ -50,9 +50,9 @@ Fecha: 2026-03-06
 
 | Segmento | Canal | Leads | Con Boleta | Tasa L->B | Inscriptos | Tasa L->I | Tasa B->I |
 |---|---|---:|---:|---:|---:|---:|---:|
-| Grado_Pregrado | Google | 21,417 | 473 | 2.2% | 538 | 2.5% | 113.7% |
+| Grado_Pregrado | Google | 21,418 | 473 | 2.2% | 538 | 2.5% | 113.7% |
 | Grado_Pregrado | Meta | 12,220 | 362 | 3.0% | 284 | 2.3% | 78.5% |
-| Grado_Pregrado | Bot | 822 | 111 | 13.5% | 222 | 27.0% | 200.0% |
+| Grado_Pregrado | Bot | 821 | 111 | 13.5% | 222 | 27.0% | 200.0% |
 | Grado_Pregrado | Otros | 26,993 | 1,306 | 4.8% | 3,745 | 13.9% | 286.8% |
 | Cursos | Google | 20 | 0 | 0.0% | 16 | 80.0% | 0.0% |
 | Cursos | Meta | 34 | 2 | 5.9% | 34 | 100.0% | 1700.0% |

@@ -1,11 +1,11 @@
-# Análisis de Dominios de Correo Inválidos
+# Analisis de Dominios de Correo Invalidos
 
-Este informe identifica dominios de correo electrónico que no existen o son errores de tipeo, y estima cuántos leads podrían recuperarse si se corrigiesen.
+Este informe identifica dominios de correo electronico que no existen o son errores de tipeo, y estima cuantos leads podrian recuperarse si se corrigiesen.
 
 ## 1. Dominios con Errores de Tipeo Conocidos
 
 Se detectaron **21** dominios con errores de tipeo, afectando **1,378** leads.
-**Estimación de matches recuperables si se corrigiesen:** 43 nuevos matches potenciales.
+**Estimacion de matches recuperables si se corrigiesen:** 43 nuevos matches potenciales.
 
 | Dominio_Typo   | Dominio_Correcto   |   Total_Leads |   Matcheados_Actuales |   No_Matcheados |   Tasa_Dominio_Correcto_% |   Matches_Recuperables_Est |
 |:---------------|:-------------------|--------------:|----------------------:|----------------:|--------------------------:|---------------------------:|
@@ -31,12 +31,12 @@ Se detectaron **21** dominios con errores de tipeo, afectando **1,378** leads.
 | yahooo.com     | yahoo.com          |             1 |                     0 |               1 |                      2.06 |                          0 |
 | gmail.om       | gmail.com          |             1 |                     1 |               0 |                      3.67 |                          0 |
 
-### Cómo se calcula la estimación
-Se toma la tasa de match del dominio correcto (ej: gmail.com tiene ~5.5%) y se aplica a los leads no matcheados del dominio con typo. Esto da una estimación conservadora de cuántos matches se recuperarían.
+### Como se calcula la estimacion
+Se toma la tasa de match del dominio correcto (ej: gmail.com tiene ~5.5%) y se aplica a los leads no matcheados del dominio con typo. Esto da una estimacion conservadora de cuantos matches se recuperarian.
 
-## 2. Otros Dominios Poco Comunes (Revisión Manual)
+## 2. Otros Dominios Poco Comunes (Revision Manual)
 
-Los siguientes dominios tienen 5 o más leads pero no son proveedores de correo comunes. Podrían ser dominios corporativos legítimos, institucionales, o errores.
+Los siguientes dominios tienen 5 o mas leads pero no son proveedores de correo comunes. Podrian ser dominios corporativos legitimos, institucionales, o errores.
 
 | Domain               |   Total_Leads |   Matcheados |   Tasa_Match_% |
 |:---------------------|--------------:|-------------:|---------------:|
