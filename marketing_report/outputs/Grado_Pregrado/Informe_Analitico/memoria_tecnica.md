@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-05 14:04:44
+**Generado:** 2026-03-06 23:31:50
 **Segmento:** Grado_Pregrado
 **Script:** `04_reporte_final.py`
 
@@ -13,7 +13,7 @@
 | Métrica | Valor |
 |---|---|
 | Total Leads cargados | 369,146 |
-| Leads en período de conversión | 186,963 |
+| Leads en período de conversión | 186,964 |
 | Total Inscriptos | 8,755 |
 | Leads convertidos (Exacto) | 8,586 |
 | Leads convertidos (Fuzzy) | 186 |
@@ -24,9 +24,9 @@
 ## Tasas de Conversión Calculadas
 | Ecosistema | Universo | Convertidos | Tasa |
 |---|---|---|---|
-| **General** | 186,963 | 8,586 | 4.59% |
+| **General** | 186,964 | 8,586 | 4.59% |
 | **Google Ads** | 24,206 | 1,551 | 6.41% |
-| **Meta (FB/IG)** | 131,670 | 1,329 | 1.01% |
+| **Meta (FB/IG)** | 131,671 | 1,329 | 1.01% |
 
 ## Procedencia de Leads
 | Categoría | Cantidad | Porcentaje |

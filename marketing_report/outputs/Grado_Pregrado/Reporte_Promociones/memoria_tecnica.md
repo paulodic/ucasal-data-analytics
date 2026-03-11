@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Promociones
 
-**Generado:** 2026-03-03 10:16:04
+**Generado:** 2026-03-06 23:31:07
 **Segmento:** Grado_Pregrado
 **Script:** `18_analisis_promociones.py`
 
@@ -33,6 +33,10 @@
 - **Aplica solo a:** Segmento Grado_Pregrado
 
 ## Archivos de Salida
-- PDF: `h:\Test-Antigravity\marketing_report\outputs\Grado_Pregrado\Reporte_Promociones\18_reporte_promociones.pdf`
-- MD: `h:\Test-Antigravity\marketing_report\outputs\Grado_Pregrado\Reporte_Promociones\18_reporte_promociones.md`
-- CSV: `h:\Test-Antigravity\marketing_report\outputs\Grado_Pregrado\Reporte_Promociones\18_tabla_promociones.csv`
+| Archivo | Descripcion |
+|---|---|
+| `18_reporte_promociones.pdf` | Informe visual con 3 graficos |
+| `18_reporte_promociones.xlsx` | Datos tramos + calendario |
+| `18_reporte_promociones.md` | Documentacion textual |
+| `18_tabla_promociones.csv` | Tabla cruda volumen por tramo |
+| `memoria_tecnica.md` | Este archivo |

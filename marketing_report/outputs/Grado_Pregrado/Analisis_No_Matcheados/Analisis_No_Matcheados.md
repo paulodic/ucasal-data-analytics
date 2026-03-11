@@ -6,9 +6,9 @@ Este informe analiza el comportamiento de los Leads que **no** lograron concreta
 
 ## 0. Proporción General: Personas Matcheadas vs No Matcheadas
 
-Se identificaron **281,849** personas únicas (sin repetidos) en la base de datos.
+Se identificaron **281,847** personas únicas (sin repetidos) en la base de datos.
 - **Personas Matcheadas (Exacto):** 7,157 (2.5%)
-- **Personas No Matcheadas:** 274,692 (97.5%)
+- **Personas No Matcheadas:** 274,690 (97.5%)
 
 ## 1. Distribución de Consultas por Persona
 
@@ -17,7 +17,7 @@ La siguiente tabla muestra cómo se distribuyen las personas según cuántas con
 
 | Rango         |   Inscriptos_Cant |   Inscriptos_% |   No_Inscriptos_Cant |   No_Inscriptos_% |
 |:--------------|------------------:|---------------:|---------------------:|------------------:|
-| 1 consulta    |              3110 |           62.2 |               192244 |              82.6 |
+| 1 consulta    |              3110 |           62.2 |               192242 |              82.6 |
 | 2 consultas   |              1063 |           21.2 |                29711 |              12.8 |
 | 3 consultas   |               457 |            9.1 |                 7084 |               3   |
 | 4 consultas   |               178 |            3.6 |                 2191 |               0.9 |
@@ -92,7 +92,7 @@ Esta tabla muestra, para los 15 dominios con más volumen de leads, qué porcent
 
 | Domain         |   Total_Leads |   Exactos |   No_Exactos |   Tasa_Inscripcion_% |
 |:---------------|--------------:|----------:|-------------:|---------------------:|
-| gmail.com      |        225057 |     10288 |       265929 |                 4.57 |
+| gmail.com      |        225055 |     10288 |       265927 |                 4.57 |
 | hotmail.com    |         47951 |       628 |        59373 |                 1.31 |
 | yahoo.com.ar   |          4371 |        70 |         5440 |                 1.6  |
 | ucasal.edu.ar  |          3550 |        51 |         3571 |                 1.44 |

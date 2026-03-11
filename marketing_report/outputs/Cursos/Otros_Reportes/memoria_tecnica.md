@@ -1,6 +1,6 @@
 # Memoria Técnica: Journey del Estudiante (Sankey)
 
-**Generado:** 2026-03-03 10:23:09
+**Generado:** 2026-03-06 23:39:55
 **Segmento:** Cursos
 **Script:** `03_journey_sankey.py`
 

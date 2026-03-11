@@ -6,8 +6,8 @@ Este informe analiza de forma exclusiva el volumen y rendimiento de los **Leads 
 
 *(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*
 
-- **Volumen de Leads Totales Meta (Histórico):** 244,205
-- **Volumen de Leads Meta (Muestra Conversión):** 129,283
+- **Volumen de Leads Totales Meta (Histórico):** 244,203
+- **Volumen de Leads Meta (Muestra Conversión):** 129,282
 - **Inscriptos Confirmados Meta:** 597
 - **Tasa de Conversión General Meta (Muestra):** 0.46%
 
@@ -15,7 +15,7 @@ Este informe analiza de forma exclusiva el volumen y rendimiento de los **Leads 
 
 | Red_Primaria   |   Leads_Muestra |   Inscriptos |   Conversión_% |
 |:---------------|----------------:|-------------:|---------------:|
-| Otro Meta      |          124254 |          503 |           0.4  |
+| Otro Meta      |          124253 |          503 |           0.4  |
 | Facebook       |            3015 |           21 |           0.7  |
 | Instagram      |            1979 |           73 |           3.69 |
 

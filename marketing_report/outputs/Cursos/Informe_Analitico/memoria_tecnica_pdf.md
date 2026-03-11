@@ -1,6 +1,6 @@
 # Memoria Técnica: PDF Informe Analítico Completo
 
-**Generado:** 2026-03-03 10:23:16
+**Generado:** 2026-03-06 23:40:04
 **Segmento:** Cursos
 **Script:** `07_pdf_completo.py`
 
@@ -38,7 +38,7 @@
 - **Deduplicación de personas:** por `DNI` (pk primaria), fallback `Correo`
 - **Filtro cohorte:** No — todos los leads
 - **Fecha de corte:** `14 de febrero de 2026`
-- **Páginas PDF generadas:** 18
+- **Páginas PDF generadas:** 26
 
 ## Archivo de Salida
 - `h:\Test-Antigravity\marketing_report\outputs\Cursos\Informe_Analitico\Informe_Analitico_Marketing_Completo.pdf`

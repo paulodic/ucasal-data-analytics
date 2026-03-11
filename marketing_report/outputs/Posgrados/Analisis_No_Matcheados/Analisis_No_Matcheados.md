@@ -6,9 +6,9 @@ Este informe analiza el comportamiento de los Leads que **no** lograron concreta
 
 ## 0. Proporción General: Personas Matcheadas vs No Matcheadas
 
-Se identificaron **129** personas únicas (sin repetidos) en la base de datos.
-- **Personas Matcheadas (Exacto):** 95 (73.6%)
-- **Personas No Matcheadas:** 34 (26.4%)
+Se identificaron **131** personas únicas (sin repetidos) en la base de datos.
+- **Personas Matcheadas (Exacto):** 95 (72.5%)
+- **Personas No Matcheadas:** 36 (27.5%)
 
 ## 1. Distribución de Consultas por Persona
 
@@ -17,7 +17,7 @@ La siguiente tabla muestra cómo se distribuyen las personas según cuántas con
 
 | Rango         |   Inscriptos_Cant |   Inscriptos_% |   No_Inscriptos_Cant |   No_Inscriptos_% |
 |:--------------|------------------:|---------------:|---------------------:|------------------:|
-| 1 consulta    |                62 |           82.7 |                   32 |               100 |
+| 1 consulta    |                62 |           82.7 |                   34 |               100 |
 | 2 consultas   |                12 |           16   |                    0 |                 0 |
 | 3 consultas   |                 1 |            1.3 |                    0 |                 0 |
 | 4 consultas   |                 0 |            0   |                    0 |                 0 |
@@ -92,7 +92,7 @@ Esta tabla muestra, para los 15 dominios con más volumen de leads, qué porcent
 
 | Domain    |   Total_Leads |   Exactos |   No_Exactos |   Tasa_Inscripcion_% |
 |:----------|--------------:|----------:|-------------:|---------------------:|
-| gmail.com |            91 |        96 |           24 |               105.49 |
+| gmail.com |            93 |        96 |           26 |               103.23 |
 
 ## 3b. Distribución Granular: Día a Día hasta Inscripción
 

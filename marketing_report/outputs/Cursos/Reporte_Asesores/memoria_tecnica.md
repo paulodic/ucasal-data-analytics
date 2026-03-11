@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Asesores y Canales de Venta
 
-**Generado:** 2026-03-03 10:23:13
+**Generado:** 2026-03-06 23:39:59
 **Segmento:** Cursos
 **Script:** `17_reporte_asesores.py`
 
@@ -38,8 +38,12 @@
 - **Montos en ARS:** Sumados desde la columna `Insc_Haber` de inscriptos matcheados
 
 ## Archivos de Salida
-- PDF: `h:\Test-Antigravity\marketing_report\outputs\Cursos\Reporte_Asesores\17_reporte_asesores.pdf`
-- MD: `h:\Test-Antigravity\marketing_report\outputs\Cursos\Reporte_Asesores\17_reporte_asesores.md`
-- CSV ranking asesores: `h:\Test-Antigravity\marketing_report\outputs\Cursos\Reporte_Asesores\17_ranking_asesores.csv`
-- CSV estados: `h:\Test-Antigravity\marketing_report\outputs\Cursos\Reporte_Asesores\17_informe_estados_asesor.csv`
-- CSV vendedores: `h:\Test-Antigravity\marketing_report\outputs\Cursos\Reporte_Asesores\17_ranking_vendedores_inscriptos.csv`
+| Archivo | Descripcion |
+|---|---|
+| `17_reporte_asesores.pdf` | Informe visual multi-pagina |
+| `17_reporte_asesores.xlsx` | Datos consolidados (5-6 hojas) |
+| `17_reporte_asesores.md` | Documentacion textual (top rankings) |
+| `17_ranking_asesores.csv` | Ranking asesores CRM |
+| `17_informe_estados_asesor.csv` | Estados por grupo de asesor |
+| `17_ranking_vendedores_inscriptos.csv` | Ranking vendedores financieros |
+| `memoria_tecnica.md` | Este archivo |

@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-03 10:23:15
+**Generado:** 2026-03-06 23:40:03
 **Segmento:** Cursos
 **Script:** `04_reporte_final.py`
 
@@ -33,6 +33,17 @@
 |---|---|---|
 | Plataformas Pagas (UTM/Ads) | 311 | 32.2% |
 | Otros (Orgánico/Sin Tracking) | 654 | 67.8% |
+
+## Atribución por Campaña
+| Métrica | Valor |
+|---|---|
+| Inscriptos campaña actual (2026) | 192 |
+| Inscriptos campaña anterior (match histórico) | 749 |
+
+La columna `Campana_Lead` en el CSV maestro indica si la fecha de consulta del lead
+cae dentro de la ventana de la campaña actual o es anterior. Generada por `02_cruce_datos.py`.
+- Grado_Pregrado: >= 2025-09-01 = "Ingreso 2026", antes = "Campaña Anterior"
+- Cursos/Posgrados: >= 2026-01-01 = "2026", antes = "Campaña Anterior"
 
 ## Reglas de Negocio Aplicadas
 - **Filtro de cohorte (Grado_Pregrado):** No — se usan todos los leads

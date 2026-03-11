@@ -8,7 +8,7 @@
 
 | Métrica | Bot/Chatbot | Meta Ads | Google Ads | Otros Canales | Total |
 |---------|------------|----------|------------|---------------|-------|
-| Leads (Histórico) | 8,449 | 244,205 | 53,810 | 62,684 | 369,148 |
+| Leads (Histórico) | 8,449 | 244,203 | 53,810 | 62,684 | 369,146 |
 | Leads (Muestra Conv.) | 2,871 | 51,025 | 11,549 | 12,150 | 77,595 |
 | Inscriptos Confirmados | 250 | 235 | 388 | 1,197 | 2,070 |
 | Conversión (Muestra) | 8.71% | 0.46% | 3.36% | 9.85% | 2.67% |

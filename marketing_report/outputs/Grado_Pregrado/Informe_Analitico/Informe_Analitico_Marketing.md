@@ -23,7 +23,7 @@ Se analizaron un total de **369,146** leads únicos y **8,755** inscriptos únic
 | Ecosistema | Total Leads Analizados | Inscriptos Atribuidos | Tasa de Conversión |
 |------------|------------------------|-----------------------|--------------------|
 | **Google Ads** | 24,206 | 1,551 | **6.41%** |
-| **Meta (FB/IG)** | 131,670 | 1,329 | **1.01%** |
+| **Meta (FB/IG)** | 131,671 | 1,329 | **1.01%** |
 
 ### Procedencia de Leads (Pagado vs Orgánico/Desconocido)
 De los 369,146 leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
@@ -119,7 +119,7 @@ Analizando el número de veces que un usuario consulta antes de pagar su matríc
 
 ### Principales Fuentes que Inician el Recorrido (1er Touch) en Usuarios Inscriptos:
 ![Top Fuentes](chart_3_top_fuentes.png)
-- **Facebook Lead Ads**: 106 inscriptos
+- **Facebook Lead Ads**: 104 inscriptos
 - **Portales (4)**: 20 inscriptos
 - **Web Orgánico (3)**: 20 inscriptos
 - **Origen 103**: 16 inscriptos

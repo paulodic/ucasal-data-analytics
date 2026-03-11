@@ -36,11 +36,20 @@ De igual manera, al observar solo las **941 inscripciones (cruces exactos)** log
 
 *(Nota sobre Fuzzys: Existen 24 leads sospechosos de ser inscriptos (24 inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
 
+### Atribución por Campaña
+La columna `Campana_Lead` identifica si el lead que generó la inscripción pertenece a la campaña actual o a una anterior.
+| Campaña | Inscriptos Exactos |
+|---|---|
+| Campaña actual (2026) | 192 |
+| Campaña anterior (match histórico) | 749 |
+
 ### Visualización de Tasas y Atribución
 ![Conversión Leads](chart_1_conversion_leads.png)
 ![Composición Inscriptos](chart_2_composicion_inscriptos.png)
 ![Pagados vs Otros Leads](chart_5_leads_pagos_vs_otros.png)
 ![Pagados vs Otros Inscriptos](chart_7_inscriptos_pagos_vs_otros.png)
+
+![Comparativa por Campana](chart_2b_campana_comparativa.png)
 
 ### Análisis de Tiempos de Resolución (Inscriptos Exactos)
 Comparativa gráfica de cuánto demora en inscribirse un prospecto según su origen (filtrado de 0 a 180 días).
@@ -56,6 +65,50 @@ Comparativa gráfica de cuánto demora en inscribirse un prospecto según su ori
 
 ![Volumen Consultas Dia](chart_9_consultas_por_dia.png)
 
+
+
+### Analisis Multi-Touch de Inscriptos
+Cada inscripto puede haber consultado por multiples canales antes de inscribirse.
+
+| Metrica | Total | 2026 | Campana Anterior |
+|---|---|---|---|
+| Inscriptos con 1 sola consulta | 386 (65.2%) | 77 (56.2%) | 309 (67.9%) |
+| Promedio consultas por inscripto | 1.6 | 1.9 | 1.5 |
+| Inscriptos con 1 canal | 518 (87.5%) | 108 (78.8%) | 410 (90.1%) |
+| Inscriptos con 2+ canales | 74 (12.5%) | 29 (21.2%) | 45 (9.9%) |
+| **Total inscriptos** | **592** | **137** | **455** |
+
+#### Top Combinaciones (Total)
+| Combinacion           |   Inscriptos |
+|:----------------------|-------------:|
+| Otros                 |          346 |
+| Meta                  |          117 |
+| Bot                   |           36 |
+| Meta + Otros          |           24 |
+| Google                |           19 |
+| Google + Otros        |           13 |
+| Bot + Otros           |           10 |
+| Google + Meta         |            9 |
+| Bot + Meta            |            7 |
+| Google + Meta + Otros |            4 |
+
+![Multi-Touch Canales](chart_multitouch_canales.png)
+![Multi-Touch Combinaciones](chart_multitouch_combinaciones.png)
+![Multi-Touch por Campana](chart_multitouch_por_campana.png)
+
+### Analisis Any-Touch: Participacion por Canal
+Para cada inscripto se verifica si tuvo **al menos 1 contacto** con cada canal.
+Un inscripto puede aparecer en varios canales a la vez (la suma supera 100%).
+
+| Canal | Total | 2026 | Campana Anterior |
+|---|---|---|---|
+| **Bot** | 60 (10.1%) | 50 (36.5%) | 10 (2.2%) |
+| **Google Ads** | 51 (8.6%) | 13 (9.5%) | 38 (8.4%) |
+| **Meta (FB/IG)** | 163 (27.5%) | 29 (21.2%) | 134 (29.5%) |
+| **Otros** | 402 (67.9%) | 81 (59.1%) | 321 (70.5%) |
+
+![Any-Touch Participacion](chart_anytouch_participacion.png)
+![Any-Touch por Campana](chart_anytouch_por_campana.png)
 
 
 ## 2. Journey del Estudiante (Comportamiento)

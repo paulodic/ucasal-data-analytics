@@ -1,6 +1,6 @@
 # Memoria Técnica: Journey del Estudiante (Sankey)
 
-**Generado:** 2026-03-03 10:15:47
+**Generado:** 2026-03-06 23:30:47
 **Segmento:** Grado_Pregrado
 **Script:** `03_journey_sankey.py`
 
@@ -11,8 +11,8 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Personas únicas analizadas | 286,649 |
-| Personas inscriptas (con pago confirmado) | 188 |
+| Personas únicas analizadas | 286,647 |
+| Personas inscriptas (con pago confirmado) | 186 |
 | Personas no inscriptas | 286,461 |
 | Promedio consultas por persona | 1.3 |
 | Promedio días hasta inscripción | 57.6 |

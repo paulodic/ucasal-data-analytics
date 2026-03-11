@@ -17,6 +17,11 @@
 - Leads sin UTM: 858 (91.2%)
 - Registros Fuzzy Complementarios: 24
 
+## Atribucion por Campana
+- Inscriptos campana actual (2026): 192
+- Inscriptos campana anterior (match historico): 749
+- % inscriptos con lead de campana anterior: 128.9%
+
 ## Conclusiones y Recomendaciones
 ### 1. Atribucion de Marketing
 Se logro trazar el origen exacto de 572 inscriptos. La tasa de conversion real (deduplicada por persona) es de 100.00%.

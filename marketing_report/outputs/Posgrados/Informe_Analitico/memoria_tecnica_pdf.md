@@ -1,6 +1,6 @@
 # Memoria Técnica: PDF Informe Analítico Completo
 
-**Generado:** 2026-03-03 10:23:50
+**Generado:** 2026-03-06 23:40:41
 **Segmento:** Posgrados
 **Script:** `07_pdf_completo.py`
 
@@ -15,9 +15,9 @@
 | Personas únicas evaluadas (cohorte) | 77 |
 | Personas convertidas (Exacto, dedup) | 77 |
 | Tasa conversión deduplicada | 100.00% |
-| Matches Fuzzy (excluidos de tasa) | 34 |
+| Matches Fuzzy (excluidos de tasa) | 36 |
 | Inscriptos exactos (desde tabla inscriptos) | 52 |
-| Inscriptos directos (sin lead) | 239 |
+| Inscriptos directos (sin lead) | 237 |
 
 ## Bot / Chatbot (FuenteLead=907)
 | Métrica | Valor |
@@ -38,7 +38,7 @@
 - **Deduplicación de personas:** por `DNI` (pk primaria), fallback `Correo`
 - **Filtro cohorte:** No — todos los leads
 - **Fecha de corte:** `14 de febrero de 2026`
-- **Páginas PDF generadas:** 18
+- **Páginas PDF generadas:** 26
 
 ## Archivo de Salida
 - `h:\Test-Antigravity\marketing_report\outputs\Posgrados\Informe_Analitico\Informe_Analitico_Marketing_Completo.pdf`

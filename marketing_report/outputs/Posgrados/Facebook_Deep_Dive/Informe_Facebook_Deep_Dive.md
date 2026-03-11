@@ -4,16 +4,16 @@
 
 Este informe analiza de forma exclusiva el volumen y rendimiento de los **Leads capturados a través de propiedades de Meta (Facebook, Instagram, Meta Ads)**.
 
-- **Volumen de Leads Totales Meta (Histórico):** 79
-- **Volumen de Leads Meta (Muestra Conversión):** 79
+- **Volumen de Leads Totales Meta (Histórico):** 81
+- **Volumen de Leads Meta (Muestra Conversión):** 81
 - **Inscriptos Confirmados Meta:** 60
-- **Tasa de Conversión General Meta (Muestra):** 75.95%
+- **Tasa de Conversión General Meta (Muestra):** 74.07%
 
 ## 1. Distribución de Origen por Red Social (Muestra Conversión)
 
 | Red_Primaria   |   Leads_Muestra |   Inscriptos |   Conversión_% |
 |:---------------|----------------:|-------------:|---------------:|
-| Otro Meta      |              53 |           58 |         109.43 |
+| Otro Meta      |              55 |           58 |         105.45 |
 | Facebook       |               1 |            1 |         100    |
 | Instagram      |               1 |            1 |         100    |
 

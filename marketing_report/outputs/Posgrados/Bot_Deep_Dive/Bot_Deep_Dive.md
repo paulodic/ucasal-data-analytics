@@ -6,10 +6,10 @@
 
 | Métrica | Bot/Chatbot | Meta Ads | Google Ads | Otros Canales | Total |
 |---------|------------|----------|------------|---------------|-------|
-| Leads (Histórico) | 6 | 79 | 21 | 51 | 157 |
-| Leads (Muestra Conv.) | 6 | 79 | 21 | 51 | 157 |
+| Leads (Histórico) | 6 | 81 | 21 | 51 | 159 |
+| Leads (Muestra Conv.) | 6 | 81 | 21 | 51 | 159 |
 | Inscriptos Confirmados | 5 | 60 | 12 | 46 | 123 |
-| Conversión (Muestra) | 83.33% | 75.95% | 57.14% | 90.20% | 78.34% |
+| Conversión (Muestra) | 83.33% | 74.07% | 57.14% | 90.20% | 77.36% |
 
 ## 2. Tasa de Conversión (Inscripción)
 

@@ -3,9 +3,9 @@
 Este informe expone las diferencias fundamentales entre el flag interno `Matriculadas` proveniente de la base de datos de **Salesforce (Leads)** y el **Cruce Físico Efectivo** contra la base contable/académica real de **Inscriptos**.
 
 ## Números Globales
-- **Total de Leads Analizados:** 157
+- **Total de Leads Analizados:** 159
 - **Leads marcados como 'Matriculados = 1' en Salesforce:** 1
-- **Inscriptos Reales Verificados (Cruce Exacto + Fuzzys confiables):** 34
+- **Inscriptos Reales Verificados (Cruce Exacto + Fuzzys confiables):** 36
 
 ## Nivel de Desvío (Falsos Positivos y Negativos)
 
@@ -21,6 +21,6 @@ Al cruzar a las personas uno por uno evaluamos la consistencia. De allí se desp
 
 ### Conclusión Matemática
 
-- **Diferencia Neta en Volumen (Reporte CRM vs Reporte Base de Datos Real):** 33 inscriptos faltantes en el reporte superficial.
+- **Diferencia Neta en Volumen (Reporte CRM vs Reporte Base de Datos Real):** 35 inscriptos faltantes en el reporte superficial.
 - **Leads que generaron una venta real y que el CRM NO se está atribuyendo:** 5,851 ventas "ciegas" en Salesforce.
-- **Total de expedientes discordantes a auditar:** 35 personas que tienen un estado de vida opuesto entre ambos sistemas informáticos.
+- **Total de expedientes discordantes a auditar:** 37 personas que tienen un estado de vida opuesto entre ambos sistemas informáticos.
