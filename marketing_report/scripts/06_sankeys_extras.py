@@ -1,3 +1,18 @@
+"""
+06_sankeys_extras.py
+Genera 5 diagramas Sankey adicionales + gráficos UTM complementarios en PDF.
+Script GLOBAL (sin argumento de segmento), lee datos consolidados.
+
+Sankey A: Inscriptos Exactos (Origen → Modalidad)
+Sankey B: Consultas → Resultado (inscripto/no inscripto)
+Sankey C: Bot cross-origin (interacción Bot con otros canales)
+Sankey D: Flujo oportunidades (Origen → Modalidad → Inscripto)
+Sankey E: Flujo Bot específico
+
+SALIDA (outputs/Informe_Analitico/):
+  - sankey_A..E_*.pdf  -> Diagramas Sankey individuales
+  - diagrama_sankey_agrupado.pdf  -> PDF consolidado
+"""
 import pandas as pd
 import os
 import re

@@ -1,3 +1,20 @@
+"""
+12_analisis_no_matcheados.py
+Análisis extenso de leads que NO matchearon con inscriptos, por segmento.
+
+Genera: pie chart de matcheados vs no, distribución de consultas por tipo,
+análisis temporal (time-to-resolution), dominios de email, curva ECDF,
+y PDF + Excel + gráficos.
+
+ENTRADA:
+  - outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+  - outputs/Data_Base/<Segmento>/reporte_marketing_inscriptos_origenes.csv
+SALIDA (outputs/<Segmento>/Analisis_No_Matcheados/):
+  - datos_analisis_no_matcheados.xlsx
+  - Analisis_No_Matcheados_Reporte.pdf
+  - Memoria_Tecnica.pdf
+  - pie_matcheados.png, distribucion_consultas_pie.png, etc.
+"""
 import pandas as pd
 import numpy as np
 import matplotlib

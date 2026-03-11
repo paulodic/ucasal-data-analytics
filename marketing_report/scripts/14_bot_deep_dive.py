@@ -119,8 +119,8 @@ print(f"Leads -> Bot: {total_bot:,} | Meta: {total_meta:,} | Google: {total_goog
 
 # REGLA DE NEGOCIO COHORTES (Muestra para Conversión)
 if segmento == 'Grado_Pregrado':
-    df['Fecha_Limpia'] = pd.to_datetime(df['Consulta: Fecha de creación'], errors='coerce')
-    df_conv = df[df['Fecha_Limpia'] >= '2024-09-01'].copy()
+    df['Fecha_Limpia'] = pd.to_datetime(df['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_conv = df[df['Fecha_Limpia'] >= '2025-09-01'].copy()
 else:
     df_conv = df.copy()
 

@@ -1,3 +1,13 @@
+"""
+08_tabla_utm.py
+Genera tabla de campañas UTM por segmento con volumen de leads, inscriptos y tasa
+de conversión. Exporta PDF y Excel.
+
+ENTRADA: outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+SALIDA (outputs/<Segmento>/):
+  - tabla_utm_campaigns.xlsx  -> Tabla de UTM Campaigns
+  - Tabla_UTM_Campaigns.pdf   -> Versión PDF
+"""
 import pandas as pd
 import os
 from fpdf import FPDF
@@ -37,8 +47,8 @@ df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
 
 # REGLA DE NEGOCIO COHORTES (Muestra para Conversión)
 if segmento == 'Grado_Pregrado':
-    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], errors='coerce')
-    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2024-09-01'].copy()
+    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2025-09-01'].copy()
 else:
     df_main_conv = df_main.copy()
 

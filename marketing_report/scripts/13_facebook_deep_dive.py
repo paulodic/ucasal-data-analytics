@@ -1,3 +1,20 @@
+"""
+13_facebook_deep_dive.py
+Análisis profundo del tráfico Facebook/Meta por segmento.
+
+Aísla leads del ecosistema Meta: FuenteLead=18 (Facebook Lead Ads) O UTM
+conteniendo fb/facebook/ig/instagram/meta. Genera distribución por red social,
+campañas top, y métricas de conversión.
+
+ENTRADA:
+  - outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+  - outputs/Data_Base/<Segmento>/reporte_marketing_inscriptos_origenes.csv
+SALIDA (outputs/<Segmento>/Facebook_Deep_Dive/):
+  - reporte_especifico_facebook.xlsx     -> Tablas detalladas
+  - Informe_Facebook_Deep_Dive.pdf       -> PDF con gráficos
+  - Informe_Facebook_Deep_Dive.md        -> Versión markdown
+  - distribucion_redes_meta.png          -> Gráfico pie
+"""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -65,8 +82,8 @@ df_meta['Match_Tipo'] = df_meta['Match_Tipo'].fillna('')
 
 # Muestra para conversión
 if segmento == 'Grado_Pregrado':
-    df_meta['Fecha_Limpia'] = pd.to_datetime(df_meta['Consulta: Fecha de creación'], errors='coerce')
-    df_meta_conv = df_meta[df_meta['Fecha_Limpia'] >= '2024-09-01'].copy()
+    df_meta['Fecha_Limpia'] = pd.to_datetime(df_meta['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_meta_conv = df_meta[df_meta['Fecha_Limpia'] >= '2025-09-01'].copy()
 else:
     df_meta_conv = df_meta.copy()
 

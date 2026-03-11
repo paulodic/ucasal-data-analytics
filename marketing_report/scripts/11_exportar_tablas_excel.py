@@ -1,3 +1,12 @@
+"""
+11_exportar_tablas_excel.py
+Exporta tablas resumen (Resumen general, Bot, Modalidad, Top Orígenes) a un
+Excel maestro por segmento. Usado como referencia rápida de KPIs.
+
+ENTRADA: outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+SALIDA (outputs/<Segmento>/Informe_Analitico/):
+  - Tablas_Informe_Analitico.xlsx  -> Excel con 4+ hojas resumen
+"""
 import pandas as pd
 import os
 

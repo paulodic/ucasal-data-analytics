@@ -1,3 +1,19 @@
+"""
+19_bot_consolidado.py
+Informe consolidado del Bot/Chatbot (FuenteLead=907) a través de todos los
+segmentos académicos. Script GLOBAL (sin argumento de segmento).
+
+Genera: resumen ejecutivo, desglose por nivel, listado completo de inscriptos
+del bot con verificación temporal (consulta previa a inscripción), y auditoría
+de DNI (recuperación desde tabla de inscriptos).
+
+SALIDA (outputs/Bot_Consolidado/):
+  - Informe_Bot_Consolidado.pdf / .md
+  - Bot_Inscriptos_Detalle_Completo.xlsx  -> 3 hojas (Resumen, Inscriptos, Todos Leads)
+  - Bot_Resumen_Por_Nivel.csv, Bot_Inscriptos_Listado.csv
+  - bot_por_nivel.png, pie_inscriptos_bot_nivel.png
+  - memoria_tecnica_bot_consolidado.md
+"""
 import pandas as pd
 import os
 import matplotlib

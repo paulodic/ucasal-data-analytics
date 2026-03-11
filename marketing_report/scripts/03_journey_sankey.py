@@ -1,3 +1,16 @@
+"""
+03_journey_sankey.py
+Análisis de journeys (rutas de consulta) de leads por segmento.
+
+Agrupa leads por persona (DNI > Email > Nombre+Tel), reconstruye los primeros
+3 touchpoints de cada journey, calcula días hasta inscripción, y genera un
+Sankey diagram del flujo + tabla de tiempos en Excel.
+
+ENTRADA: outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+SALIDA (outputs/<Segmento>/Otros_Reportes/):
+  - reporte_journey_tiempos.xlsx  -> Tabla de journeys con touchpoints y tiempos
+  - memoria_tecnica.md            -> Documentación del proceso
+"""
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -18,11 +31,7 @@ leads_file = os.path.join(base_output_dir, "reporte_marketing_leads_completos.cs
 inscriptos_file = os.path.join(base_output_dir, "reporte_marketing_inscriptos_origenes.csv")
 
 print("Leyendo reporte de leads completo...")
-try:
-    df = pd.read_excel(leads_file)
-except Exception as e:
-    print(f"Error leyendo Excel ({e}). Probando fallback a CSV...")
-    df = pd.read_csv(leads_file.replace('.xlsx', '.csv'))
+df = pd.read_csv(leads_file, low_memory=False)
 
 # ==========================================
 # PREPARACIÓN DE DATOS PARA JOURNEY
@@ -46,7 +55,7 @@ def get_person_id(row):
 df['Persona_ID'] = df.apply(get_person_id, axis=1)
 
 # Asegurar que Fecha de creación sea datetime
-df['Consulta_Fecha'] = pd.to_datetime(df['Consulta: Fecha de creación'], errors='coerce')
+df['Consulta_Fecha'] = pd.to_datetime(df['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
 
 # Ordenar por Persona y Fecha de Consulta
 df = df.sort_values(by=['Persona_ID', 'Consulta_Fecha'])
@@ -64,7 +73,7 @@ for persona_id, group in df.groupby('Persona_ID'):
     ultima_fecha = group['Consulta_Fecha'].max()
     
     # Determinar si se inscribió analizando el Match_Tipo de cualquiera de sus registros
-    inscripto = any(group['Match_Tipo'].astype(str).str.contains(r'Si \(Lead|Match Fuzzy', case=False, na=False))
+    inscripto = any(group['Match_Tipo'].astype(str).str.contains('Exacto', case=False, na=False))
     
     # Intentar obtener la Fecha de Pago si existe en alguna de las filas
     if 'Insc_Fecha Pago' in group.columns:

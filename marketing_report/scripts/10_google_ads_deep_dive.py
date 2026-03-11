@@ -1,3 +1,17 @@
+"""
+10_google_ads_deep_dive.py
+Análisis profundo de Google Ads por segmento.
+
+Filtra leads cuyo UTM Source contiene 'google', desglosa por Campaign y Medium,
+calcula tasas de conversión, y genera PDF + Excel.
+
+ENTRADA:
+  - outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+  - outputs/Data_Base/<Segmento>/reporte_marketing_inscriptos_origenes.csv
+SALIDA (outputs/<Segmento>/Google_Ads_Deep_Dive/):
+  - reporte_especifico_googleads.xlsx
+  - Informe_Google_Ads_Deep_Dive.pdf
+"""
 import pandas as pd
 import os
 import matplotlib

@@ -1,3 +1,19 @@
+"""
+16_analisis_matriculadas.py
+Auditoría CRM: compara el flag 'Matriculadas' de Salesforce contra los matches
+reales con la tabla de inscriptos, por segmento.
+
+Detecta: falsos positivos (CRM dice matriculado pero no está en inscriptos),
+inscriptos sin lead asociado, y errores de tipeo en emails (gmail.con, etc.).
+
+ENTRADA:
+  - outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+  - outputs/Data_Base/<Segmento>/reporte_marketing_inscriptos_origenes.csv
+SALIDA (outputs/<Segmento>/Analisis_CRM/):
+  - auditoria_crm_matriculadas.pdf
+  - 16_*.xlsx / 16_*.csv  -> Tablas de auditoría
+  - memoria_tecnica.md
+"""
 import pandas as pd
 import os
 import matplotlib

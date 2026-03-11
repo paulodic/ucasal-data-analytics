@@ -1,3 +1,14 @@
+"""
+05_mapeo_y_reportes.py
+Genera Sankey principal (Origen → Modalidad → Resultado), reporte fuzzy,
+análisis del bot, y PDF consolidado para el Informe Analítico global.
+
+NOTA: Este script lee de Data_Base/ sin segmento (datos consolidados).
+Se ejecuta como script global en 00_run_all.py.
+
+SALIDA (outputs/Informe_Analitico/):
+  - Sankey diagram, reporte fuzzy, análisis bot, PDF, Excel complementario
+"""
 import pandas as pd
 import os
 import plotly.graph_objects as go
@@ -148,11 +159,11 @@ print(f"-> Sankey agrupado guardado en: {sankey_pdf}")
 # ==========================================
 print("Generando gráficos adicionales...")
 
-# REGLA DE NEGOCIO: Si es Grado_Pregrado, las tasas de conversión se calculan 
-# aislando leads desde septiembre de 2024 (inicio de inscripciones a la 1ra cohorte)
+# REGLA DE NEGOCIO: Si es Grado_Pregrado, las tasas de conversión se calculan
+# aislando leads desde septiembre de 2025 (inicio captación cohorte Ingreso 2026)
 if segmento == 'Grado_Pregrado':
-    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], errors='coerce')
-    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2024-09-01'].copy()
+    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2025-09-01'].copy()
 else:
     df_main_conv = df_main.copy()
 

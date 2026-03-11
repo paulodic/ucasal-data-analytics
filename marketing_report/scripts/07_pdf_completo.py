@@ -1,3 +1,16 @@
+"""
+07_pdf_completo.py
+Genera el PDF completo del Informe Analítico de Marketing por segmento.
+
+Incluye: KPIs de conversión, desglose por canal, atribución por campaña
+(Campana_Lead), análisis del Bot con dedup dedicada, y todos los gráficos
+generados por 04_reporte_final.py.
+
+ENTRADA: outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+SALIDA (outputs/<Segmento>/Informe_Analitico/):
+  - Informe_Analitico_Marketing_Completo.pdf
+  - memoria_tecnica_pdf.md
+"""
 import pandas as pd
 import os
 from fpdf import FPDF

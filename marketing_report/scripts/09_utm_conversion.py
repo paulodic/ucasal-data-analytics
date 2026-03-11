@@ -1,3 +1,18 @@
+"""
+09_utm_conversion.py
+Análisis profundo de conversión UTM por segmento.
+
+Desglosa leads e inscriptos por cada campo UTM (Source, Campaign, Medium, Term,
+Content), genera gráficos de barras horizontales con tasas de conversión, y
+compila todo en un PDF + Excel detallado.
+
+ENTRADA:
+  - outputs/Data_Base/<Segmento>/reporte_marketing_leads_completos.csv
+  - outputs/Data_Base/<Segmento>/reporte_marketing_inscriptos_origenes.csv
+SALIDA (outputs/<Segmento>/Analisis_UTM/):
+  - analisis_utm_completo.xlsx     -> Tablas por campo UTM
+  - Analisis_UTM_Conversion.pdf    -> PDF con gráficos y tablas
+"""
 import pandas as pd
 import os
 import matplotlib
@@ -67,8 +82,8 @@ total_utm = len(df_utm_dedup)
 
 # REGLA DE NEGOCIO COHORTES (Muestra para Conversión)
 if segmento == 'Grado_Pregrado':
-    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], errors='coerce')
-    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2024-09-01'].copy()
+    df_main['Fecha_Limpia'] = pd.to_datetime(df_main['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+    df_main_conv = df_main[df_main['Fecha_Limpia'] >= '2025-09-01'].copy()
 else:
     df_main_conv = df_main.copy()
 
