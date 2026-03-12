@@ -124,6 +124,12 @@ bot_tasa = (bot_insc / bot_leads_conv * 100) if bot_leads_conv > 0 else 0
 insc_exactos = len(df_insc[df_insc['Match_Tipo'].astype(str).str.contains('Exacto')])
 insc_directos = len(df_insc[df_insc['Match_Tipo'] == 'No (Solo Inscripto Directo)'])
 
+# Desglose por tipo de match (sobre mismos datos, sin dedup adicional)
+insc_por_dni = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (DNI)'])
+insc_por_email = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (Email)'])
+insc_por_tel = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (Teléfono)'])
+insc_por_cel = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (Celular)'])
+
 # UTM
 for col in ['UtmSource', 'UtmCampaign', 'UtmMedium']:
     if col in df_main.columns:
@@ -158,13 +164,23 @@ print(f"Bot: {bot_leads:,} -> {bot_insc:,} ({bot_tasa:.2f}%)")
 md_path = os.path.join(output_dir, "Informe_Analitico_Marketing_Completo.md")
 with open(md_path, 'w', encoding='utf-8') as f:
     f.write(f"# Informe Analitico de Marketing - Completo\n\n**Aviso: Este documento es un BORRADOR. Todos los datos contenidos aqui estan pendientes de verificacion.**\n\n*(Datos actualizados al {max_date_str})*\n\n")
+    f.write("## Nota Metodologica\n")
+    f.write("- **Modelo de atribucion principal:** Deduplicado por persona (DNI). Cada inscripto se cuenta una vez.\n")
+    f.write("- **Tipos de match:** Exacto por DNI, Email, Telefono y Celular (en ese orden de prioridad).\n")
+    f.write("- **Modelo Any-Touch:** Disponible en el Informe Analitico (04). Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%).\n")
+    f.write("- **Ventana de conversion:** Grado_Pregrado: leads desde Sep 2025. Cursos/Posgrados: leads del año calendario.\n")
+    f.write("- **Datos fuente:** Salesforce (leads) + Sistema academico (inscriptos).\n\n")
     f.write("## Resumen Ejecutivo\n")
     if segmento == 'Grado_Pregrado':
         f.write("*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*\n\n")
     f.write(f"- Total Registros de Leads (Historico): {total_registros:,}\n")
     f.write(f"- Personas Unicas (Muestra para conversion): {total_personas_conv:,}\n")
     f.write(f"- Tasa de Conversion Global (deduplicada): {tasa_dedup:.2f}%\n")
-    f.write(f"- Inscriptos Atribuidos a Paid Ads (exacto): {insc_exactos:,}\n")
+    f.write(f"- Inscriptos Atribuidos (exacto): {insc_exactos:,}\n")
+    f.write(f"  - Match por DNI: {insc_por_dni:,}\n")
+    f.write(f"  - Match por Email: {insc_por_email:,}\n")
+    f.write(f"  - Match por Telefono: {insc_por_tel:,}\n")
+    f.write(f"  - Match por Celular: {insc_por_cel:,}\n")
     f.write(f"- Inscriptos sin trazabilidad (sin lead previo): {insc_directos:,}\n")
     f.write(f"- Bot - Leads captados (historico): {bot_leads:,}\n")
     f.write(f"- Bot - Inscriptos confirmados (muestra): {bot_insc:,}\n")
@@ -180,7 +196,7 @@ with open(md_path, 'w', encoding='utf-8') as f:
         f.write(f"- % inscriptos con lead de campana anterior: {pct_ant:.1f}%\n\n")
     f.write("## Conclusiones y Recomendaciones\n")
     f.write("### 1. Atribucion de Marketing\n")
-    f.write(f"Se logro trazar el origen exacto de {insc_exactos:,} inscriptos. La tasa de conversion real (deduplicada por persona) es de {tasa_dedup:.2f}%.\n\n")
+    f.write(f"Se logro trazar el origen exacto de {insc_exactos:,} inscriptos. Metodos de match: DNI ({insc_por_dni:,}), Email ({insc_por_email:,}), Telefono ({insc_por_tel:,}), Celular ({insc_por_cel:,}). La tasa de conversion real (deduplicada por persona) es de {tasa_dedup:.2f}%.\n\n")
     f.write("### 2. Rendimiento del Chatbot (907)\n")
     comp = "superior" if bot_tasa > tasa_dedup else "inferior"
     f.write(f"El Bot presenta una tasa de conversion de {bot_tasa:.2f}%, {comp} al promedio general de {tasa_dedup:.2f}%. Capto {bot_leads:,} leads de los cuales {bot_insc:,} se inscribieron.\n\n")
@@ -238,9 +254,23 @@ pdf.cell(0, 8, '(Solo cruces exactos - Fuzzy en informe complementario)', new_x=
 pdf.ln(20)
 
 # ============================
-# RESUMEN EJECUTIVO
+# NOTA METODOLOGICA
 # ============================
 pdf.add_page()
+pdf.set_font('Helvetica', 'B', 14)
+pdf.cell(0, 10, 'Nota Metodologica', new_x="LMARGIN", new_y="NEXT")
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    "Modelo de atribucion: Deduplicado por persona (DNI). Cada inscripto se cuenta una vez.\n"
+    "Tipos de match: Exacto por DNI, Email, Telefono y Celular (en ese orden de prioridad).\n"
+    "Modelo Any-Touch: Disponible en Informe Analitico (04). Un inscripto se cuenta en CADA canal que consulto.\n"
+    f"Ventana de conversion: {'Leads desde Sep 2025' if segmento == 'Grado_Pregrado' else 'Leads del ano calendario'}.\n"
+    "Datos fuente: Salesforce (leads) + Sistema academico (inscriptos).")
+pdf.ln(8)
+
+# ============================
+# RESUMEN EJECUTIVO
+# ============================
 pdf.set_font('Helvetica', 'B', 18)
 pdf.cell(0, 12, 'Resumen Ejecutivo', new_x="LMARGIN", new_y="NEXT")
 pdf.ln(5)
@@ -276,7 +306,11 @@ pdf.cell(180, 9, '  Inscriptos', border=1, fill=True)
 pdf.cell(80, 9, '  Valor', border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
 pdf.set_text_color(0, 0, 0)
 
-table_row('Inscriptos Atribuidos a Paid Ads (exacto)', f'{insc_exactos:,}')
+table_row('Inscriptos Atribuidos (exacto)', f'{insc_exactos:,}')
+table_row('  - Match por DNI', f'{insc_por_dni:,}')
+table_row('  - Match por Email', f'{insc_por_email:,}')
+table_row('  - Match por Telefono', f'{insc_por_tel:,}')
+table_row('  - Match por Celular', f'{insc_por_cel:,}')
 table_row('Inscriptos sin trazabilidad (sin lead previo)', f'{insc_directos:,}')
 table_row('Coincidencias Fuzzy (informe complementario)', f'{total_fuzzy:,}')
 
@@ -402,7 +436,7 @@ pdf.ln(8)
 pdf.set_font('Helvetica', 'B', 11)
 pdf.cell(0, 8, '1. Atribucion de Marketing', new_x="LMARGIN", new_y="NEXT")
 pdf.set_font('Helvetica', '', 10)
-pdf.multi_cell(0, 6, f'Se logro trazar el origen exacto de {insc_exactos:,} inscriptos. La tasa de conversion real (deduplicada por persona) es de {tasa_dedup:.2f}%.')
+pdf.multi_cell(0, 6, f'Se logro trazar el origen exacto de {insc_exactos:,} inscriptos. Match: DNI ({insc_por_dni:,}), Email ({insc_por_email:,}), Telefono ({insc_por_tel:,}), Celular ({insc_por_cel:,}). Tasa de conversion real: {tasa_dedup:.2f}%.')
 pdf.ln(4)
 
 pdf.set_font('Helvetica', 'B', 11)
@@ -467,7 +501,11 @@ memoria = f"""# Memoria Técnica: PDF Informe Analítico Completo
 | Personas convertidas (Exacto, dedup) | {personas_conv:,} |
 | Tasa conversión deduplicada | {tasa_dedup:.2f}% |
 | Matches Fuzzy (excluidos de tasa) | {total_fuzzy:,} |
-| Inscriptos exactos (desde tabla inscriptos) | {insc_exactos:,} |
+| Inscriptos exactos deduplicados | {insc_exactos:,} |
+|   - Match por DNI | {insc_por_dni:,} |
+|   - Match por Email | {insc_por_email:,} |
+|   - Match por Telefono | {insc_por_tel:,} |
+|   - Match por Celular | {insc_por_cel:,} |
 | Inscriptos directos (sin lead) | {insc_directos:,} |
 
 ## Bot / Chatbot (FuenteLead=907)

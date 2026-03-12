@@ -151,13 +151,23 @@ for seg in SEGMENTOS:
 
     consultas_seg = len(df_seg_all)
     total_seg = len(df_seg)
+    # Desglose por tipo de match (sin dedup adicional, respeta datos de 02_cruce_datos)
     insc_seg = len(df_seg[df_seg['_mc'] == 'exacto'])
+    mt_seg = df_seg['Match_Tipo'].astype(str)
+    insc_dni_seg = int((mt_seg == 'Exacto (DNI)').sum())
+    insc_email_seg = int((mt_seg == 'Exacto (Email)').sum())
+    insc_tel_seg = int((mt_seg == 'Exacto (Teléfono)').sum())
+    insc_cel_seg = int((mt_seg == 'Exacto (Celular)').sum())
     tasa_seg = (insc_seg / total_seg * 100) if total_seg > 0 else 0
     resumen_seg.append({
         'Segmento': seg,
         'Consultas_Total': consultas_seg,
         'Personas_Unicas': total_seg,
         'Inscriptos': insc_seg,
+        'Match_DNI': insc_dni_seg,
+        'Match_Email': insc_email_seg,
+        'Match_Telefono': insc_tel_seg,
+        'Match_Celular': insc_cel_seg,
         'Tasa_%': round(tasa_seg, 2)
     })
     print(f"  [{seg}] Consultas: {consultas_seg:,} | Personas: {total_seg:,} | Inscriptos: {insc_seg:,} | Tasa: {tasa_seg:.2f}%")
@@ -262,12 +272,22 @@ print(f"Inscriptos del bot a listar: {len(df_listado):,}")
 md = f"# Informe Consolidado del Bot / Chatbot — Todos los Niveles\n\n"
 md += f"**Datos actualizados al {max_date_str}** *(fecha del último inscripto registrado)*\n\n"
 md += "> Este informe consolida el rendimiento del canal Bot/Chatbot (FuenteLead = 907) a través de todos los segmentos académicos: Grado y Pregrado, Cursos, y Posgrados.\n\n"
+md += "### Nota Metodologica\n"
+md += "- **Modelo de atribucion:** Deduplicado por persona (DNI). Cada inscripto se cuenta una vez.\n"
+md += "- **Tipos de match:** Exacto por DNI, Email, Telefono y Celular.\n"
+md += "- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Ver Informe Analitico (04) para detalle any-touch.\n"
+md += "- **Este informe:** Modelo directo — solo incluye inscriptos cuyo lead del Bot (FuenteLead=907) matcheo exactamente con un inscripto.\n"
+md += "- **Ventana:** Grado_Pregrado desde Sep 2025. Cursos/Posgrados del ano calendario.\n\n"
 
 md += "## 1. Resumen Ejecutivo Consolidado\n\n"
 md += f"| Métrica | Valor |\n|---------|-------|\n"
 md += f"| Total Consultas (Registros) vía Bot | {total_consultas_bot:,} |\n"
 md += f"| Total Personas Únicas vía Bot | {total_bot:,} |\n"
 md += f"| Total Inscriptos del Bot | {total_insc_bot:,} |\n"
+md += f"|   - Match por DNI | {df_resumen['Match_DNI'].sum():,} |\n"
+md += f"|   - Match por Email | {df_resumen['Match_Email'].sum():,} |\n"
+md += f"|   - Match por Telefono | {df_resumen['Match_Telefono'].sum():,} |\n"
+md += f"|   - Match por Celular | {df_resumen['Match_Celular'].sum():,} |\n"
 md += f"| Tasa de Conversión Total (Bot) | {tasa_total:.2f}% |\n\n"
 
 md += "## 2. Desglose por Nivel Académico\n\n"
@@ -383,6 +403,10 @@ pdf.multi_cell(0, 6,
     f"Total Consultas (Registros) via Bot: {total_consultas_bot:,}\n"
     f"Total Personas Unicas via Bot: {total_bot:,}\n"
     f"Total Inscriptos del Bot (todos los niveles): {total_insc_bot:,}\n"
+    f"  - Match por DNI: {df_resumen['Match_DNI'].sum():,}\n"
+    f"  - Match por Email: {df_resumen['Match_Email'].sum():,}\n"
+    f"  - Match por Telefono: {df_resumen['Match_Telefono'].sum():,}\n"
+    f"  - Match por Celular: {df_resumen['Match_Celular'].sum():,}\n"
     f"Tasa de Conversion Total (Bot): {tasa_total:.2f}%")
 pdf.ln(5)
 

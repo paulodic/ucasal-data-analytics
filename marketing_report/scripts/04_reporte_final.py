@@ -373,6 +373,14 @@ canales_por_persona['n_canales'] = canales_por_persona['_canal_mt'].apply(len)
 canales_por_persona['combinacion'] = canales_por_persona['_canal_mt'].apply(lambda x: ' + '.join(x))
 canales_por_persona = canales_por_persona.merge(consultas_por_persona, on='_pk_mt', how='left')
 
+# Mejor tipo de match por persona (prioridad: DNI > Email > Tel > Cel, deduplicado)
+_mt_prio_map = {'Exacto (DNI)': 0, 'Exacto (Email)': 1, 'Exacto (Teléfono)': 2, 'Exacto (Celular)': 3}
+df_exact_mt['_mt_prio'] = df_exact_mt['Match_Tipo'].map(_mt_prio_map).fillna(9)
+_best_match = df_exact_mt.sort_values('_mt_prio').drop_duplicates(subset='_pk_mt', keep='first')[['_pk_mt', 'Match_Tipo']]
+_best_match.rename(columns={'Match_Tipo': '_best_match'}, inplace=True)
+canales_por_persona = canales_por_persona.merge(_best_match, on='_pk_mt', how='left')
+canales_por_persona['_best_match'] = canales_por_persona['_best_match'].fillna('')
+
 # Merge campaña a canales_por_persona
 if not campana_por_pk.empty:
     canales_por_persona = canales_por_persona.merge(campana_por_pk, on='_pk_mt', how='left')
@@ -391,7 +399,8 @@ def calc_mt_at(df_sub, label):
                 'n_1consulta': 0, 'avg_consultas': 0,
                 'top_combos': pd.Series(dtype='int64'),
                 'mt_dist': pd.Series(dtype='int64'),
-                'at': {'Bot': 0, 'Google': 0, 'Meta': 0, 'Otros': 0}}
+                'at': {'Bot': 0, 'Google': 0, 'Meta': 0, 'Otros': 0},
+                'match_tipos': {'DNI': 0, 'Email': 0, 'Telefono': 0, 'Celular': 0}}
     n_s = int((df_sub['n_canales'] == 1).sum())
     n_m = int((df_sub['n_canales'] > 1).sum())
     # Consultas únicas: cuántas personas hicieron exactamente 1 consulta
@@ -405,9 +414,16 @@ def calc_mt_at(df_sub, label):
         'Meta':   int(df_sub['_canal_mt'].apply(lambda cs: 'Meta' in cs).sum()),
         'Otros':  int(df_sub['_canal_mt'].apply(lambda cs: 'Otros' in cs).sum()),
     }
+    # Desglose por tipo de match (deduplicado: 1 persona = mejor match)
+    mt_desglose = {
+        'DNI':      int((df_sub['_best_match'] == 'Exacto (DNI)').sum()),
+        'Email':    int((df_sub['_best_match'] == 'Exacto (Email)').sum()),
+        'Telefono': int((df_sub['_best_match'] == 'Exacto (Teléfono)').sum()),
+        'Celular':  int((df_sub['_best_match'] == 'Exacto (Celular)').sum()),
+    }
     return {'total': total, 'n_single': n_s, 'n_multi': n_m,
             'n_1consulta': n_1c, 'avg_consultas': avg_c,
-            'top_combos': tc, 'mt_dist': md, 'at': at}
+            'top_combos': tc, 'mt_dist': md, 'at': at, 'match_tipos': mt_desglose}
 
 # Calcular para total, campaña actual y campaña anterior
 stats_total = calc_mt_at(canales_por_persona, 'Total')
@@ -576,6 +592,14 @@ Un inscripto puede aparecer en varios canales a la vez (la suma supera 100%).
 | **Google Ads** | {at['Google']:,} ({_pct(at['Google'], total_insc_mt)}) | {stats_actual['at']['Google']:,} ({_pct(stats_actual['at']['Google'], stats_actual['total'])}) | {stats_anterior['at']['Google']:,} ({_pct(stats_anterior['at']['Google'], stats_anterior['total'])}) |
 | **Meta (FB/IG)** | {at['Meta']:,} ({_pct(at['Meta'], total_insc_mt)}) | {stats_actual['at']['Meta']:,} ({_pct(stats_actual['at']['Meta'], stats_actual['total'])}) | {stats_anterior['at']['Meta']:,} ({_pct(stats_anterior['at']['Meta'], stats_anterior['total'])}) |
 | **Otros** | {at['Otros']:,} ({_pct(at['Otros'], total_insc_mt)}) | {stats_actual['at']['Otros']:,} ({_pct(stats_actual['at']['Otros'], stats_actual['total'])}) | {stats_anterior['at']['Otros']:,} ({_pct(stats_anterior['at']['Otros'], stats_anterior['total'])}) |
+
+#### Desglose por Tipo de Match (mejor match por persona, prioridad DNI > Email > Tel > Cel)
+| Tipo Match | Total | {label_campana_actual} | Campana Anterior |
+|---|---|---|---|
+| **Exacto (DNI)** | {stats_total['match_tipos']['DNI']:,} ({_pct(stats_total['match_tipos']['DNI'], total_insc_mt)}) | {stats_actual['match_tipos']['DNI']:,} ({_pct(stats_actual['match_tipos']['DNI'], stats_actual['total'])}) | {stats_anterior['match_tipos']['DNI']:,} ({_pct(stats_anterior['match_tipos']['DNI'], stats_anterior['total'])}) |
+| **Exacto (Email)** | {stats_total['match_tipos']['Email']:,} ({_pct(stats_total['match_tipos']['Email'], total_insc_mt)}) | {stats_actual['match_tipos']['Email']:,} ({_pct(stats_actual['match_tipos']['Email'], stats_actual['total'])}) | {stats_anterior['match_tipos']['Email']:,} ({_pct(stats_anterior['match_tipos']['Email'], stats_anterior['total'])}) |
+| **Exacto (Telefono)** | {stats_total['match_tipos']['Telefono']:,} ({_pct(stats_total['match_tipos']['Telefono'], total_insc_mt)}) | {stats_actual['match_tipos']['Telefono']:,} ({_pct(stats_actual['match_tipos']['Telefono'], stats_actual['total'])}) | {stats_anterior['match_tipos']['Telefono']:,} ({_pct(stats_anterior['match_tipos']['Telefono'], stats_anterior['total'])}) |
+| **Exacto (Celular)** | {stats_total['match_tipos']['Celular']:,} ({_pct(stats_total['match_tipos']['Celular'], total_insc_mt)}) | {stats_actual['match_tipos']['Celular']:,} ({_pct(stats_actual['match_tipos']['Celular'], stats_actual['total'])}) | {stats_anterior['match_tipos']['Celular']:,} ({_pct(stats_anterior['match_tipos']['Celular'], stats_anterior['total'])}) |
 
 ![Any-Touch Participacion](chart_anytouch_participacion.png)
 {'![Any-Touch por Campana](chart_anytouch_por_campana.png)' if chart_at_camp_path else ''}
@@ -833,7 +857,13 @@ Analizando los días con las caídas más fuertes de inscripciones, podemos obse
 **Observación sobre los valles:** El {fines_de_semana_pct:.1f}% de los días con menor volumen de inscripciones del histórico analizado coinciden directamente con fines de semana (Sábado/Domingo).
 """
 
-report_content += """
+report_content += f"""
+## Nota Metodologica
+- **Cruce de datos:** Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.
+- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en secciones de Multi-Touch y Any-Touch de este informe.
+- **Tasas de conversion:** Calculadas sobre la muestra de la campana actual ({'leads desde Sep 2025' if segmento == 'Grado_Pregrado' else 'leads del ano calendario'}).
+- **Fuente:** Consultas exportadas de Salesforce, inscriptos del sistema academico.
+
 ## Conclusiones y Recomendaciones
 
 1. **Atribución de Marketing:** Se logró trazar el origen de un alto porcentaje de inscriptos, lo que demuestra que los esfuerzos de captación inicial en Salesforce tienen un impacto directo comprobable.

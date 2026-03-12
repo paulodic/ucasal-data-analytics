@@ -1190,6 +1190,29 @@ for seg in SEGMENTOS:
 # ============================================================
 # 5. OUTPUT
 # ============================================================
+# Nota Metodológica
+pdf.add_page()
+pdf.section_title('Nota Metodologica')
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    'MODELO CAUSAL: Solo se cuenta como conversion una consulta cuya fecha de creacion es '
+    'ANTERIOR O IGUAL a la fecha de pago de inscripcion (Insc_Fecha Pago). '
+    'Consultas post-pago (soporte, reactivacion) quedan excluidas.\n\n'
+    'Modelo de atribucion: Last-Touch Causal (consulta mas reciente anterior al pago). '
+    'Alternativa First-Touch Causal disponible. Deduplicado por persona (DNI).\n\n'
+    'Match Exacto: DNI > Email > Telefono > Celular (prioridad). '
+    'Solo se cuentan conversiones por Match Exacto.\n\n'
+    'Any-Touch Causal: Un inscripto se cuenta en TODOS los canales con los que tuvo contacto causal. '
+    'La suma por canal excede el total de inscriptos unicos. Detalle en pag. 4.\n\n'
+    'Ventana de conversion:\n'
+    '  - Grado/Pregrado: Leads desde 01/09/2025 (campana ingreso 2026)\n'
+    '  - Cursos y Posgrados: Anio calendario desde 01/01/2026\n\n'
+    'Definiciones:\n'
+    '  - CPL = Inversion / Leads CRM deduplicados en ventana\n'
+    '  - CPA = Inversion / Inscriptos Match Exacto Causal\n'
+    '  - Revenue = Insc_Haber (cuota/arancel, no LTV)\n'
+    '  - ROI = (Revenue - Inversion) / Inversion x 100')
+
 pdf_path = os.path.join(output_dir, 'Presupuesto_ROI_Causal_Ingreso2026.pdf')
 pdf.output(pdf_path)
 print(f"\n-> PDF generado: {pdf_path}")

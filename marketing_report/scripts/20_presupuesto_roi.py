@@ -957,6 +957,26 @@ for seg in SEGMENTOS:
 # ============================================================
 # 5. OUTPUT
 # ============================================================
+# Nota Metodológica
+pdf.add_page()
+pdf.section_title('Nota Metodologica')
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    'Modelo de atribucion: Last-Touch (consulta exacta mas reciente asigna el canal). '
+    'Alternativa First-Touch disponible en pag. 3. Deduplicado por persona (DNI).\n\n'
+    'Match Exacto: DNI > Email > Telefono > Celular (prioridad). '
+    'Solo se cuentan conversiones por Match Exacto (Fuzzy excluido de KPIs financieros).\n\n'
+    'Any-Touch: Para ver cuantos inscriptos tuvieron contacto con cada canal (sin dedup entre canales), '
+    'referirse al Informe Analitico (04_reporte_final).\n\n'
+    'Ventana de conversion:\n'
+    '  - Grado/Pregrado: Leads desde 01/09/2025 (campana ingreso 2026)\n'
+    '  - Cursos y Posgrados: Anio calendario desde 01/01/2026\n\n'
+    'Definiciones:\n'
+    '  - CPL = Inversion / Leads CRM deduplicados en ventana\n'
+    '  - CPA = Inversion / Inscriptos Match Exacto\n'
+    '  - Revenue = Insc_Haber (cuota/arancel al momento de inscripcion, no LTV)\n'
+    '  - ROI = (Revenue - Inversion) / Inversion x 100')
+
 pdf_path = os.path.join(output_dir, 'Presupuesto_ROI_Ingreso2026.pdf')
 pdf.output(pdf_path)
 print(f"\n-> PDF generado: {pdf_path}")

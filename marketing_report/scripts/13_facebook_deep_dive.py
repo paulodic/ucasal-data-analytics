@@ -95,15 +95,20 @@ if total_meta_leads == 0:
     exit()
 
 exactos_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'].str.contains('Exacto', case=False, na=False)])
+insc_dni_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (DNI)'])
+insc_email_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (Email)'])
+insc_tel_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (Teléfono)'])
+insc_cel_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (Celular)'])
 conversion_meta = (exactos_meta / total_meta_leads_conv) * 100 if total_meta_leads_conv > 0 else 0
 
 md_content = f"# Deep Dive: Facebook & Meta Ecosystem\n\n*(Datos actualizados al {max_date_str})*\n\n"
 md_content += "Este informe analiza de forma exclusiva el volumen y rendimiento de los **Leads capturados a través de propiedades de Meta (Facebook, Instagram, Meta Ads)**.\n\n"
 if segmento == 'Grado_Pregrado':
-    md_content += "*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*\n\n"
+    md_content += "*(Nota Cohortes: Las tasas de conversión se calculan sobre leads desde Septiembre 2025, coincidiendo con la campaña de ingreso 2026.)*\n\n"
 md_content += f"- **Volumen de Leads Totales Meta (Histórico):** {total_meta_leads:,}\n"
 md_content += f"- **Volumen de Leads Meta (Muestra Conversión):** {total_meta_leads_conv:,}\n"
 md_content += f"- **Inscriptos Confirmados Meta:** {exactos_meta:,}\n"
+md_content += f"  - por DNI: {insc_dni_meta:,} | por Email: {insc_email_meta:,} | por Teléfono: {insc_tel_meta:,} | por Celular: {insc_cel_meta:,}\n"
 md_content += f"- **Tasa de Conversión General Meta (Muestra):** {conversion_meta:.2f}%\n\n"
 
 # --- 1. Distribución de Red (FB vs IG) ---
@@ -167,6 +172,15 @@ plt.close()
 
 # Exportar a Excel
 print("Generando Excel y Markdown...")
+md_content += "\n## Nota Metodológica\n\n"
+md_content += "- **Modelo de atribución:** Directa por canal (FuenteLead=18 o UTM de Meta). Deduplicado por lead.\n"
+md_content += f"- **Match Exacto:** DNI ({insc_dni_meta:,}), Email ({insc_email_meta:,}), Teléfono ({insc_tel_meta:,}), Celular ({insc_cel_meta:,}). Total: {exactos_meta:,}.\n"
+md_content += "- **Any-Touch:** Para ver cuántos inscriptos tuvieron *al menos un contacto* con Meta (aunque también consultaron por otros canales), referirse al Informe Analítico (04_reporte_final).\n"
+if segmento == 'Grado_Pregrado':
+    md_content += "- **Ventana de conversión:** Leads desde 01/09/2025 (campaña ingreso 2026).\n"
+else:
+    md_content += "- **Ventana de conversión:** Año calendario 2026.\n"
+
 with open(os.path.join(output_dir, 'Informe_Facebook_Deep_Dive.md'), 'w', encoding='utf-8') as f:
     f.write(md_content)
 
@@ -197,7 +211,7 @@ pdf.cell(0, 8, "Resumen Global del Ecosistema Meta", ln=True)
 pdf.set_font("Helvetica", size=11)
 if segmento == 'Grado_Pregrado':
     pdf.set_font("Helvetica", 'I', 8)
-    pdf.cell(0, 6, "Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads desde Septiembre 2024.", ln=True)
+    pdf.cell(0, 6, "Nota Cohortes: Las tasas de conversion se calculan sobre leads desde Septiembre 2025 (campaña ingreso 2026).", ln=True)
     pdf.set_font("Helvetica", size=11)
 
 pdf.multi_cell(0, 6, f"Volumen total de Leads procedentes de Facebook o Instagram (Histórico): {total_meta_leads:,}\n" \
@@ -224,6 +238,22 @@ try:
     pdf.image(os.path.join(output_dir, 'top_campanas_volumen.png'), w=170)
 except Exception as e:
     print(f"Error integrando imagen camp: {e}")
+
+# Nota Metodológica
+pdf.add_page()
+pdf.set_font("Helvetica", "B", 12)
+pdf.cell(0, 8, "Nota Metodológica", ln=True)
+pdf.set_font("Helvetica", size=9)
+nota_met = (
+    f"Modelo de atribución: Directa por canal (FuenteLead=18 o UTM de Meta). Deduplicado por lead.\n"
+    f"Match Exacto: DNI ({insc_dni_meta:,}), Email ({insc_email_meta:,}), Telefono ({insc_tel_meta:,}), Celular ({insc_cel_meta:,}). Total: {exactos_meta:,}.\n"
+    f"Any-Touch: Para ver cuantos inscriptos tuvieron al menos un contacto con Meta (aunque tambien consultaron por otros canales), referirse al Informe Analitico (04_reporte_final).\n"
+)
+if segmento == 'Grado_Pregrado':
+    nota_met += "Ventana de conversion: Leads desde 01/09/2025 (campana ingreso 2026).\n"
+else:
+    nota_met += "Ventana de conversion: Anio calendario 2026.\n"
+pdf.multi_cell(0, 6, nota_met)
 
 pdf.output(os.path.join(output_dir, 'Informe_Facebook_Deep_Dive.pdf'))
 

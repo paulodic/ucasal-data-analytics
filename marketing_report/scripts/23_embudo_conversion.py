@@ -447,12 +447,15 @@ for seg in SEGMENTOS:
         md.append('> desaparecen del archivo fuente, por lo que la cifra real de boletas generadas es mayor.*\n')
 
 md.append('\n## Nota Metodológica\n')
+md.append('- **Modelo de atribución:** Embudo por persona (DNI). Deduplicado por DNI limpio.')
 md.append('- **Persona** = DNI limpio único. Leads sin DNI no se incluyen en el embudo.')
 md.append('- **Consulta**: persona que generó al menos 1 lead/consulta en Salesforce.')
 md.append('- **Boleta**: persona cuyo DNI aparece en el archivo de boletas generadas.')
-md.append('- **Inscripto**: persona cuyo lead matcheó exactamente con un inscripto (pagó matrícula).')
+md.append('- **Inscripto**: persona cuyo lead matcheó exactamente con un inscripto (pagó matrícula). Match Exacto: DNI > Email > Teléfono > Celular (prioridad).')
 md.append('- La tasa Lead->Boleta puede subestimarse si la persona usó datos diferentes en Salesforce vs sistema de boletas.')
 md.append('- La tasa Boleta->Pago se calcula sobre TODAS las boletas del segmento (no solo las conectadas a leads).')
+md.append('- **Any-Touch:** Para atribución multi-canal (inscriptos que consultaron por más de un canal), referirse al Informe Analítico (04_reporte_final).')
+md.append('- **Ventana:** Grado/Pregrado desde 01/09/2025, Cursos y Posgrados desde 01/01/2026.')
 
 md_text = '\n'.join(md)
 md_path = os.path.join(output_dir, 'embudo_conversion.md')
@@ -629,6 +632,23 @@ for seg in SEGMENTOS:
             '* "Boleta No Pagada" refleja el snapshot actual del archivo de boletas. '
             'Cuando una boleta se paga, desaparece del listado. '
             'La cifra real de boletas generadas es mayor que las visibles en el archivo.')
+
+# Nota Metodológica
+pdf.add_page()
+pdf.section_title('Nota Metodologica')
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    'Modelo de atribucion: Embudo por persona (DNI limpio unico). '
+    'Leads sin DNI no se incluyen en el embudo.\n\n'
+    'Etapas: Consulta (lead en Salesforce) -> Boleta Generada (DNI en archivo de boletas) -> '
+    'Pago (inscripto con Match Exacto: DNI > Email > Telefono > Celular).\n\n'
+    'Canal: Clasificado por UTM/FuenteLead del lead mas reciente de la persona.\n\n'
+    'La tasa Boleta->Pago se calcula sobre TODAS las boletas del segmento, '
+    'no solo las conectadas a leads.\n\n'
+    'Any-Touch: Para atribucion multi-canal (inscriptos que consultaron por mas de un canal), '
+    'referirse al Informe Analitico (04_reporte_final).\n\n'
+    'Ventana: Grado/Pregrado desde 01/09/2025 (campana ingreso 2026). '
+    'Cursos y Posgrados desde 01/01/2026.')
 
 pdf_path = os.path.join(output_dir, 'Embudo_Conversion.pdf')
 pdf.output(pdf_path)

@@ -139,7 +139,9 @@ pdf.cell(0, 12, 'Detalle de UTM Campaigns', new_x="LMARGIN", new_y="NEXT", align
 pdf.ln(3)
 pdf.set_font('Helvetica', '', 9)
 pdf.set_x(10)
-pdf.multi_cell(260, 5, f'Se identificaron {len(tabla)} campanas UTM distintas con un total de {len(df_utm):,} consultas de leads. A continuacion se muestra el detalle por campana, deduplicado por persona unica.')
+pdf.multi_cell(260, 5,
+    f'Se identificaron {len(tabla)} campanas UTM distintas con un total de {len(df_utm):,} consultas de leads.\n'
+    f'Modelo: Deduplicado por persona (DNI). Match: Exacto (DNI/Email/Telefono/Celular). Any-Touch: ver Informe Analitico (04).')
 if segmento == 'Grado_Pregrado':
     pdf.set_font('Helvetica', 'I', 8)
     pdf.multi_cell(260, 5, "Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads desde Septiembre 2024 (Personas_Muestra).")
@@ -190,6 +192,18 @@ pdf.cell(col_widths[6], 7, f"{int(tabla['Inscriptos_Exactos'].sum()):,}", border
 tasa_total = (tabla['Inscriptos_Exactos'].sum() / tabla['Personas_Muestra'].sum() * 100) if tabla['Personas_Muestra'].sum() > 0 else 0
 pdf.cell(col_widths[7], 7, f"{tasa_total:.2f}%", border=1, fill=True, align='R')
 pdf.ln()
+
+# Nota Metodologica
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 14)
+pdf.cell(0, 10, 'Nota Metodologica', new_x="LMARGIN", new_y="NEXT")
+pdf.ln(3)
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(260, 5,
+    'Cruce de datos: Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.\n'
+    'Modelo Any-Touch: Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). '
+    'Detalle en el Informe Analitico (04_reporte_final).\n'
+    'Fuente: Consultas exportadas de Salesforce, inscriptos del sistema academico.')
 
 pdf_path = os.path.join(output_dir, "Tabla_UTM_Campaigns.pdf")
 pdf.output(pdf_path)

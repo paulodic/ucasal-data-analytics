@@ -162,8 +162,14 @@ tasa_nobot = (df_nobot_conv['Es_Exacto'].sum() / total_nobot_conv * 100) if tota
 # ============ MARKDOWN ============
 md = f"# Análisis de Leads Originados por Bot/Chatbot\n\n"
 md += f"**Datos actualizados al {max_date_str}**\n\n"
+md += "### Nota Metodologica\n"
+md += "- **Modelo de atribucion:** Deduplicado por persona (DNI). Cada canal se evalua por separado.\n"
+md += "- **Tipos de match:** Exacto por DNI, Email, Telefono y Celular.\n"
+md += "- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (Bot, Google, Meta, Otros). La suma supera 100%.\n"
+md += "- **Tabla 1 (Volumen):** Modelo directo por canal — cada lead se clasifica en UN canal segun su FuenteLead/UTM.\n"
+md += "- **Tabla 3 (Match):** Desglose algoritmico del tipo de cruce Lead-Inscripto.\n\n"
 if segmento == 'Grado_Pregrado':
-    md += "*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*\n\n"
+    md += "*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con la inscripcion a la primera cohorte.)*\n\n"
 
 # Resumen
 total_bot_insc = df_bot_conv['Es_Exacto'].sum()

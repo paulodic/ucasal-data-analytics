@@ -127,9 +127,25 @@ personas_no_exactas = total_personas - personas_exactas
 pct_exactas = (personas_exactas / total_personas * 100) if total_personas > 0 else 0
 pct_no_exactas = (personas_no_exactas / total_personas * 100) if total_personas > 0 else 0
 
+## Desglose por tipo de match (deduplicado: 1 persona = mejor match)
+_mt_prio_map = {'Exacto (DNI)': 0, 'Exacto (Email)': 1, 'Exacto (Teléfono)': 2, 'Exacto (Celular)': 3}
+df['_mt_prio'] = df['Match_Tipo'].map(_mt_prio_map).fillna(9)
+_best_mt = df.sort_values('_mt_prio').drop_duplicates(subset='Persona_ID', keep='first')[['Persona_ID', 'Match_Tipo']]
+_best_mt.rename(columns={'Match_Tipo': '_best_match'}, inplace=True)
+persona_group = persona_group.merge(_best_mt, on='Persona_ID', how='left')
+p_dni = int((persona_group['_best_match'] == 'Exacto (DNI)').sum())
+p_email = int((persona_group['_best_match'] == 'Exacto (Email)').sum())
+p_tel = int((persona_group['_best_match'] == 'Exacto (Teléfono)').sum())
+p_cel = int((persona_group['_best_match'] == 'Exacto (Celular)').sum())
+
 md_content += "## 0. Proporción General: Personas Matcheadas vs No Matcheadas\n\n"
-md_content += f"Se identificaron **{total_personas:,}** personas únicas (sin repetidos) en la base de datos.\n"
+md_content += f"Se identificaron **{total_personas:,}** personas únicas (agrupadas por persona) en la base de datos.\n"
+md_content += f"El tipo de match mostrado es el de mayor prioridad por persona (DNI > Email > Telefono > Celular).\n\n"
 md_content += f"- **Personas Matcheadas (Exacto):** {personas_exactas:,} ({pct_exactas:.1f}%)\n"
+md_content += f"  - por DNI: {p_dni:,}\n"
+md_content += f"  - por Email: {p_email:,}\n"
+md_content += f"  - por Telefono: {p_tel:,}\n"
+md_content += f"  - por Celular: {p_cel:,}\n"
 md_content += f"- **Personas No Matcheadas:** {personas_no_exactas:,} ({pct_no_exactas:.1f}%)\n\n"
 
 plt.figure(figsize=(8, 8))
@@ -496,6 +512,15 @@ if has_time_data:
 # EXPORTACIONES
 # ======================================================
 print("Guardando archivos y PDF...")
+md_content += "\n## Nota Metodológica\n\n"
+md_content += "- **Modelo de atribución:** Deduplicado por persona (Correo o DNI). Match por prioridad: DNI > Email > Teléfono > Celular.\n"
+md_content += f"- **Personas Matcheadas (Exacto):** {personas_exactas:,} — por DNI: {p_dni:,}, por Email: {p_email:,}, por Teléfono: {p_tel:,}, por Celular: {p_cel:,}.\n"
+md_content += "- **Any-Touch:** Para atribución multi-canal (inscriptos que consultaron por más de un canal), referirse al Informe Analítico (04_reporte_final).\n"
+if segmento == 'Grado_Pregrado':
+    md_content += "- **Ventana de conversión:** Leads desde 01/09/2025 (campaña ingreso 2026). Límite superior: última fecha de inscripción registrada.\n"
+else:
+    md_content += "- **Ventana de conversión:** Año calendario 2026.\n"
+
 with open(os.path.join(output_dir, 'Analisis_No_Matcheados.md'), 'w', encoding='utf-8') as f:
     f.write(md_content)
 
@@ -623,6 +648,20 @@ if has_time_data:
     try:
         pdf.image(os.path.join(output_dir, 'histograma_granular_dias.png'), w=230)
     except Exception: pass
+
+# Nota Metodológica
+pdf.add_page()
+pdf.set_font("Helvetica", "B", 12)
+pdf.cell(0, 10, "Nota Metodologica", ln=True)
+pdf.set_font("Helvetica", size=9)
+pdf.multi_cell(0, 6,
+    f"Modelo de atribucion: Deduplicado por persona (Correo o DNI). Match por prioridad: DNI > Email > Telefono > Celular.\n"
+    f"Personas Matcheadas (Exacto): {personas_exactas:,} -- por DNI: {p_dni:,}, por Email: {p_email:,}, por Telefono: {p_tel:,}, por Celular: {p_cel:,}.\n"
+    f"Any-Touch: Para atribucion multi-canal (inscriptos que consultaron por mas de un canal), referirse al Informe Analitico (04_reporte_final).\n")
+if segmento == 'Grado_Pregrado':
+    pdf.multi_cell(0, 6, "Ventana de conversion: Leads desde 01/09/2025 (campana ingreso 2026). Limite superior: ultima fecha de inscripcion registrada.")
+else:
+    pdf.multi_cell(0, 6, "Ventana de conversion: Anio calendario 2026.")
 
 pdf.output(os.path.join(output_dir, 'Analisis_No_Matcheados_Reporte.pdf'))
 

@@ -131,8 +131,7 @@ Al cruzar a las personas uno por uno evaluamos la consistencia. De allí se desp
 """
 
 output_md = os.path.join(report_output_dir, "16_analisis_matriculadas.md")
-with open(output_md, 'w', encoding='utf-8') as f:
-    f.write(report_md)
+# Nota Metodológica se agrega después de calcular las variables de match (más abajo)
 
 print(f"\\nReporte Markdown guardado exitosamente en: {output_md}")
 
@@ -161,14 +160,36 @@ print(f"Bases de datos brutas de discrepancias exportadas a CSV y XLSX en output
 print("\n--- ANALIZANDO LOS INSCRIPTOS REALES ---")
 total_inscriptos_fisicos = len(df_insc)
 
+# Desglose por tipo de match (sin dedup adicional, respeta datos de 02_cruce_datos)
 inscriptos_exactos = len(df_insc[df_insc['Match_Tipo'].astype(str).str.contains('Exacto')])
+inscriptos_por_dni = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (DNI)'])
+inscriptos_por_email = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (Email)'])
+inscriptos_por_tel = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (Teléfono)'])
+inscriptos_por_cel = len(df_insc[df_insc['Match_Tipo'] == 'Exacto (Celular)'])
 inscriptos_fuzzys = len(df_insc[df_insc['Match_Tipo'].astype(str).str.contains('Posible Match Fuzzy') & ~df_insc['Match_Tipo'].astype(str).str.contains('Email')])
 inscriptos_fuzzys_email = len(df_insc[df_insc['Match_Tipo'].astype(str).str.contains('Fuzzy Email')])
 inscriptos_huerfanos = len(df_insc[df_insc['Match_Tipo'].astype(str).str.contains('Solo Inscripto')])
 
+# Ahora que tenemos las variables, agregar Nota Metodológica al MD y escribirlo
+report_md += f"""
+## Nota Metodologica
+
+- **Modelo de atribucion:** Cruce directo Lead - Inscripto. Sin deduplicacion adicional (la dedup se realiza en `02_cruce_datos.py`).
+- **Match Exacto (prioridad):** DNI ({inscriptos_por_dni:,}), Email ({inscriptos_por_email:,}), Telefono ({inscriptos_por_tel:,}), Celular ({inscriptos_por_cel:,}). Total Exacto: {inscriptos_exactos:,}.
+- **Match Fuzzy:** Nombre aproximado ({inscriptos_fuzzys:,}), Email con 1-2 caracteres de error ({inscriptos_fuzzys_email:,}).
+- **Huerfanos:** Inscriptos sin traza en CRM ({inscriptos_huerfanos:,}).
+- **Any-Touch:** Para atribucion multi-canal (inscriptos que consultaron por mas de un canal), referirse al Informe Analitico (04_reporte_final).
+"""
+with open(output_md, 'w', encoding='utf-8') as f:
+    f.write(report_md)
+print(f"\\nReporte Markdown guardado exitosamente en: {output_md}")
+
 df_match_stats = pd.DataFrame({
-    'Tipo de Cruzamiento': ['Cruce Exacto (DNI/Email/Tel)', 'Cruce Fuzzy (Aprox. Nombre)', 'Cruce Fuzzy Email (1 o 2 Caracteres Error)', 'Sin trazabilidad (No en Leads)'],
-    'Cantidad de Inscriptos': [inscriptos_exactos, inscriptos_fuzzys, inscriptos_fuzzys_email, inscriptos_huerfanos]
+    'Tipo de Cruzamiento': [
+        'Cruce Exacto (Total)', '  - por DNI', '  - por Email', '  - por Telefono', '  - por Celular',
+        'Cruce Fuzzy (Aprox. Nombre)', 'Cruce Fuzzy Email (1 o 2 Caracteres Error)', 'Sin trazabilidad (No en Leads)'],
+    'Cantidad de Inscriptos': [inscriptos_exactos, inscriptos_por_dni, inscriptos_por_email, inscriptos_por_tel, inscriptos_por_cel,
+                               inscriptos_fuzzys, inscriptos_fuzzys_email, inscriptos_huerfanos]
 })
 
 print(df_match_stats.to_string(index=False))
@@ -242,6 +263,18 @@ pdf.ln(5)
 pdf.image(chart_table_path, x=15, w=180)
 pdf.ln(5)
 pdf.image(chart_bar_path, x=25, w=160)
+
+# Nota Metodológica
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 12)
+pdf.cell(0, 8, 'Nota Metodologica', ln=True)
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 6,
+    f"Modelo de atribucion: Cruce directo Lead <-> Inscripto. Sin deduplicacion adicional (la dedup se realiza en 02_cruce_datos.py).\n"
+    f"Match Exacto (prioridad): DNI ({inscriptos_por_dni:,}), Email ({inscriptos_por_email:,}), Telefono ({inscriptos_por_tel:,}), Celular ({inscriptos_por_cel:,}). Total Exacto: {inscriptos_exactos:,}.\n"
+    f"Match Fuzzy: Nombre aproximado ({inscriptos_fuzzys:,}), Email con 1-2 caracteres de error ({inscriptos_fuzzys_email:,}).\n"
+    f"Huerfanos: Inscriptos sin traza en CRM ({inscriptos_huerfanos:,}).\n"
+    f"Any-Touch: Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).")
 
 pdf_output_path = os.path.join(report_output_dir, "auditoria_crm_matriculadas.pdf")
 pdf.output(pdf_output_path)

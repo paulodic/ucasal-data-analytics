@@ -248,7 +248,12 @@ pdf.cell(0, 14, 'Analisis de Conversion por UTM', new_x="LMARGIN", new_y="NEXT",
 pdf.ln(5)
 pdf.set_font('Helvetica', '', 12)
 pdf.cell(0, 10, f'Tasas de conversion para todos los campos UTM no vacios (al {max_date_str})', new_x="LMARGIN", new_y="NEXT", align='C')
-pdf.ln(15)
+pdf.ln(5)
+pdf.set_font('Helvetica', 'I', 8)
+pdf.multi_cell(0, 4,
+    'Modelo: Deduplicado por persona (DNI) dentro de cada valor UTM. Match: Exacto (DNI/Email/Telefono/Celular). '
+    'Any-Touch: ver Informe Analitico (04) para inscriptos que consultaron por multiples canales.')
+pdf.ln(5)
 
 # Resumen global
 pdf.set_font('Helvetica', 'B', 10)
@@ -331,6 +336,18 @@ for campo, data in resultados.items():
         tasa_val = row.get('Tasa_Conversion_%', row.get('Tasa_%', 0.0))
         pdf.cell(col_w[5], 6, f"{tasa_val:.2f}%", border=1, fill=True, align='R')
         pdf.ln()
+
+# Nota Metodologica
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 14)
+pdf.cell(0, 10, 'Nota Metodologica', new_x="LMARGIN", new_y="NEXT")
+pdf.ln(3)
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    'Cruce de datos: Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.\n'
+    'Modelo Any-Touch: Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). '
+    'Detalle en el Informe Analitico (04_reporte_final).\n'
+    'Fuente: Consultas exportadas de Salesforce, inscriptos del sistema academico.')
 
 pdf_path = os.path.join(output_dir, "Analisis_UTM_Conversion.pdf")
 pdf.output(pdf_path)

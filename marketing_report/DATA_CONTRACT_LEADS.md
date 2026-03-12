@@ -336,6 +336,28 @@ Esto revela la participación real de cada canal en el journey completo.
 multi-touch se cuenta en cada canal que consultó. Por ejemplo, una persona que consultó por
 Google y luego por Bot aparece en ambos canales.
 
+**Desglose por Tipo de Match:** Todos los informes incluyen siempre el desglose de inscriptos
+por método de cruce exacto, en este orden (incremental, sin repetir):
+1. **Exacto (DNI)** — match prioritario
+2. **Exacto (Email)** — inscriptos adicionales no capturados por DNI
+3. **Exacto (Teléfono)** — adicionales no capturados por DNI ni Email
+4. **Exacto (Celular)** — adicionales restantes
+
+Scripts que incluyen este desglose: `04_reporte_final.py`, `07_pdf_completo.py`,
+`12_analisis_no_matcheados.py`, `13_facebook_deep_dive.py`, `14_bot_deep_dive.py`,
+`16_analisis_matriculadas.py`, `19_bot_consolidado.py`.
+
+**Nota Metodológica obligatoria:** Todos los informes incluyen una sección "Nota Metodológica"
+que explicita:
+1. El modelo de atribución usado en cada tabla/conclusión (deduplicado, last-touch, first-touch, causal, etc.)
+2. El desglose de tipos de match (DNI, Email, Teléfono, Celular)
+3. Referencia al modelo Any-Touch del Informe Analítico (04_reporte_final) para consulta cruzada
+
+Scripts con Nota Metodológica: `07_pdf_completo.py`, `08_tabla_utm.py`, `09_utm_conversion.py`,
+`10_google_ads_deep_dive.py`, `12_analisis_no_matcheados.py`, `13_facebook_deep_dive.py`,
+`14_bot_deep_dive.py`, `16_analisis_matriculadas.py`, `19_bot_consolidado.py`,
+`20_presupuesto_roi.py`, `21_atribucion_causal.py`, `23_embudo_conversion.py`.
+
 Gráficos generados:
 - `chart_anytouch_participacion.png` — Barras horizontales: inscriptos donde intervino cada canal (con %) — total
 - `chart_anytouch_por_campana.png` — Barras agrupadas: participación por canal separada por campaña actual vs anterior

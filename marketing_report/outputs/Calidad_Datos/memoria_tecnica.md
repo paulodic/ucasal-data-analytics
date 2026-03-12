@@ -1,6 +1,6 @@
 # Memoria Tecnica: Analisis de Dominios Invalidos
 
-**Generado:** 2026-03-06 23:44:01
+**Generado:** 2026-03-12 10:36:11
 **Script:** `15_dominios_invalidos.py`
 
 ## Fuente de Datos

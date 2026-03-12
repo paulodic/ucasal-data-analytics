@@ -207,11 +207,13 @@ pdf.add_page()
 pdf.set_font('Helvetica', 'B', 16)
 pdf.cell(0, 10, 'Resumen Ejecutivo Google Ads', new_x="LMARGIN", new_y="NEXT")
 pdf.ln(5)
+pdf.set_font('Helvetica', 'I', 8)
+pdf.multi_cell(0, 4,
+    'Modelo: Deduplicado por persona (DNI), filtro canal Google Ads. Match: Exacto (DNI/Email/Telefono/Celular). '
+    'Any-Touch: ver Informe Analitico (04).'
+    + (' Cohorte: leads desde Sep 2025.' if segmento == 'Grado_Pregrado' else ''))
+pdf.ln(3)
 pdf.set_font('Helvetica', '', 12)
-if segmento == 'Grado_Pregrado':
-    pdf.set_font("Helvetica", 'I', 8)
-    pdf.cell(0, 6, "Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads desde Septiembre 2024.", ln=True)
-    pdf.set_font("Helvetica", size=12)
 pdf.cell(0, 8, f'Total Personas captadas vía Google Ads (Histórico): {total_gads:,}', new_x="LMARGIN", new_y="NEXT")
 pdf.cell(0, 8, f'Total Personas captadas vía Google Ads (Muestra): {total_gads_conv:,}', new_x="LMARGIN", new_y="NEXT")
 pdf.cell(0, 8, f'Inscriptos Confirmados (Muestra): {conv_gads:,}', new_x="LMARGIN", new_y="NEXT")
@@ -253,6 +255,18 @@ for c, res in gads_results.items():
         pdf.cell(30, 6, str(int(r['Personas_Muestra'])), 1)
         pdf.cell(30, 6, str(int(r['Inscriptos'])), 1)
         pdf.cell(20, 6, f"{r['Tasa_%']:.2f}%", 1, new_x="LMARGIN", new_y="NEXT")
+
+# Nota Metodologica
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 14)
+pdf.cell(0, 10, 'Nota Metodologica', new_x="LMARGIN", new_y="NEXT")
+pdf.ln(3)
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    'Cruce de datos: Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.\n'
+    'Modelo Any-Touch: Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). '
+    'Detalle en el Informe Analitico (04_reporte_final).\n'
+    'Fuente: Consultas exportadas de Salesforce, inscriptos del sistema academico.')
 
 pdf.output(os.path.join(output_dir, "Informe_Google_Ads_Deep_Dive.pdf"))
 print("Informe Google Ads generado con exito.")
