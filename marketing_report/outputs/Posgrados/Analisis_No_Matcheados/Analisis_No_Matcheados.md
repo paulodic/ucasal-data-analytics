@@ -6,9 +6,15 @@ Este informe analiza el comportamiento de los Leads que **no** lograron concreta
 
 ## 0. Proporción General: Personas Matcheadas vs No Matcheadas
 
-Se identificaron **131** personas únicas (sin repetidos) en la base de datos.
-- **Personas Matcheadas (Exacto):** 95 (72.5%)
-- **Personas No Matcheadas:** 36 (27.5%)
+Se identificaron **147** personas únicas (agrupadas por persona) en la base de datos.
+El tipo de match mostrado es el de mayor prioridad por persona (DNI > Email > Telefono > Celular).
+
+- **Personas Matcheadas (Exacto):** 102 (69.4%)
+  - por DNI: 25
+  - por Email: 18
+  - por Telefono: 52
+  - por Celular: 7
+- **Personas No Matcheadas:** 45 (30.6%)
 
 ## 1. Distribución de Consultas por Persona
 
@@ -17,9 +23,9 @@ La siguiente tabla muestra cómo se distribuyen las personas según cuántas con
 
 | Rango         |   Inscriptos_Cant |   Inscriptos_% |   No_Inscriptos_Cant |   No_Inscriptos_% |
 |:--------------|------------------:|---------------:|---------------------:|------------------:|
-| 1 consulta    |                62 |           82.7 |                   34 |               100 |
-| 2 consultas   |                12 |           16   |                    0 |                 0 |
-| 3 consultas   |                 1 |            1.3 |                    0 |                 0 |
+| 1 consulta    |                66 |           80.5 |                   42 |               100 |
+| 2 consultas   |                15 |           18.3 |                    0 |                 0 |
+| 3 consultas   |                 1 |            1.2 |                    0 |                 0 |
 | 4 consultas   |                 0 |            0   |                    0 |                 0 |
 | 5 consultas   |                 0 |            0   |                    0 |                 0 |
 | 6 consultas   |                 0 |            0   |                    0 |                 0 |
@@ -92,7 +98,7 @@ Esta tabla muestra, para los 15 dominios con más volumen de leads, qué porcent
 
 | Domain    |   Total_Leads |   Exactos |   No_Exactos |   Tasa_Inscripcion_% |
 |:----------|--------------:|----------:|-------------:|---------------------:|
-| gmail.com |            93 |        96 |           26 |               103.23 |
+| gmail.com |           103 |       103 |           30 |                  100 |
 
 ## 3b. Distribución Granular: Día a Día hasta Inscripción
 
@@ -100,3 +106,10 @@ Esta gráfica complementa la sección 2b mostrando un **histograma continuo día
 
 **Personas analizadas:** 18 (mismas que sección 2)
 
+
+## Nota Metodológica
+
+- **Modelo de atribución:** Deduplicado por persona (Correo o DNI). Match por prioridad: DNI > Email > Teléfono > Celular.
+- **Personas Matcheadas (Exacto):** 102 — por DNI: 25, por Email: 18, por Teléfono: 52, por Celular: 7.
+- **Any-Touch:** Para atribución multi-canal (inscriptos que consultaron por más de un canal), referirse al Informe Analítico (04_reporte_final).
+- **Ventana de conversión:** Año calendario 2026.

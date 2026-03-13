@@ -3,9 +3,9 @@
 Este informe expone las diferencias fundamentales entre el flag interno `Matriculadas` proveniente de la base de datos de **Salesforce (Leads)** y el **Cruce Físico Efectivo** contra la base contable/académica real de **Inscriptos**.
 
 ## Números Globales
-- **Total de Leads Analizados:** 369,146
-- **Leads marcados como 'Matriculados = 1' en Salesforce:** 5,712
-- **Inscriptos Reales Verificados (Cruce Exacto + Fuzzys confiables):** 186
+- **Total de Leads Analizados:** 398,556
+- **Leads marcados como 'Matriculados = 1' en Salesforce:** 8,294
+- **Inscriptos Reales Verificados (Cruce Exacto + Fuzzys confiables):** 155
 
 ## Nivel de Desvío (Falsos Positivos y Negativos)
 
@@ -21,6 +21,14 @@ Al cruzar a las personas uno por uno evaluamos la consistencia. De allí se desp
 
 ### Conclusión Matemática
 
-- **Diferencia Neta en Volumen (Reporte CRM vs Reporte Base de Datos Real):** 5,526 inscriptos faltantes en el reporte superficial.
+- **Diferencia Neta en Volumen (Reporte CRM vs Reporte Base de Datos Real):** 8,139 inscriptos faltantes en el reporte superficial.
 - **Leads que generaron una venta real y que el CRM NO se está atribuyendo:** 5,851 ventas "ciegas" en Salesforce.
-- **Total de expedientes discordantes a auditar:** 5,888 personas que tienen un estado de vida opuesto entre ambos sistemas informáticos.
+- **Total de expedientes discordantes a auditar:** 8,439 personas que tienen un estado de vida opuesto entre ambos sistemas informáticos.
+
+## Nota Metodologica
+
+- **Modelo de atribucion:** Cruce directo Lead - Inscripto. Sin deduplicacion adicional (la dedup se realiza en `02_cruce_datos.py`).
+- **Match Exacto (prioridad):** DNI (5,423), Email (2,151), Telefono (227), Celular (192). Total Exacto: 7,993.
+- **Match Fuzzy:** Nombre aproximado (112), Email con 1-2 caracteres de error (43).
+- **Huerfanos:** Inscriptos sin traza en CRM (1,377).
+- **Any-Touch:** Para atribucion multi-canal (inscriptos que consultaron por mas de un canal), referirse al Informe Analitico (04_reporte_final).

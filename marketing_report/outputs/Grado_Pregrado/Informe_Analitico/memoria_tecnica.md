@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-06 23:31:50
+**Generado:** 2026-03-12 21:17:57
 **Segmento:** Grado_Pregrado
 **Script:** `04_reporte_final.py`
 
@@ -12,33 +12,33 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total Leads cargados | 369,146 |
-| Leads en período de conversión | 186,964 |
-| Total Inscriptos | 8,755 |
-| Leads convertidos (Exacto) | 8,586 |
-| Leads convertidos (Fuzzy) | 186 |
-| Leads no convertidos | 357,492 |
-| Inscriptos atribuidos a Lead (Exacto) | 6,926 |
-| Inscriptos sin trazabilidad | 1,643 |
+| Total Leads cargados | 398,556 |
+| Leads en período de conversión | 212,826 |
+| Total Inscriptos | 9,525 |
+| Leads convertidos (Exacto) | 10,225 |
+| Leads convertidos (Fuzzy) | 155 |
+| Leads no convertidos | 385,231 |
+| Inscriptos atribuidos a Lead (Exacto) | 7,993 |
+| Inscriptos sin trazabilidad | 1,377 |
 
 ## Tasas de Conversión Calculadas
 | Ecosistema | Universo | Convertidos | Tasa |
 |---|---|---|---|
-| **General** | 186,964 | 8,586 | 4.59% |
-| **Google Ads** | 24,206 | 1,551 | 6.41% |
-| **Meta (FB/IG)** | 131,671 | 1,329 | 1.01% |
+| **General** | 212,826 | 10,225 | 4.80% |
+| **Google Ads** | 27,170 | 1,756 | 6.46% |
+| **Meta (FB/IG)** | 148,479 | 1,494 | 1.01% |
 
 ## Procedencia de Leads
 | Categoría | Cantidad | Porcentaje |
 |---|---|---|
-| Plataformas Pagas (UTM/Ads) | 298,729 | 80.9% |
-| Otros (Orgánico/Sin Tracking) | 70,417 | 19.1% |
+| Plataformas Pagas (UTM/Ads) | 321,665 | 80.7% |
+| Otros (Orgánico/Sin Tracking) | 76,891 | 19.3% |
 
 ## Atribución por Campaña
 | Métrica | Valor |
 |---|---|
-| Inscriptos campaña actual (Ingreso 2026) | 8,808 |
-| Inscriptos campaña anterior (match histórico) | 2,660 |
+| Inscriptos campaña actual (Ingreso 2026) | 10,448 |
+| Inscriptos campaña anterior (match histórico) | 2,722 |
 
 La columna `Campana_Lead` en el CSV maestro indica si la fecha de consulta del lead
 cae dentro de la ventana de la campaña actual o es anterior. Generada por `02_cruce_datos.py`.

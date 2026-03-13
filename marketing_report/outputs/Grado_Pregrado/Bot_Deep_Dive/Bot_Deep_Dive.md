@@ -2,16 +2,23 @@
 
 **Datos actualizados al 17 de febrero de 2026**
 
-*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*
+### Nota Metodologica
+- **Modelo de atribucion:** Deduplicado por persona (DNI). Cada canal se evalua por separado.
+- **Tipos de match:** Exacto por DNI, Email, Telefono y Celular.
+- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (Bot, Google, Meta, Otros). La suma supera 100%.
+- **Tabla 1 (Volumen):** Modelo directo por canal — cada lead se clasifica en UN canal segun su FuenteLead/UTM.
+- **Tabla 3 (Match):** Desglose algoritmico del tipo de cruce Lead-Inscripto.
+
+*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con la inscripcion a la primera cohorte.)*
 
 ## 1. Volumen y Proporción
 
 | Métrica | Bot/Chatbot | Meta Ads | Google Ads | Otros Canales | Total |
 |---------|------------|----------|------------|---------------|-------|
-| Leads (Histórico) | 8,449 | 244,203 | 53,810 | 62,684 | 369,146 |
-| Leads (Muestra Conv.) | 2,871 | 51,025 | 11,549 | 12,150 | 77,595 |
-| Inscriptos Confirmados | 250 | 235 | 388 | 1,197 | 2,070 |
-| Conversión (Muestra) | 8.71% | 0.46% | 3.36% | 9.85% | 2.67% |
+| Leads (Histórico) | 10,244 | 264,078 | 56,809 | 67,425 | 398,556 |
+| Leads (Muestra Conv.) | 10,244 | 159,463 | 27,988 | 30,759 | 228,454 |
+| Inscriptos Confirmados | 713 | 1,515 | 1,762 | 6,458 | 10,448 |
+| Conversión (Muestra) | 6.96% | 0.95% | 6.30% | 21.00% | 4.57% |
 
 ## 2. Tasa de Conversión (Inscripción)
 
@@ -21,37 +28,37 @@ Desglose algorítmico de cómo se vincularon los leads del bot con inscripciones
 
 | Metodología de Cruce (Lead -> Inscripto)   |   Inscriptos Confirmados |    % |
 |:-------------------------------------------|-------------------------:|-----:|
-| Exacto (DNI)                               |                      146 | 58.4 |
-| Exacto (Email)                             |                       77 | 30.8 |
-| Exacto (Teléfono)                          |                       17 |  6.8 |
-| Exacto (Celular)                           |                       10 |  4   |
+| Exacto (DNI)                               |                      390 | 54.7 |
+| Exacto (Email)                             |                      238 | 33.4 |
+| Exacto (Teléfono)                          |                       46 |  6.5 |
+| Exacto (Celular)                           |                       39 |  5.5 |
 
 ## 4. Top 10 Carreras Inscriptas vía Bot
 
 | Carrera                                           |   Inscriptos (Muestra) |   Consultas (Muestra) |   Tasa_% |
 |:--------------------------------------------------|-----------------------:|----------------------:|---------:|
-| ABOGACÍA                                          |                     36 |                   543 |     6.63 |
-| CIENCIAS VETERINARIAS                             |                     20 |                    68 |    29.41 |
-| ARQUITECTURA                                      |                     15 |                    31 |    48.39 |
-| ESCRIBANÍA                                        |                     13 |                   110 |    11.82 |
-| CONTADOR PÚBLICO                                  |                     12 |                   103 |    11.65 |
-| LICENCIATURA EN RECURSOS HUMANOS                  |                     10 |                    88 |    11.36 |
-| LICENCIATURA EN DISEÑO GRÁFICO                    |                      9 |                    19 |    47.37 |
-| LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO |                      9 |                   127 |     7.09 |
-| LICENCIATURA EN PSICOLOGÍA                        |                      8 |                   102 |     7.84 |
-| INGENIERÍA EN INFORMÁTICA                         |                      8 |                    40 |    20    |
+| ABOGACÍA                                          |                    108 |                  1840 |     5.87 |
+| ARQUITECTURA                                      |                     37 |                   127 |    29.13 |
+| CONTADOR PÚBLICO                                  |                     36 |                   364 |     9.89 |
+| CIENCIAS VETERINARIAS                             |                     35 |                   175 |    20    |
+| LICENCIATURA EN KINESIOLOGÍA Y FISIOTERAPIA       |                     34 |                   205 |    16.59 |
+| LICENCIATURA EN PSICOLOGÍA                        |                     29 |                   363 |     7.99 |
+| ESCRIBANÍA                                        |                     24 |                   305 |     7.87 |
+| LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO |                     23 |                   392 |     5.87 |
+| INGENIERÍA EN INFORMÁTICA                         |                     22 |                   113 |    19.47 |
+| LICENCIATURA EN CRIMINALÍSTICA                    |                     19 |                   186 |    10.22 |
 
 ## 4. Distribución por Sede
 
 | Sede                                        |   Leads |
 |:--------------------------------------------|--------:|
-| SALTA - CASTAÑARES PRESENCIAL               |    3828 |
-| HOME                                        |    2775 |
-| SALTA - DISTANCIA Modo 7                    |    1522 |
-| DELEGACIÓN SAN MIGUEL - BUENOS AIRES Modo 7 |     104 |
-| DELEGACION S S DE JUJUY - JUJUY             |      60 |
-| SALTA - ANEXO CENTRO                        |      50 |
-| BUENOS AIRES - CABA                         |      38 |
+| SALTA - CASTAÑARES PRESENCIAL               |    4641 |
+| HOME                                        |    3340 |
+| SALTA - DISTANCIA Modo 7                    |    1815 |
+| DELEGACION S S DE JUJUY - JUJUY             |     144 |
+| DELEGACIÓN SAN MIGUEL - BUENOS AIRES Modo 7 |     117 |
+| SALTA - ANEXO CENTRO                        |      56 |
+| BUENOS AIRES - CABA                         |      48 |
 | SANTIAGO DEL ESTERO - SANTIAGO DEL ESTERO   |       7 |
 | CAFAYATE - SALTA                            |       5 |
 | TARTAGAL - SALTA                            |       4 |
@@ -60,16 +67,16 @@ Desglose algorítmico de cómo se vincularon los leads del bot con inscripciones
 
 | Cola           |   Leads |
 |:---------------|--------:|
-| Contact_Center |    4388 |
+| Contact_Center |    5256 |
 | Sede_33        |       2 |
 
 ## 6. Estado de los Leads de Bot
 
 | Estado           |   Cantidad |    % |
 |:-----------------|-----------:|-----:|
-| Abierto          |       4231 | 50.1 |
-| No interesado    |       2217 | 26.2 |
-| Interesado       |       1670 | 19.8 |
-| Solicitud creada |        330 |  3.9 |
+| Abierto          |       4916 | 48   |
+| No interesado    |       2849 | 27.8 |
+| Interesado       |       2051 | 20   |
+| Solicitud creada |        427 |  4.2 |
 | Pre Inscripción  |          1 |  0   |
 

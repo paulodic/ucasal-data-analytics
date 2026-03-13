@@ -1,6 +1,6 @@
 # Memoria Técnica: Journey del Estudiante (Sankey)
 
-**Generado:** 2026-03-06 23:40:32
+**Generado:** 2026-03-12 21:27:27
 **Segmento:** Posgrados
 **Script:** `03_journey_sankey.py`
 
@@ -11,11 +11,11 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Personas únicas analizadas | 129 |
-| Personas inscriptas (con pago confirmado) | 36 |
-| Personas no inscriptas | 93 |
+| Personas únicas analizadas | 145 |
+| Personas inscriptas (con pago confirmado) | 100 |
+| Personas no inscriptas | 45 |
 | Promedio consultas por persona | 1.2 |
-| Promedio días hasta inscripción | 67.9 |
+| Promedio días hasta inscripción | 133.0 |
 
 ## Lógica del Journey
 - **Agrupación:** Se agrupan leads por `DNI` (persona única)
@@ -26,3 +26,7 @@
 
 ## Archivos de Salida
 - Excel: `h:\Test-Antigravity\marketing_report\outputs\Posgrados\Otros_Reportes\reporte_journey_tiempos.xlsx`
+
+## Nota Metodologica
+- **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Asesores y Canales de Venta
 
-**Generado:** 2026-03-06 23:31:15
+**Generado:** 2026-03-12 21:17:18
 **Segmento:** Grado_Pregrado
 **Script:** `17_reporte_asesores.py`
 
@@ -11,28 +11,28 @@
 ## Volúmenes Macro
 | Métrica | Valor |
 |---|---|
-| Total Leads históricos | 369,146 |
-| Total Inscriptos físicos | 8,755 |
-| Leads en Contact Center | 87,216 (23.6%) |
-| Leads con Estado "Abierto" | 137,322 (37.2%) |
+| Total Leads históricos | 398,556 |
+| Total Inscriptos físicos | 9,525 |
+| Leads en Contact Center | 135,406 (34.0%) |
+| Leads con Estado "Abierto" | 148,930 (37.4%) |
 
 ## Distribución de Estados (Top 10)
 | Estado            |   Cantidad |   Porcentaje |
 |:------------------|-----------:|-------------:|
-| Abierto           |     137322 |  37.1999     |
-| No interesado     |     120678 |  32.6911     |
-| Interesado        |      87939 |  23.8223     |
-| Solicitud creada  |      22541 |   6.10626    |
-| Desuscripto       |        643 |   0.174186   |
-| Pre Inscripción   |         17 |   0.00460522 |
-| Solicita Admisión |          6 |   0.00162537 |
+| Abierto           |     148930 |  37.3674     |
+| No interesado     |     128567 |  32.2582     |
+| Interesado        |      95744 |  24.0227     |
+| Solicitud creada  |      24634 |   6.18081    |
+| Desuscripto       |        656 |   0.164594   |
+| Pre Inscripción   |         18 |   0.0045163  |
+| Solicita Admisión |          7 |   0.00175634 |
 
 ## Origen de Inscripciones (Atribución por Canal)
 | Origen_Cierre             |   Cantidad |   Porcentaje |
 |:--------------------------|-----------:|-------------:|
-| Asesores UCASAL (Central) |       5578 |     63.7122  |
-| Sistemas / Automatizado   |       3003 |     34.3004  |
-| Sedes / Delegaciones      |        174 |      1.98744 |
+| Asesores UCASAL (Central) |       7782 |     81.7008  |
+| Sistemas / Automatizado   |       1348 |     14.1522  |
+| Sedes / Delegaciones      |        395 |      4.14698 |
 
 ## Reglas de Negocio
 - **Propietario del lead:** Columna `Consulta: Nombre del propietario` (o equivalente), usada para agrupar por asesor
@@ -50,3 +50,7 @@
 | `17_informe_estados_asesor.csv` | Estados por grupo de asesor |
 | `17_ranking_vendedores_inscriptos.csv` | Ranking vendedores financieros |
 | `memoria_tecnica.md` | Este archivo |
+
+## Nota Metodologica
+- **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

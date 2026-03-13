@@ -29,3 +29,7 @@
 | FLORENCIA MARIA ROSA VILLARREAL |               1 |        306900 |
 | FERNANDA VICTORIA MEZA          |               1 |        242280 |
 | FEDERICO STAGNITTO              |               1 |        257670 |
+
+## Nota Metodologica
+- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

@@ -9,23 +9,27 @@
 
 | Insc_Vendedor                           |   Total_Pagados |   Volumen_ARS |
 |:----------------------------------------|----------------:|--------------:|
-| Desconocido / Sin Vendedor              |             436 |      55447280 |
-| GIMENA BEATRIZ VALLEJOS                 |             309 |      55968440 |
-| FRANCISCO GERARDO JOVER                 |             307 |      53519745 |
-| JORGE ARIEL CABAÑA                      |             305 |      53924455 |
-| FATIMA DE LOS ANGELES SALVATIERRA LOPEZ |             299 |      53025270 |
-| ROMINA TAMARA PRADO                     |             297 |      51598925 |
-| JENNIFER MARIANELA SALTOS               |             293 |      52306540 |
-| FLORENCIA MARIA ROSA VILLARREAL         |             286 |      52493065 |
-| MELINA SALVATIERRA                      |             285 |      51030020 |
-| MARIA JOSE FERNANDEZ                    |             277 |      49098785 |
-| ANDREA ELIANA LAMAS                     |             272 |      48119700 |
-| ROCIO BELEN AGUIRRE                     |             271 |      48514015 |
-| ALEJO AGUSTIN BONARI                    |             271 |      46981205 |
-| PAULA LUCIANA MARTINEZ ROSAS            |             248 |      44315210 |
-| CAMILA NAHIR ABRAHAM                    |             245 |      43958645 |
-| FERNANDA VICTORIA MEZA                  |             238 |      41616080 |
-| CAMILA MENDOZA KLIMASASKAS              |             237 |      39308750 |
-| DANIEL LUCIANO CHAILE SOTO              |             224 |      38313215 |
-| VERONICA CAMILA PACHTMAN                |             217 |      37848620 |
-| NAOMI MAILEN ITATI CARDOZO              |             200 |      33167085 |
+| Desconocido / Sin Vendedor              |             450 |      57662080 |
+| GIMENA BEATRIZ VALLEJOS                 |             347 |      62234340 |
+| ROMINA TAMARA PRADO                     |             330 |      57034725 |
+| JORGE ARIEL CABAÑA                      |             329 |      57873555 |
+| FRANCISCO GERARDO JOVER                 |             325 |      56472945 |
+| FATIMA DE LOS ANGELES SALVATIERRA LOPEZ |             321 |      56498050 |
+| JENNIFER MARIANELA SALTOS               |             319 |      56624640 |
+| FLORENCIA MARIA ROSA VILLARREAL         |             318 |      57643565 |
+| MELINA SALVATIERRA                      |             311 |      55302620 |
+| MARIA JOSE FERNANDEZ                    |             309 |      54347385 |
+| ALEJO AGUSTIN BONARI                    |             303 |      52274905 |
+| ROCIO BELEN AGUIRRE                     |             292 |      51982515 |
+| ANDREA ELIANA LAMAS                     |             290 |      51118200 |
+| CAMILA NAHIR ABRAHAM                    |             271 |      48175845 |
+| PAULA LUCIANA MARTINEZ ROSAS            |             270 |      47905210 |
+| FERNANDA VICTORIA MEZA                  |             259 |      45050980 |
+| CAMILA MENDOZA KLIMASASKAS              |             257 |      42552150 |
+| VERONICA CAMILA PACHTMAN                |             250 |      43294120 |
+| CAMILA LAMAS CIL                        |             250 |      42648670 |
+| DANIEL LUCIANO CHAILE SOTO              |             245 |      41792515 |
+
+## Nota Metodologica
+- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

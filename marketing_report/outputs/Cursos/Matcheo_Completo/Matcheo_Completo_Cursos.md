@@ -1,6 +1,6 @@
 # Matcheo Completo: Cursos
 
-**Generado:** 2026-03-06 23:40:32
+**Generado:** 2026-03-12 21:27:26
 **Segmento:** Cursos
 **Script:** `21_exportar_matcheo_completo.py`
 
@@ -11,36 +11,40 @@
 ## Totales Históricos
 | Métrica | Valor |
 |---|---|
-| Total registros leads (con duplicados) | 965 |
-| Personas únicas (deduplicadas) | 616 |
-| Match Exacto (DNI/Email/Teléfono) | 592 |
-| Match Fuzzy (revisión pendiente) | 24 |
+| Total registros leads (con duplicados) | 44 |
+| Personas únicas (deduplicadas) | 25 |
+| Match Exacto (DNI/Email/Teléfono) | 21 |
+| Match Fuzzy (revisión pendiente) | 4 |
 | Sin match (solo lead) | 0 |
 
 ## Atribución por Campaña
 | Métrica | Valor |
 |---|---|
-| Inscriptos campaña actual (2026) | 129 |
-| Inscriptos campaña anterior (match histórico) | 463 |
+| Inscriptos campaña actual (2026) | 6 |
+| Inscriptos campaña anterior (match histórico) | 15 |
 
 ## Ventana de Conversión (Cohorte)
 | Métrica | Valor |
 |---|---|
 | Ventana de análisis | Todos hasta 14/02/2026 |
-| Leads en ventana (dedup) | 600 |
-| Inscriptos en ventana | 581 |
-| Tasa de conversión | 96.83% |
+| Leads en ventana (dedup) | 21 |
+| Inscriptos en ventana | 18 |
+| Tasa de conversión | 85.71% |
 
 ## Archivos de Salida
 | Archivo | Filas | Descripcion |
 |---|---|---|
 | `Resumen_Cursos.xlsx` | — | Métricas y estadísticas |
-| `Con_Duplicados_Cursos.xlsx` | 965 | Todos los registros de leads |
-| `Deduplicados_Cursos.xlsx` | 616 | 1 fila por persona (mejor match) |
-| `Solo_Matcheados_Cursos.xlsx` | 592 | Solo matcheos exactos |
+| `Con_Duplicados_Cursos.xlsx` | 44 | Todos los registros de leads |
+| `Deduplicados_Cursos.xlsx` | 25 | 1 fila por persona (mejor match) |
+| `Solo_Matcheados_Cursos.xlsx` | 21 | Solo matcheos exactos |
 
 ## Reglas de Negocio
 - **Deduplicación:** prioridad Exacto > Fuzzy > Sin_Match (misma clave pk)
 - **Clave pk:** DNI (sin decimal) > Correo > ID Consulta > índice
 - **Ventana cohorte Grado_Pregrado:** desde 2025-09-01 (ingreso 2026)
 - **Ventana cohorte Cursos/Posgrados:** todos los registros hasta hoy
+
+## Nota Metodologica
+- **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

@@ -7,7 +7,11 @@ Tasas de conversion para todos los campos UTM no vacios.
 *(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2024, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*
 
 ## Metrica Global UTM
-- Personas con algun UTM (Histórico): 56,643
-- Personas con algun UTM (Muestra Conversión): 12,882
-- Inscriptos (exacto - en Muestra): 367
-- Tasa de Conversion UTM Global (Muestra): 2.85%
+- Personas con algun UTM (Histórico): 60,042
+- Personas con algun UTM (Muestra Conversión): 31,712
+- Inscriptos (exacto - en Muestra): 1,669
+- Tasa de Conversion UTM Global (Muestra): 5.26%
+
+## Nota Metodologica
+- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

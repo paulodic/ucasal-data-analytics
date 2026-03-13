@@ -1,4 +1,4 @@
-﻿Segmento,Consultas_Total,Personas_Unicas,Inscriptos,Tasa_%
-Grado_Pregrado,8447,6189,396,6.4
-Cursos,75,55,55,100.0
-Posgrados,5,4,4,100.0
+﻿Segmento,Consultas_Total,Personas_Unicas,Inscriptos,Match_DNI,Match_Email,Match_Telefono,Match_Celular,Tasa_%
+Grado_Pregrado,10240,7663,502,271,167,33,31,6.55
+Cursos,1,0,0,0,0,0,0,0.0
+Posgrados,6,5,5,2,2,1,0,100.0

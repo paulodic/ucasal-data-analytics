@@ -9,23 +9,27 @@
 
 | Insc_Vendedor                           |   Total_Pagados |   Volumen_ARS |
 |:----------------------------------------|----------------:|--------------:|
-| CAMILA LAMAS CIL                        |              54 |       8435200 |
-| Desconocido / Sin Vendedor              |              45 |       4255900 |
-| VALERIA JESSICA PUIA                    |              43 |       7146900 |
-| GIMENA BEATRIZ VALLEJOS                 |              42 |       6568000 |
-| KAREN IRIS MAMANI                       |              40 |       6439600 |
-| ROMINA TAMARA PRADO                     |              36 |       5757600 |
-| NAOMI MAILEN ITATI CARDOZO              |              34 |       5007263 |
-| FLORENCIA MARIA ROSA VILLARREAL         |              33 |       5186500 |
-| MARIA JOSE FERNANDEZ                    |              33 |       5338900 |
-| ALEJO AGUSTIN BONARI                    |              33 |       5350200 |
-| VERONICA CAMILA PACHTMAN                |              33 |       5445500 |
-| JORGE ARIEL CABAÑA                      |              29 |       4370600 |
-| MELINA SALVATIERRA                      |              28 |       4365100 |
-| JENNIFER MARIANELA SALTOS               |              28 |       4468100 |
-| CAMILA NAHIR ABRAHAM                    |              28 |       4428200 |
-| CAMILA MENDOZA KLIMASASKAS              |              25 |       3819400 |
-| DAIR GABRIELA LARA GARCÍA               |              24 |       3870200 |
-| DANIEL LUCIANO CHAILE SOTO              |              24 |       3818600 |
-| FATIMA DE LOS ANGELES SALVATIERRA LOPEZ |              24 |       3583780 |
-| FRANCISCO GERARDO JOVER                 |              23 |       3431200 |
+| Desconocido / Sin Vendedor              |              31 |       2041100 |
+| NAOMI MAILEN ITATI CARDOZO              |               6 |        455063 |
+| CAMILA MENDOZA KLIMASASKAS              |               5 |        576000 |
+| JORGE ARIEL CABAÑA                      |               5 |        421500 |
+| FRANCISCO GERARDO JOVER                 |               5 |        478000 |
+| GIMENA BEATRIZ VALLEJOS                 |               4 |        302100 |
+| CAMILA LAMAS CIL                        |               4 |        326500 |
+| ROMINA TAMARA PRADO                     |               3 |        321800 |
+| DANIEL LUCIANO CHAILE SOTO              |               3 |        339300 |
+| GABRIELA CRISTINA ARO CARRIZO           |               3 |        342485 |
+| MICAELA FABBRONI                        |               2 |        165000 |
+| PABLO SIMON SOTO                        |               2 |        288000 |
+| JENNIFER MARIANELA SALTOS               |               2 |        150000 |
+| FATIMA DE LOS ANGELES SALVATIERRA LOPEZ |               2 |        111000 |
+| CAMILA NAHIR ABRAHAM                    |               2 |        211000 |
+| ANDREA ELIANA LAMAS                     |               2 |         92500 |
+| MELINA SALVATIERRA                      |               2 |         92500 |
+| ROCIO BELEN AGUIRRE                     |               1 |        130000 |
+| MARÍA CARLA AZCÁRATE CABRAL             |               1 |         56500 |
+| ALDANA ROCÍO BRUNO BLANCO               |               1 |         90300 |
+
+## Nota Metodologica
+- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

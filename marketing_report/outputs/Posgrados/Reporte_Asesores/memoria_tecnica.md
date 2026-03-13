@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Asesores y Canales de Venta
 
-**Generado:** 2026-03-06 23:40:36
+**Generado:** 2026-03-12 21:27:30
 **Segmento:** Posgrados
 **Script:** `17_reporte_asesores.py`
 
@@ -11,25 +11,25 @@
 ## Volúmenes Macro
 | Métrica | Valor |
 |---|---|
-| Total Leads históricos | 159 |
+| Total Leads históricos | 178 |
 | Total Inscriptos físicos | 325 |
-| Leads en Contact Center | 51 (32.1%) |
-| Leads con Estado "Abierto" | 58 (36.5%) |
+| Leads en Contact Center | 71 (39.9%) |
+| Leads con Estado "Abierto" | 65 (36.5%) |
 
 ## Distribución de Estados (Top 10)
 | Estado           |   Cantidad |   Porcentaje |
 |:-----------------|-----------:|-------------:|
-| No interesado    |         69 |     43.3962  |
-| Abierto          |         58 |     36.478   |
-| Interesado       |         21 |     13.2075  |
-| Solicitud creada |         11 |      6.91824 |
+| No interesado    |         77 |     43.2584  |
+| Abierto          |         65 |     36.5169  |
+| Interesado       |         25 |     14.0449  |
+| Solicitud creada |         11 |      6.17978 |
 
 ## Origen de Inscripciones (Atribución por Canal)
 | Origen_Cierre             |   Cantidad |   Porcentaje |
 |:--------------------------|-----------:|-------------:|
-| Asesores UCASAL (Central) |        282 |    86.7692   |
-| Sistemas / Automatizado   |         42 |    12.9231   |
-| Sedes / Delegaciones      |          1 |     0.307692 |
+| Asesores UCASAL (Central) |        298 |    91.6923   |
+| Sistemas / Automatizado   |         24 |     7.38462  |
+| Sedes / Delegaciones      |          3 |     0.923077 |
 
 ## Reglas de Negocio
 - **Propietario del lead:** Columna `Consulta: Nombre del propietario` (o equivalente), usada para agrupar por asesor
@@ -47,3 +47,7 @@
 | `17_informe_estados_asesor.csv` | Estados por grupo de asesor |
 | `17_ranking_vendedores_inscriptos.csv` | Ranking vendedores financieros |
 | `memoria_tecnica.md` | Este archivo |
+
+## Nota Metodologica
+- **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.

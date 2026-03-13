@@ -1,6 +1,6 @@
 # Memoria Técnica: PDF Informe Analítico Completo
 
-**Generado:** 2026-03-06 23:40:04
+**Generado:** 2026-03-12 21:27:03
 **Segmento:** Cursos
 **Script:** `07_pdf_completo.py`
 
@@ -11,27 +11,31 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total registros de leads | 941 |
-| Personas únicas evaluadas (cohorte) | 581 |
-| Personas convertidas (Exacto, dedup) | 581 |
+| Total registros de leads | 40 |
+| Personas únicas evaluadas (cohorte) | 18 |
+| Personas convertidas (Exacto, dedup) | 18 |
 | Tasa conversión deduplicada | 100.00% |
-| Matches Fuzzy (excluidos de tasa) | 24 |
-| Inscriptos exactos (desde tabla inscriptos) | 572 |
-| Inscriptos directos (sin lead) | 268 |
+| Matches Fuzzy (excluidos de tasa) | 4 |
+| Inscriptos exactos deduplicados | 19 |
+|   - Match por DNI | 10 |
+|   - Match por Email | 4 |
+|   - Match por Telefono | 3 |
+|   - Match por Celular | 2 |
+| Inscriptos directos (sin lead) | 71 |
 
 ## Bot / Chatbot (FuenteLead=907)
 | Métrica | Valor |
 |---|---|
-| Leads capturados por Bot | 75 |
-| Leads Bot en cohorte evaluada | 55 |
-| Inscripciones confirmadas (Bot) | 55 |
-| Tasa conversión Bot | 100.00% |
+| Leads capturados por Bot | 1 |
+| Leads Bot en cohorte evaluada | 0 |
+| Inscripciones confirmadas (Bot) | 0 |
+| Tasa conversión Bot | 0.00% |
 
 ## Tracking UTM
 | Categoría | Cantidad |
 |---|---|
-| Leads CON UTM | 83 |
-| Leads SIN UTM | 858 |
+| Leads CON UTM | 5 |
+| Leads SIN UTM | 35 |
 
 ## Reglas de Negocio
 - **Clasificación Match_Tipo:** `'Exacto'` en el string = conversión confirmada; `'Posible Match Fuzzy'` = excluido de tasas

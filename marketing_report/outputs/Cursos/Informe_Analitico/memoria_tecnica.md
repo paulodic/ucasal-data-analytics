@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-06 23:40:03
+**Generado:** 2026-03-12 21:27:02
 **Segmento:** Cursos
 **Script:** `04_reporte_final.py`
 
@@ -12,33 +12,33 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total Leads cargados | 965 |
-| Leads en período de conversión | 937 |
-| Total Inscriptos | 864 |
-| Leads convertidos (Exacto) | 918 |
-| Leads convertidos (Fuzzy) | 24 |
+| Total Leads cargados | 44 |
+| Leads en período de conversión | 40 |
+| Total Inscriptos | 94 |
+| Leads convertidos (Exacto) | 37 |
+| Leads convertidos (Fuzzy) | 4 |
 | Leads no convertidos | 0 |
-| Inscriptos atribuidos a Lead (Exacto) | 572 |
-| Inscriptos sin trazabilidad | 268 |
+| Inscriptos atribuidos a Lead (Exacto) | 19 |
+| Inscriptos sin trazabilidad | 71 |
 
 ## Tasas de Conversión Calculadas
 | Ecosistema | Universo | Convertidos | Tasa |
 |---|---|---|---|
-| **General** | 937 | 918 | 97.97% |
-| **Google Ads** | 65 | 60 | 92.31% |
-| **Meta (FB/IG)** | 235 | 229 | 97.45% |
+| **General** | 40 | 37 | 92.50% |
+| **Google Ads** | 3 | 2 | 66.67% |
+| **Meta (FB/IG)** | 16 | 15 | 93.75% |
 
 ## Procedencia de Leads
 | Categoría | Cantidad | Porcentaje |
 |---|---|---|
-| Plataformas Pagas (UTM/Ads) | 311 | 32.2% |
-| Otros (Orgánico/Sin Tracking) | 654 | 67.8% |
+| Plataformas Pagas (UTM/Ads) | 22 | 50.0% |
+| Otros (Orgánico/Sin Tracking) | 22 | 50.0% |
 
 ## Atribución por Campaña
 | Métrica | Valor |
 |---|---|
-| Inscriptos campaña actual (2026) | 192 |
-| Inscriptos campaña anterior (match histórico) | 749 |
+| Inscriptos campaña actual (2026) | 7 |
+| Inscriptos campaña anterior (match histórico) | 33 |
 
 La columna `Campana_Lead` en el CSV maestro indica si la fecha de consulta del lead
 cae dentro de la ventana de la campaña actual o es anterior. Generada por `02_cruce_datos.py`.
