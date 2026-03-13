@@ -8,13 +8,13 @@ Fecha: 2026-03-12
 
 | Etapa | Personas | Tasa desde anterior |
 |---|---:|---:|
-| Consulta (leads con DNI) | 63,055 | - |
-| Generó Boleta | 2,404 | 3.8% |
-| Pagó (inscripto) | 5,154 | 8.2% |
+| Consulta (leads con DNI) | 63,966 | - |
+| Generó Boleta | 2,479 | 3.9% |
+| Pagó (inscripto) | 5,547 | 8.7% |
 
-**Boleta -> Pago (todas las boletas):** 297 / 7,704 = 3.9%
+**Boleta -> Pago (todas las boletas):** 444 / 7,704 = 5.8%
 
-**Boletas sin lead asociado:** 5,300  |  **Inscriptos sin lead:** 3,665
+**Boletas sin lead asociado:** 5,225  |  **Inscriptos sin lead:** 4,042
 
 ![Embudo Grado_Pregrado](chart_embudo_Grado_Pregrado.png)
 
@@ -22,13 +22,13 @@ Fecha: 2026-03-12
 
 | Etapa | Personas | Tasa desde anterior |
 |---|---:|---:|
-| Consulta (leads con DNI) | 419 | - |
-| Generó Boleta | 7 | 1.7% |
-| Pagó (inscripto) | 415 | 99.0% |
+| Consulta (leads con DNI) | 11 | - |
+| Generó Boleta | 0 | 0.0% |
+| Pagó (inscripto) | 10 | 90.9% |
 
-**Boleta -> Pago (todas las boletas):** 5 / 374 = 1.3%
+**Boleta -> Pago (todas las boletas):** 0 / 374 = 0.0%
 
-**Boletas sin lead asociado:** 367  |  **Inscriptos sin lead:** 465
+**Boletas sin lead asociado:** 374  |  **Inscriptos sin lead:** 84
 
 ![Embudo Cursos](chart_embudo_Cursos.png)
 
@@ -50,14 +50,14 @@ Fecha: 2026-03-12
 
 | Segmento | Canal | Leads | Con Boleta | Tasa L->B | Inscriptos | Tasa L->I | Tasa B->I |
 |---|---|---:|---:|---:|---:|---:|---:|
-| Grado_Pregrado | Google | 21,597 | 497 | 2.3% | 577 | 2.7% | 116.1% |
-| Grado_Pregrado | Meta | 12,565 | 380 | 3.0% | 291 | 2.3% | 76.6% |
-| Grado_Pregrado | Bot | 932 | 129 | 13.8% | 249 | 26.7% | 193.0% |
-| Grado_Pregrado | Otros | 27,961 | 1,398 | 5.0% | 4,037 | 14.4% | 288.8% |
-| Cursos | Google | 14 | 0 | 0.0% | 13 | 92.9% | 0.0% |
-| Cursos | Meta | 50 | 1 | 2.0% | 50 | 100.0% | 5000.0% |
-| Cursos | Bot | 16 | 1 | 6.2% | 15 | 93.8% | 1500.0% |
-| Cursos | Otros | 339 | 5 | 1.5% | 337 | 99.4% | 6740.0% |
+| Grado_Pregrado | Google | 21,570 | 505 | 2.3% | 579 | 2.7% | 114.7% |
+| Grado_Pregrado | Meta | 13,028 | 391 | 3.0% | 338 | 2.6% | 86.4% |
+| Grado_Pregrado | Bot | 968 | 134 | 13.8% | 267 | 27.6% | 199.3% |
+| Grado_Pregrado | Otros | 28,400 | 1,449 | 5.1% | 4,363 | 15.4% | 301.1% |
+| Cursos | Google | 1 | 0 | 0.0% | 1 | 100.0% | 0.0% |
+| Cursos | Meta | 2 | 0 | 0.0% | 2 | 100.0% | 0.0% |
+| Cursos | Bot | 0 | 0 | 0.0% | 0 | 0.0% | 0.0% |
+| Cursos | Otros | 8 | 0 | 0.0% | 7 | 87.5% | 0.0% |
 | Posgrados | Google | 8 | 0 | 0.0% | 6 | 75.0% | 0.0% |
 | Posgrados | Meta | 7 | 0 | 0.0% | 3 | 42.9% | 0.0% |
 | Posgrados | Bot | 2 | 0 | 0.0% | 2 | 100.0% | 0.0% |
@@ -69,10 +69,10 @@ Fecha: 2026-03-12
 
 | Segmento | Campana | Leads | Con Boleta | Tasa L->B | Inscriptos | Tasa L->I |
 |---|---|---:|---:|---:|---:|---:|
-| Grado_Pregrado | Ingreso 2026 | 22,260 | 2,001 | 9.0% | 4,352 | 19.6% |
-| Grado_Pregrado | Campaña Anterior | 40,795 | 403 | 1.0% | 802 | 2.0% |
-| Cursos | 2026 | 113 | 2 | 1.8% | 111 | 98.2% |
-| Cursos | Campaña Anterior | 306 | 5 | 1.6% | 304 | 99.3% |
+| Grado_Pregrado | Ingreso 2026 | 22,997 | 2,068 | 9.0% | 4,700 | 20.4% |
+| Grado_Pregrado | Campaña Anterior | 40,969 | 411 | 1.0% | 847 | 2.1% |
+| Cursos | 2026 | 3 | 0 | 0.0% | 3 | 100.0% |
+| Cursos | Campaña Anterior | 8 | 0 | 0.0% | 7 | 87.5% |
 | Posgrados | 2026 | 20 | 0 | 0.0% | 17 | 85.0% |
 | Posgrados | Campaña Anterior | 27 | 0 | 0.0% | 21 | 77.8% |
 

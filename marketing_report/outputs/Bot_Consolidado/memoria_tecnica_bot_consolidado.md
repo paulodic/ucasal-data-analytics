@@ -1,6 +1,6 @@
 # Memoria Técnica — 19_bot_consolidado.py
 
-**Generado automáticamente el 2026-03-12 10:33:34**
+**Generado automáticamente el 2026-03-12 21:28:10**
 **Datos actualizados al 17 de febrero de 2026** *(fecha del último inscripto registrado)*
 
 ---
@@ -12,24 +12,24 @@
 | Segmentos procesados | Grado_Pregrado, Cursos, Posgrados |
 | Archivos leads cargados | 3 |
 | Archivos inscriptos cargados | 3 |
-| Total leads consolidados | 389,291 |
+| Total leads consolidados | 398,778 |
 | Total inscriptos consolidados | 9,944 |
 
 ## 2. Métricas del Bot (FuenteLead = 907)
 
 | Métrica | Valor |
 |---------|-------|
-| Total Consultas (registros sin dedup) | 10,052 |
-| Personas Únicas vía Bot | 7,525 |
+| Total Consultas (registros sin dedup) | 10,247 |
+| Personas Únicas vía Bot | 7,668 |
 | Inscriptos del Bot | 507 |
-| Tasa de Conversión Total | 6.74% |
+| Tasa de Conversión Total | 6.61% |
 
 ### Desglose por Segmento
 
 | Segmento       |   Consultas_Total |   Personas_Unicas |   Inscriptos |   Match_DNI |   Match_Email |   Match_Telefono |   Match_Celular |   Tasa_% |
 |:---------------|------------------:|------------------:|-------------:|------------:|--------------:|-----------------:|----------------:|---------:|
-| Grado_Pregrado |              9955 |              7459 |          441 |         255 |           134 |               33 |              19 |     5.91 |
-| Cursos         |                91 |                61 |           61 |          16 |            33 |                0 |              12 |   100    |
+| Grado_Pregrado |             10240 |              7663 |          502 |         271 |           167 |               33 |              31 |     6.55 |
+| Cursos         |                 1 |                 0 |            0 |           0 |             0 |                0 |               0 |     0    |
 | Posgrados      |                 6 |                 5 |            5 |           2 |             2 |                1 |               0 |   100    |
 
 ## 3. Auditoría de DNI — Inscriptos del Bot
@@ -68,16 +68,16 @@ Sin embargo, la tabla de inscriptos sí contiene el DNI (`Insc_DNI`) de cada per
 
 |     | Nombre_Completo                          |      DNI |   Insc_DNI | Match_Tipo     | Correo                           |
 |----:|:-----------------------------------------|---------:|-----------:|:---------------|:---------------------------------|
-| 285 | Soria Briones , Juan Pablo               | 48338866 |   48338866 | Exacto (Email) | jpsoria2016@gmail.com            |
-| 286 | Limardo, Lucía Belén                     | 43918536 |   43918536 | Exacto (Email) | limardolb@gmail.com              |
-| 287 | FUENTES SANMILLAN, CAMILA                | 47818826 |   47818826 | Exacto (Email) | camilafuentessanmillan@gmail.com |
-| 288 | Montañez, Brisa de los Ángeles           | 48210845 |   48210845 | Exacto (Email) | brisamontanez77@gmail.com        |
-| 289 | SOLALIGA , EMILIA MICAELA                | 48777049 |   48777049 | Exacto (Email) | solaligaemilia7@gmail.com        |
-| 290 | Puca , Sarón Briana                      | 46471828 |   46471828 | Exacto (Email) | sharon.puca04@gmail.com          |
-| 291 | NESTOR JOEL MAIDANA, NESTOR JOEL MAIDANA | 48209694 |   48209694 | Exacto (Email) | joelmaidana07098@gmail.com       |
-| 292 | Homez Llanos , Valentina Luján           | 44564872 |   44564872 | Exacto (Email) | valenhomez2002@gmail.com         |
-| 293 | JANCO, WILLIAN                           | 44048597 |   44048597 | Exacto (Email) | wilian12te@gmail.com             |
-| 294 | GOMEZ, BRENDA NICOLE                     | 48375203 |   48375203 | Exacto (Email) | brendagomez3438@gmail.com        |
+| 302 | Soria Briones , Juan Pablo               | 48338866 |   48338866 | Exacto (Email) | jpsoria2016@gmail.com            |
+| 303 | Limardo, Lucía Belén                     | 43918536 |   43918536 | Exacto (Email) | limardolb@gmail.com              |
+| 304 | FUENTES SANMILLAN, CAMILA                | 47818826 |   47818826 | Exacto (Email) | camilafuentessanmillan@gmail.com |
+| 305 | Montañez, Brisa de los Ángeles           | 48210845 |   48210845 | Exacto (Email) | brisamontanez77@gmail.com        |
+| 306 | TEJERINA, ALVARO BENJAMIN                | 45976665 |   45976665 | Exacto (Email) | benjatejerina16@gmail.com        |
+| 307 | Valdez, Abigail De Los Angeles Guadalupe | 48804837 |   48804837 | Exacto (Email) | abi.v2804@gmail.com              |
+| 308 | SOLALIGA , EMILIA MICAELA                | 48777049 |   48777049 | Exacto (Email) | solaligaemilia7@gmail.com        |
+| 309 | HERRERA, VICTORIA CAROLINA               | 48412717 |   48412717 | Exacto (Email) | vickyyyvh@gmail.com              |
+| 310 | Puca , Sarón Briana                      | 46471828 |   46471828 | Exacto (Email) | sharon.puca04@gmail.com          |
+| 311 | NESTOR JOEL MAIDANA, NESTOR JOEL MAIDANA | 48209694 |   48209694 | Exacto (Email) | joelmaidana07098@gmail.com       |
 
 ### 3.5 Muestreo — Registros matcheados por DNI (siempre tuvieron DNI)
 
