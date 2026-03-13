@@ -53,6 +53,23 @@ def run_script(script_path, args=None, label=""):
 print("Iniciando Compilación Maestra de Reportes Académicos...")
 
 # =========================================================
+# PRE-FLIGHT: Verificar que 02_cruce_datos.py fue ejecutado
+# =========================================================
+outputs_dir = os.path.join(os.path.dirname(base_dir), "outputs")
+db_base = os.path.join(outputs_dir, "Data_Base")
+any_db = any(
+    os.path.exists(os.path.join(db_base, seg, "reporte_marketing_inscriptos_origenes.csv"))
+    for seg in segmentos
+)
+if not any_db:
+    print("\n" + "!" * 60)
+    print("  ERROR: No se encontraron bases de datos intermedias.")
+    print("  Debes ejecutar primero: python scripts/02_cruce_datos.py")
+    print("  Este script genera los CSVs en outputs/Data_Base/")
+    print("!" * 60)
+    sys.exit(1)
+
+# =========================================================
 # FASE 1: Scripts por segmento
 # =========================================================
 for segmento in segmentos:
@@ -60,7 +77,7 @@ for segmento in segmentos:
     print(f" CONSTRUYENDO SUITE: {segmento.upper()}")
     print("="*50)
 
-    db_path = os.path.join(r"h:\Test-Antigravity\marketing_report\outputs", "Data_Base", segmento, "reporte_marketing_inscriptos_origenes.csv")
+    db_path = os.path.join(outputs_dir, "Data_Base", segmento, "reporte_marketing_inscriptos_origenes.csv")
     if not os.path.exists(db_path):
         print(f"No existe la base de datos para '{segmento}'. Se omitirá.")
         continue
