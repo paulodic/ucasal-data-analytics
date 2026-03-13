@@ -658,20 +658,32 @@ if __name__ == '__main__':
     # ==========================================
     print("Segmentando y exportando informes a CSV según Nivel Académico...")
 
+    # Códigos de carrera que son "Cursos de Ingreso" a carreras de grado
+    # → deben reportar en Grado_Pregrado, no en Cursos
+    CODCAR_INGRESO_GRADO = {1169, 1200, 1201, 1202, 1203, 1204}
+
     # Función para estandarizar la clasificación
-    def segmentar_tipcar(tipcar_val):
+    def segmentar_tipcar(tipcar_val, codcar_val=None):
+        # Si el código de carrera es de curso de ingreso a grado, reclasificar
+        if codcar_val is not None:
+            try:
+                if int(float(codcar_val)) in CODCAR_INGRESO_GRADO:
+                    return 'Grado_Pregrado'
+            except (ValueError, TypeError):
+                pass
         val = str(tipcar_val).lower()
-        if 'curso' in val: 
+        if 'curso' in val:
             return 'Cursos'
-        elif 'postgrado' in val or 'maestría' in val or 'maestria' in val or 'posgrado' in val: 
+        elif 'postgrado' in val or 'maestría' in val or 'maestria' in val or 'posgrado' in val:
             return 'Posgrados'
-        elif 'grado' in val or 'pregrado' in val: 
+        elif 'grado' in val or 'pregrado' in val:
             return 'Grado_Pregrado'
-        else: 
+        else:
             return 'Desconocido'
 
-    # Clasificar inscriptos (usan Insc_Tipcar)
-    df_final_inscriptos['Segmento_Acad'] = df_final_inscriptos['Insc_Tipcar'].apply(segmentar_tipcar)
+    # Clasificar inscriptos (usan Insc_Tipcar + Insc_Cod. Carrera)
+    df_final_inscriptos['Segmento_Acad'] = df_final_inscriptos.apply(
+        lambda r: segmentar_tipcar(r.get('Insc_Tipcar', ''), r.get('Insc_Cod. Carrera')), axis=1)
 
     # Clasificar leads: si matchearon con inscripto, heredan Insc_Tipcar para
     # consistencia exacta con el segmento del inscripto. Si no matchearon,
@@ -679,16 +691,17 @@ if __name__ == '__main__':
     def get_lead_segment(row):
         insc_tip = str(row.get('Insc_Tipcar', 'nan'))
         if insc_tip != 'nan' and insc_tip.strip() != '' and insc_tip != 'None':
-             return segmentar_tipcar(insc_tip)
+             return segmentar_tipcar(insc_tip, row.get('Insc_Cod. Carrera'))
 
         local_tip = str(row.get('Tipo de Carrera', 'nan'))
-        return segmentar_tipcar(local_tip)
+        return segmentar_tipcar(local_tip, row.get('Código Carrera'))
 
     df_final_leads['Segmento_Acad'] = df_final_leads.apply(get_lead_segment, axis=1)
 
-    # Clasificar boletas por segmento (usan Tipcar directo)
+    # Clasificar boletas por segmento (usan Tipcar + Cod. Carrera)
     if not df_final_boletas.empty:
-        df_final_boletas['Segmento_Acad'] = df_final_boletas['Tipcar'].apply(segmentar_tipcar)
+        df_final_boletas['Segmento_Acad'] = df_final_boletas.apply(
+            lambda r: segmentar_tipcar(r.get('Tipcar', ''), r.get('Cod. Carrera')), axis=1)
 
     # Exportar cada grupo a su propio directorio
     for segmento in ['Grado_Pregrado', 'Cursos', 'Posgrados', 'Desconocido']:

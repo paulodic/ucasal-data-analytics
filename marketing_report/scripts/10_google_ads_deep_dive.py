@@ -186,6 +186,9 @@ with open(md_path, 'w', encoding='utf-8') as f:
     f.write(f"- Total Personas captadas vía Google Ads (Muestra Conversión): {total_gads_conv:,}\n")
     f.write(f"- Inscriptos Confirmados (Muestra): {conv_gads:,}\n")
     f.write(f"- Tasa de Conversión Google Ads: {tasa_gads:.2f}%\n")
+    f.write("\n## Nota Metodologica\n")
+    f.write("- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).\n")
+    f.write("- **Match:** Exacto por DNI, Email, Telefono y Celular.\n")
 print(f"-> Textos exportados a MD: {md_path}\n")
 
 # PDF
@@ -279,6 +282,7 @@ memoria_gads = """# Memoria Técnica: Cálculos de Google Ads Deep Dive
 - **Match Exacto (Conversión):** Se restringe la consideración de "Inscriptos" únicamente a aquellos leads donde el campo `Match_Tipo` dictamina una correlación "Exacta" validada por el CRM frente a la universidad. Las coincidencias difusas (Fuzzy) han sido expresamente retiradas del cálculo estadístico de atribución.
 - **Limpieza y Deduplicación:** Como una misma persona pudo consultar en varias ocasiones mediante el mismo Ad, previo a generar la base contable se ejecuta una eliminación de duplicados absolutos empleando el documento de identidad (`DNI`) como clave primaria primaria (Primary Key), y el `Correo` como respaldo en caso de carecer de identificación estatal. Esto asegura que no se inflen artificialmente las interacciones del anuncio.
 - **Tasa de Conversión (CR%):** Obtenida mediante la fórmula estricta `(Inscriptos Exactos / Volumen Físico de Personas Únicas de la campaña) * 100`.
+- **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consultó. Para atribución multi-canal, referirse al Informe Analítico (04_reporte_final).
 """
 with open(os.path.join(output_dir, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
     f.write(memoria_gads)

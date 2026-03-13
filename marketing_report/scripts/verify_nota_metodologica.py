@@ -27,6 +27,9 @@ SCRIPTS_REQUIRED = {
     '20_presupuesto_roi.py':    {'nota': True, 'match': False, 'anytouch': True},
     '21_atribucion_causal.py':  {'nota': True, 'match': False, 'anytouch': True},
     '23_embudo_conversion.py':  {'nota': True, 'match': False, 'anytouch': True},
+    '03_journey_sankey.py':     {'nota': True, 'match': False, 'anytouch': True},
+    '17_reporte_asesores.py':   {'nota': True, 'match': False, 'anytouch': True},
+    '21_exportar_matcheo_completo.py': {'nota': True, 'match': False, 'anytouch': True},
 }
 
 # Patterns to search for

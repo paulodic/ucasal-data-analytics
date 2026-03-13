@@ -294,6 +294,10 @@ md_content = f"""# Matcheo Completo: {segmento}
 - **Clave pk:** DNI (sin decimal) > Correo > ID Consulta > índice
 - **Ventana cohorte Grado_Pregrado:** desde 2025-09-01 (ingreso 2026)
 - **Ventana cohorte Cursos/Posgrados:** todos los registros hasta hoy
+
+## Nota Metodologica
+- **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.
 """
 md_path = os.path.join(out_dir, f'Matcheo_Completo_{segmento}.md')
 with open(md_path, 'w', encoding='utf-8') as f:

@@ -166,6 +166,10 @@ memoria = f"""# Memoria Técnica: Journey del Estudiante (Sankey)
 
 ## Archivos de Salida
 - Excel: `{output_excel}`
+
+## Nota Metodologica
+- **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
+- **Match:** Exacto por DNI, Email, Telefono y Celular.
 """
 with open(os.path.join(output_dir, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
     f.write(memoria)
