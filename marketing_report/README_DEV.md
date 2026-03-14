@@ -115,7 +115,7 @@ Se ejecutan una sola vez, sin argumento de segmento:
 
 > **IMPORTANTE — FORMATOS MIXTOS:** Las columnas de fecha en los CSVs de salida **NO comparten un único formato**. La columna `Consulta: Fecha de creación` mantiene el formato raw `D/M/YYYY` de Salesforce (ej: `2/3/2026` = 2 de marzo), mientras que las columnas `Insc_*`, `Fecha Pago` y `Fecha Aplicación` usan `YYYY-MM-DD` (ISO 8601). Ver tabla abajo para detalle por columna.
 >
-> **Riesgo si no se maneja:** Parsear `Consulta: Fecha de creación` sin `dayfirst=True` pierde el 87% de las filas donde el día > 12 (pandas las interpreta como mes inválido y devuelve `NaT`).
+> **Riesgo si no se maneja:** Parsear `Consulta: Fecha de creación` sin `dayfirst=True` pierde la mayoria de las filas donde el dia > 12 (pandas las interpreta como mes inválido y devuelve `NaT`).
 
 ### Tabla: `reporte_marketing_leads_completos.csv` (Leads)
 
@@ -225,7 +225,7 @@ sizes = [v for l, v, p in pairs]
 ### 6. 📅 `Consulta: Fecha de creación` — Formato D/M/YYYY (¡CRÍTICO!)
 **Descubrimiento:** La columna `Consulta: Fecha de creación` en los CSVs maestros está almacenada en formato **`D/M/YYYY`** (ej: `2/3/2026` = 2 de marzo de 2026). Esto es distinto a todas las columnas `Insc_*` que usan `YYYY-MM-DD` (ISO).
 
-**Impacto si NO se corrige:** `pd.to_datetime(col, errors='coerce')` sin `dayfirst=True` falla para el 87% de las filas (todas con día > 12), dejándolas como `NaT`. Los gráficos de curva de consultas por mes solo muestran 35K de 270K registros.
+**Impacto si NO se corrige:** `pd.to_datetime(col, errors='coerce')` sin `dayfirst=True` falla para la mayoria de las filas (todas con dia > 12), dejandolas como `NaT`. Los graficos de curva de consultas por mes quedan con una fraccion minima de los registros reales.
 
 **Corrección obligatoria en todos los scripts:**
 ```python
@@ -261,13 +261,13 @@ tasa_consultas = bot_inscriptos / len(df_bot_leads) * 100  # tasa s/consultas
 > **Nota:** Los valores numéricos de las tasas dependen de la corrida. No hardcodear valores en la documentación — siempre consultar el informe generado.
 
 ### 8. 📧 Dominios de correo inválidos comunes
-**Descubrimiento:** Una cantidad significativa de leads tienen dominios con errores de tipeo. Los más frecuentes (valores de corridas anteriores, consultar informe actualizado):
-- `gmail.com.ar` (434 leads) — **NO EXISTE**, es un error común de argentinos
-- `gmail.con` (354 leads) — falta la "m"
-- `gamil.com` (171 leads) — inversión de letras
+**Descubrimiento:** Una cantidad significativa de leads tienen dominios con errores de tipeo. Los patrones mas frecuentes:
+- `gmail.com.ar` — **NO EXISTE**, es un error comun de argentinos
+- `gmail.con` — falta la "m"
+- `gamil.com` — inversion de letras
 - Otros: `gmai.com`, `gmail.comm`, `gmail.co`, `hotmail.con`
 
-Corregir estos dominios podría recuperar matches adicionales (consultar `15_dominios_invalidos.py` para datos actualizados).
+Corregir estos dominios podria recuperar matches adicionales. Para cantidades exactas por dominio, ejecutar `15_dominios_invalidos.py` (genera `outputs/General/Calidad_Datos/dominios_invalidos.xlsx`).
 
 ---
 

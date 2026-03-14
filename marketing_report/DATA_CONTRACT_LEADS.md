@@ -574,9 +574,11 @@ df_leads = (
 - Si el mensual tiene `Candidato` y el General no → se usa el del mensual
 - Si el General tiene `Gestionados` y el mensual no → se usa el del General
 
-### 15.4 Análisis de solapamiento (2026-03-02)
+### 15.4 Análisis de solapamiento
 
-| Archivo | Filas | Rango ID Consulta | Solapamiento con General |
+> **Nota:** Los valores de esta tabla corresponden a la corrida de 2026-03-02. Al agregar nuevos archivos de leads, las cantidades cambian. Ejecutar `02_cruce_datos.py` para ver los totales actualizados en la consola.
+
+| Archivo (ejemplo corrida 2026-03-02) | Filas | Rango ID Consulta | Solapamiento con General |
 |---|---|---|---|
 | **Informe General** (nuevo) | 100,004 | 1,663,529 – 1,795,300 | — |
 | `provisorio febrero 2026.xlsx` | 36,718 | ≈ mismo rango | **36,644 IDs compartidos** |
@@ -586,7 +588,7 @@ df_leads = (
 | `Leads octubre 2025.xlsx` | 38,525 | diferente rango | 0 |
 | `Leads septiembre 2025.xlsx` | 33,721 | diferente rango | 0 |
 
-**63,356 IDs del General son registros completamente nuevos** (no estaban en ningún archivo mensual previo).
+**Hallazgo clave:** La mayoría de IDs del Informe General son registros nuevos que no estaban en los archivos mensuales. La deduplicación por `Consulta: ID Consulta` (`groupby().first()`) resuelve los solapamientos automáticamente.
 
 ### 15.5 Nota sobre `Septiembre_2025.xlsx`
 
