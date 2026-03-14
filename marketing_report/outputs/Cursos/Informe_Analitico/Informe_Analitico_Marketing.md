@@ -7,41 +7,46 @@
 Este informe consolida el análisis generado a partir del cruce de bases de datos de **Consultas (Leads en Salesforce)** e **Inscriptos**, unificando los orígenes y calculando el "Journey" de las personas. Durante la lectura de las bases de datos originales se aplicaron procesos de **deduplicación** para garantizar que los solapamientos de archivos no duplicaran los registros.
 
 ## 1. Resumen Ejecutivo
-Se analizaron un total de **44** leads únicos y **94** inscriptos únicos para identificar qué campañas e interacciones previas generaron las inscripciones finales.
+Se procesaron **41** consultas únicas de Salesforce (cada una con su propio ID y origen), correspondientes a **22** personas distintas. Se cruzaron contra **94** inscriptos únicos.
 
 | Métrica | Valor |
 |---------|-------|
-| Total Leads | 44 |
+| Total Consultas (ID Consulta único) | 41 |
+| Personas que consultaron | 22 |
 | Total Inscriptos | 94 |
-| Inscriptos Atribuidos a un Lead (Exacto) | 19 (20.2% del total) |
+| Personas convertidas (Exacto) | 15 |
+| Inscriptos atribuidos a Lead (Exacto) | 18 (19.1% del total) |
 | Inscriptos sin trazabilidad | 71 |
-| **Tasa de Conversión General Leads (Exacta)** | **92.50%** |
+| **Tasa de Conversion sobre Consultas** | **39.47%** *(inscriptos / consultas en ventana)* |
+| **Tasa de Conversion sobre Personas** | **78.95%** *(inscriptos / personas en ventana)* |
 
-### Desglose por Ecosistema Principal
-*(Nota: Las tasas de conversión reflejan estrictamente cruces exactos sin contemplar coincidencias difusas)*
+> **Consultas vs Personas (Embudo):** Cada consulta tiene un ID unico de Salesforce y proviene de un canal especifico. Una persona puede generar multiples consultas desde distintos canales. Se presentan DOS tasas de conversion: sobre consultas (eficiencia por interaccion) y sobre personas (eficiencia por individuo). La tasa sobre personas es el KPI principal del embudo: Consultas -> Personas -> Inscriptos.
 
-| Ecosistema | Total Leads Analizados | Inscriptos Atribuidos | Tasa de Conversión |
-|------------|------------------------|-----------------------|--------------------|
-| **Google Ads** | 3 | 2 | **66.67%** |
-| **Meta (FB/IG)** | 16 | 15 | **93.75%** |
+### Desglose por Ecosistema Principal (Any-Touch)
+*(Nota: Las tasas de conversión reflejan cruces exactos. Modelo Any-Touch: una persona que consultó por Google Y por Meta se cuenta en ambos canales.)*
+
+| Ecosistema | Consultas | Personas | Convertidas | Tasa s/Consultas | Tasa s/Personas |
+|------------|-----------|----------|-------------|------------------|-----------------|
+| **Google Ads** | 3 | 3 | 2 | 66.67% | **66.67%** |
+| **Meta (FB/IG)** | 14 | 9 | 7 | 50.00% | **77.78%** |
 
 ### Procedencia de Leads (Pagado vs Orgánico/Desconocido)
-De los 44 leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
-- **Plataformas Pagadas Confirmadas:** 22 leads (50.0%)
-- **Otros (Orgánico / Sin Tracking ID):** 22 leads (50.0%)
+De los 41 leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
+- **Plataformas Pagadas Confirmadas:** 19 leads (46.3%)
+- **Otros (Orgánico / Sin Tracking ID):** 22 leads (53.7%)
 
-De igual manera, al observar solo las **40 inscripciones (cruces exactos)** logradas a partir de leads, la distribución de origen es:
-- **Inscripciones Pagadas (Meta/UTM):** 18 (45.0%)
-- **Inscripciones Orgánicas/Directas:** 22 (55.0%)
+De igual manera, al observar solo las **17 inscripciones (cruces exactos)** logradas a partir de leads, la distribución de origen es:
+- **Inscripciones Pagadas (Meta/UTM):** 7 (41.2%)
+- **Inscripciones Orgánicas/Directas:** 10 (58.8%)
 
-*(Nota sobre Fuzzys: Existen 4 leads sospechosos de ser inscriptos (4 inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
+*(Nota sobre Fuzzys: Existen 5 leads sospechosos de ser inscriptos (5 inscriptos) que fueron encontrados mediante algoritmos de similitud de nombres y requieren verificación manual. NO han sido incluidos en ninguna tasa de conversión).*
 
 ### Atribución por Campaña
 La columna `Campana_Lead` identifica si el lead que generó la inscripción pertenece a la campaña actual o a una anterior.
 | Campaña | Inscriptos Exactos |
 |---|---|
-| Campaña actual (2026) | 7 |
-| Campaña anterior (match histórico) | 33 |
+| Campaña actual (2026) | 4 |
+| Campaña anterior (match histórico) | 13 |
 
 ### Visualización de Tasas y Atribución
 ![Conversión Leads](chart_1_conversion_leads.png)
@@ -56,8 +61,8 @@ Comparativa gráfica de cuánto demora en inscribirse un prospecto según su ori
 
 | Origen_Agrupado    |   Promedio |   Mediana |   Moda |
 |:-------------------|-----------:|----------:|-------:|
-| Orgánicos/Directos |      105.4 |       122 |    162 |
-| Pagados (Meta/UTM) |       82.6 |        82 |     53 |
+| Orgánicos/Directos |       88.1 |        88 |      5 |
+| Pagados (Meta/UTM) |       90.2 |        90 |     53 |
 
 ![Tiempos Resolucion](chart_8_tiempos_resolucion.png)
 ### Volumen de Consultas por Día y Mes
@@ -72,17 +77,17 @@ Cada inscripto puede haber consultado por multiples canales antes de inscribirse
 
 | Metrica | Total | 2026 | Campana Anterior |
 |---|---|---|---|
-| Inscriptos con 1 sola consulta | 13 (61.9%) | 5 (83.3%) | 8 (53.3%) |
-| Promedio consultas por inscripto | 1.9 | 1.2 | 2.2 |
-| Inscriptos con 1 canal | 19 (90.5%) | 6 (100.0%) | 13 (86.7%) |
-| Inscriptos con 2+ canales | 2 (9.5%) | 0 (0.0%) | 2 (13.3%) |
-| **Total inscriptos** | **21** | **6** | **15** |
+| Inscriptos con 1 sola consulta | 9 (52.9%) | 3 (75.0%) | 6 (46.2%) |
+| Promedio consultas por inscripto | 2.1 | 1.2 | 2.4 |
+| Inscriptos con 1 canal | 15 (88.2%) | 4 (100.0%) | 11 (84.6%) |
+| Inscriptos con 2+ canales | 2 (11.8%) | 0 (0.0%) | 2 (15.4%) |
+| **Total inscriptos** | **17** | **4** | **13** |
 
 #### Top Combinaciones (Total)
 | Combinacion   |   Inscriptos |
 |:--------------|-------------:|
-| Meta          |            9 |
 | Otros         |            8 |
+| Meta          |            5 |
 | Google        |            1 |
 | Meta + Otros  |            1 |
 | Bot           |            1 |
@@ -98,18 +103,18 @@ Un inscripto puede aparecer en varios canales a la vez (la suma supera 100%).
 
 | Canal | Total | 2026 | Campana Anterior |
 |---|---|---|---|
-| **Bot** | 1 (4.8%) | 1 (16.7%) | 0 (0.0%) |
-| **Google Ads** | 2 (9.5%) | 0 (0.0%) | 2 (13.3%) |
-| **Meta (FB/IG)** | 11 (52.4%) | 2 (33.3%) | 9 (60.0%) |
-| **Otros** | 9 (42.9%) | 3 (50.0%) | 6 (40.0%) |
+| **Bot** | 1 (5.9%) | 1 (25.0%) | 0 (0.0%) |
+| **Google Ads** | 2 (11.8%) | 0 (0.0%) | 2 (15.4%) |
+| **Meta (FB/IG)** | 7 (41.2%) | 0 (0.0%) | 7 (53.8%) |
+| **Otros** | 9 (52.9%) | 3 (75.0%) | 6 (46.2%) |
 
 #### Desglose por Tipo de Match (mejor match por persona, prioridad DNI > Email > Tel > Cel)
 | Tipo Match | Total | 2026 | Campana Anterior |
 |---|---|---|---|
-| **Exacto (DNI)** | 9 (42.9%) | 2 (33.3%) | 7 (46.7%) |
-| **Exacto (Email)** | 4 (19.0%) | 0 (0.0%) | 4 (26.7%) |
-| **Exacto (Telefono)** | 6 (28.6%) | 4 (66.7%) | 2 (13.3%) |
-| **Exacto (Celular)** | 2 (9.5%) | 0 (0.0%) | 2 (13.3%) |
+| **Exacto (DNI)** | 9 (52.9%) | 2 (50.0%) | 7 (53.8%) |
+| **Exacto (Email)** | 4 (23.5%) | 0 (0.0%) | 4 (30.8%) |
+| **Exacto (Telefono)** | 2 (11.8%) | 2 (50.0%) | 0 (0.0%) |
+| **Exacto (Celular)** | 2 (11.8%) | 0 (0.0%) | 2 (15.4%) |
 
 ![Any-Touch Participacion](chart_anytouch_participacion.png)
 ![Any-Touch por Campana](chart_anytouch_por_campana.png)
@@ -118,12 +123,12 @@ Un inscripto puede aparecer en varios canales a la vez (la suma supera 100%).
 ## 2. Journey del Estudiante (Comportamiento)
 Analizando el número de veces que un usuario consulta antes de pagar su matrícula, observamos los siguientes patrones:
 
-- **Promedio de Consultas por Persona:** 1.8 veces.
-- **Tiempo de Decisión Promedio:** Un usuario tarda en promedio **103.9 días** desde su primera consulta hasta que formaliza el pago.
+- **Promedio de Consultas por Persona:** 1.9 veces.
+- **Tiempo de Decisión Promedio:** Un usuario tarda en promedio **115.9 días** desde su primera consulta hasta que formaliza el pago.
 
 ### Principales Fuentes que Inician el Recorrido (1er Touch) en Usuarios Inscriptos:
 ![Top Fuentes](chart_3_top_fuentes.png)
-- **Facebook Lead Ads**: 8 inscriptos
+- **Facebook Lead Ads**: 4 inscriptos
 - **Web Orgánico (3)**: 3 inscriptos
 - **Portales (4)**: 2 inscriptos
 - **Desconocido**: 2 inscriptos
@@ -176,8 +181,9 @@ Analizando los días con las caídas más fuertes de inscripciones, podemos obse
 
 ## Nota Metodologica
 - **Cruce de datos:** Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.
-- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en secciones de Multi-Touch y Any-Touch de este informe.
-- **Tasas de conversion:** Calculadas sobre la muestra de la campana actual (leads del ano calendario).
+- **Modelo de este informe: Any-Touch ESTANDAR** - Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Incluye todas las consultas, sin filtro de fecha vs pago.
+- **Modelo Causal (informe separado):** Solo cuenta consultas cuya fecha es ANTERIOR O IGUAL a la fecha de pago (Consulta <= Insc_Fecha Pago). Consultas post-pago excluidas. Ver `Presupuesto_ROI_Causal`.
+- **Tasas de conversion:** Se presentan dos tasas complementarias: (1) **sobre consultas** = inscriptos / consultas en ventana, mide eficiencia por interaccion; (2) **sobre personas** = inscriptos / personas unicas en ventana, mide eficiencia por individuo (KPI principal). Embudo: Consultas -> Personas -> Inscriptos. Ventana: leads del ano calendario.
 - **Fuente:** Consultas exportadas de Salesforce, inscriptos del sistema academico.
 
 ## Conclusiones y Recomendaciones
@@ -185,4 +191,25 @@ Analizando los días con las caídas más fuertes de inscripciones, podemos obse
 1. **Atribución de Marketing:** Se logró trazar el origen de un alto porcentaje de inscriptos, lo que demuestra que los esfuerzos de captación inicial en Salesforce tienen un impacto directo comprobable.
 2. **Tiempo de Maduración:** Dado que el tiempo promedio de decisión supera el contacto inicial, las estrategias de "Remarketing" o "Nutrición de Leads" por email/teléfono durante estas semanas intermedias son vitales.
 3. **Calidad de Datos:** Una porción de los registros se inscribió de manera directa o ingresó usando correos/teléfonos muy distintos. Se recomienda continuar fortaleciendo la trazabilidad mediante canales digitales.
+
+
+## Atribucion Causal (consulta <= fecha de pago)
+
+*Ventana: 01/01/2026 - 14/02/2026 | desde Ene 2026 (ano calendario)*
+
+Consultas post-pago excluidas: 0
+
+| Canal | Inscriptos (Any-Touch Causal) | % Participacion |
+|-------|---:|---:|
+| Google | 0 | 0.0% |
+| Facebook | 0 | 0.0% |
+| Bot | 0 | 0.0% |
+| Otros | 2 | 100.0% |
+| **Total Unico** | **2** | **100%** |
+
+Multi-canal: 1 canal=2, 2 canales=0, 3+=0
+
+Inscriptos sin lead/match: 9 de 11 (81.8%)
+
+*Nota: El modelo causal solo cuenta consultas cuya fecha es ANTERIOR O IGUAL a la fecha de pago. Consultas post-pago (soporte, seguimiento) excluidas.*
 

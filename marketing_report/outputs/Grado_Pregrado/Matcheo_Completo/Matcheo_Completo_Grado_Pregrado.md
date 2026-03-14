@@ -1,6 +1,6 @@
 # Matcheo Completo: Grado_Pregrado
 
-**Generado:** 2026-03-12 21:26:52
+**Generado:** 2026-03-14 20:35:10
 **Segmento:** Grado_Pregrado
 **Script:** `21_exportar_matcheo_completo.py`
 
@@ -11,33 +11,33 @@
 ## Totales Históricos
 | Métrica | Valor |
 |---|---|
-| Total registros leads (con duplicados) | 398,556 |
-| Personas únicas (deduplicadas) | 305,249 |
-| Match Exacto (DNI/Email/Teléfono) | 7,980 |
-| Match Fuzzy (revisión pendiente) | 155 |
-| Sin match (solo lead) | 385,231 |
+| Total registros leads (con duplicados) | 398,442 |
+| Personas únicas (deduplicadas) | 305,232 |
+| Match Exacto (DNI/Email/Teléfono) | 7,937 |
+| Match Fuzzy (revisión pendiente) | 153 |
+| Sin match (solo lead) | 385,280 |
 
 ## Atribución por Campaña
 | Métrica | Valor |
 |---|---|
-| Inscriptos campaña actual (Ingreso 2026) | 6,465 |
-| Inscriptos campaña anterior (match histórico) | 1,515 |
+| Inscriptos campaña actual (Ingreso 2026) | 6,457 |
+| Inscriptos campaña anterior (match histórico) | 1,480 |
 
 ## Ventana de Conversión (Cohorte)
 | Métrica | Valor |
 |---|---|
 | Ventana de análisis | 01/09/2025 - 17/02/2026 |
-| Leads en ventana (dedup) | 170,085 |
-| Inscriptos en ventana | 6,911 |
-| Tasa de conversión | 4.06% |
+| Leads en ventana (dedup) | 170,073 |
+| Inscriptos en ventana | 6,895 |
+| Tasa de conversión | 4.05% |
 
 ## Archivos de Salida
 | Archivo | Filas | Descripcion |
 |---|---|---|
 | `Resumen_Grado_Pregrado.xlsx` | — | Métricas y estadísticas |
-| `Con_Duplicados_Grado_Pregrado.xlsx` | 398,556 | Todos los registros de leads |
-| `Deduplicados_Grado_Pregrado.xlsx` | 305,249 | 1 fila por persona (mejor match) |
-| `Solo_Matcheados_Grado_Pregrado.xlsx` | 7,980 | Solo matcheos exactos |
+| `Con_Duplicados_Grado_Pregrado.xlsx` | 398,442 | Todos los registros de leads |
+| `Deduplicados_Grado_Pregrado.xlsx` | 305,232 | 1 fila por persona (mejor match) |
+| `Solo_Matcheados_Grado_Pregrado.xlsx` | 7,937 | Solo matcheos exactos |
 
 ## Reglas de Negocio
 - **Deduplicación:** prioridad Exacto > Fuzzy > Sin_Match (misma clave pk)

@@ -2,8 +2,28 @@
 
 ## 1. Top Asesores por Volumen Cierre
 
-| Propietario   | Total_Inscriptos   |
-|---------------|--------------------|
+| Propietario                     |   Total_Inscriptos |
+|:--------------------------------|-------------------:|
+| Contact Center                  |                 20 |
+| Sin Asignar                     |                 15 |
+| Aldana Micaela Quinteros        |                  5 |
+| UCASAL Prod                     |                  4 |
+| Carla Azcárate                  |                  3 |
+| Fernanda Victoria Meza          |                  2 |
+| Neuquén Sede_30 NEUQUÉN         |                  2 |
+| Francisco Gerardo Jover         |                  2 |
+| VERONICA PACHTMAN               |                  2 |
+| Camila Lamas Cil                |                  2 |
+| Ana Sofía Gomez                 |                  2 |
+| Fiamma Alejandra Spring         |                  1 |
+| Florencia María Rosa Villarreal |                  1 |
+| FORMOSA Sede_195                |                  1 |
+| Aldana Rocio Bruno Blanco       |                  1 |
+| Gabriel Cortes                  |                  1 |
+| Gabriela Cristina Aro Carrizo   |                  1 |
+| Jorge Ariel Cabaña              |                  1 |
+| Julieta María García            |                  1 |
+| Macarena De Singlau             |                  1 |
 
 ## 2. Top Vendedores (Sist. Financiero)
 
@@ -32,4 +52,4 @@
 
 ## Nota Metodologica
 - **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI (23), Email (18), Teléfono (15), Celular (7). Total: 63.

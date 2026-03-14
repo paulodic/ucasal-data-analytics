@@ -2,8 +2,18 @@
 
 ## 1. Top Asesores por Volumen Cierre
 
-| Propietario   | Total_Inscriptos   |
-|---------------|--------------------|
+| Propietario                   |   Total_Inscriptos |
+|:------------------------------|-------------------:|
+| Contact Center                |                  9 |
+| Sin Asignar                   |                  3 |
+| Camila Gisela Pacheco         |                  1 |
+| Carolina Eugenia Ferrer       |                  1 |
+| Francisco Gerardo Jover       |                  1 |
+| Gimena Vallejos               |                  1 |
+| Jorge Ariel Cabaña            |                  1 |
+| Rocío Belén Leiva             |                  1 |
+| UCASAL Prod                   |                  1 |
+| VIRGINIA MARIA HUERGO CORNEJO |                  1 |
 
 ## 2. Top Vendedores (Sist. Financiero)
 
@@ -32,4 +42,4 @@
 
 ## Nota Metodologica
 - **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI (9), Email (4), Teléfono (2), Celular (2). Total: 17.

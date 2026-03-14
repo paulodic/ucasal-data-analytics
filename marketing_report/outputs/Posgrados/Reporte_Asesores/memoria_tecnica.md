@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Asesores y Canales de Venta
 
-**Generado:** 2026-03-12 21:27:30
+**Generado:** 2026-03-14 20:35:49
 **Segmento:** Posgrados
 **Script:** `17_reporte_asesores.py`
 
@@ -11,24 +11,24 @@
 ## Volúmenes Macro
 | Métrica | Valor |
 |---|---|
-| Total Leads históricos | 178 |
+| Total Leads históricos | 139 |
 | Total Inscriptos físicos | 325 |
-| Leads en Contact Center | 71 (39.9%) |
-| Leads con Estado "Abierto" | 65 (36.5%) |
+| Leads en Contact Center | 51 (36.7%) |
+| Leads con Estado "Abierto" | 46 (33.1%) |
 
 ## Distribución de Estados (Top 10)
 | Estado           |   Cantidad |   Porcentaje |
 |:-----------------|-----------:|-------------:|
-| No interesado    |         77 |     43.2584  |
-| Abierto          |         65 |     36.5169  |
-| Interesado       |         25 |     14.0449  |
-| Solicitud creada |         11 |      6.17978 |
+| No interesado    |         58 |     41.7266  |
+| Abierto          |         46 |     33.0935  |
+| Interesado       |         24 |     17.2662  |
+| Solicitud creada |         11 |      7.91367 |
 
 ## Origen de Inscripciones (Atribución por Canal)
 | Origen_Cierre             |   Cantidad |   Porcentaje |
 |:--------------------------|-----------:|-------------:|
-| Asesores UCASAL (Central) |        298 |    91.6923   |
-| Sistemas / Automatizado   |         24 |     7.38462  |
+| Asesores UCASAL (Central) |        299 |    92        |
+| Sistemas / Automatizado   |         23 |     7.07692  |
 | Sedes / Delegaciones      |          3 |     0.923077 |
 
 ## Reglas de Negocio
@@ -50,4 +50,4 @@
 
 ## Nota Metodologica
 - **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI (23), Email (18), Telefono (15), Celular (7). Total: 63.

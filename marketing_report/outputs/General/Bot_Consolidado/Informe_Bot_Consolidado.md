@@ -7,8 +7,9 @@
 ### Nota Metodologica
 - **Modelo de atribucion:** Deduplicado por persona (DNI). Cada inscripto se cuenta una vez.
 - **Tipos de match:** Exacto por DNI, Email, Telefono y Celular.
-- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Ver Informe Analitico (04) para detalle any-touch.
-- **Este informe:** Modelo directo — solo incluye inscriptos cuyo lead del Bot (FuenteLead=907) matcheo exactamente con un inscripto.
+- **Modelo Any-Touch ESTANDAR (este informe):** Incluye todas las consultas sin filtro de fecha vs pago.
+- **Modelo CAUSAL (informe separado):** Solo consultas con fecha <= fecha de pago. Excluye consultas post-pago (soporte, seguimiento). Ver Presupuesto_ROI_Causal.
+- **Este informe:** Modelo directo - solo incluye inscriptos cuyo lead del Bot (FuenteLead=907) matcheo exactamente con un inscripto.
 - **Ventana:** Grado_Pregrado desde Sep 2025. Cursos/Posgrados del ano calendario.
 
 ## 1. Resumen Ejecutivo Consolidado
@@ -16,25 +17,25 @@
 | Métrica | Valor |
 |---------|-------|
 | Total Consultas (Registros) vía Bot | 10,247 |
-| Total Personas Únicas vía Bot | 7,668 |
-| Total Inscriptos del Bot | 507 |
+| Total Personas Únicas vía Bot | 7,777 |
+| Total Inscriptos del Bot | 508 |
 |   - Match por DNI | 273 |
 |   - Match por Email | 169 |
 |   - Match por Telefono | 34 |
-|   - Match por Celular | 31 |
-| Tasa de Conversión Total (Bot) | 6.61% |
+|   - Match por Celular | 32 |
+| Tasa de Conversión Total (Bot) | 6.53% |
 
 ## 2. Desglose por Nivel Académico
 
 | Segmento       |   Consultas_Total |   Personas_Unicas |   Inscriptos |   Match_DNI |   Match_Email |   Match_Telefono |   Match_Celular |   Tasa_% |
 |:---------------|------------------:|------------------:|-------------:|------------:|--------------:|-----------------:|----------------:|---------:|
-| Grado_Pregrado |             10240 |              7663 |          502 |         271 |           167 |               33 |              31 |     6.55 |
+| Grado_Pregrado |             10240 |              7772 |          503 |         271 |           167 |               33 |              32 |     6.47 |
 | Cursos         |                 1 |                 0 |            0 |           0 |             0 |                0 |               0 |     0    |
 | Posgrados      |                 6 |                 5 |            5 |           2 |             2 |                1 |               0 |   100    |
 
 ## 3. Listado Completo de Inscriptos del Bot
 
-**Total: 555 inscriptos confirmados originados por el Bot/Chatbot.**
+**Total: 556 inscriptos confirmados originados por el Bot/Chatbot.**
 
 |     | Segmento       | Nombre_Completo                         | Candidato                     | Nombre                        | Insc_Apellido y Nombre                  |      DNI | Correo                                  |      Telefono |   Celular | Match_Tipo   | Consulta: Fecha de creación   |   FuenteLead |   UtmSource |   UtmCampaign |   UtmMedium |   Insc_DNI | Insc_Email                             | Insc_Telefono    | Insc_Celular        | Insc_Tipcar   | Insc_Fecha Pago   | Insc_Fecha Aplicación   | ColaNombre     | Sede Nombre                    | Carrera                                                        | Tipo de Carrera    | Modo       |   Insc_Cod. Lugar | Insc_Lugar                         |   Insc_Cod. Sector | Insc_Sector                                   |   Insc_Cod. Carrera | Insc_Carrera                                            |   Insc_Cod. Modo | Insc_Modo      | Insc_Tipo de DNI   |   Insc_Cod. Operador |   Insc_Cod. Empresa | Insc_Empresa                |   Insc_Cod. Vendedor | Insc_Vendedor                           |   Insc_Haber | Insc_Tipo Origen   |   Insc_Anio Aplicación |   Insc_Conceptos | Insc_Reci. - Trans.                   | Insc_Apellido        | Insc_Nombres                | Consulta_Previa_a_Inscripcion   |
 |----:|:---------------|:----------------------------------------|:------------------------------|:------------------------------|:----------------------------------------|---------:|:----------------------------------------|--------------:|----------:|:-------------|:------------------------------|-------------:|------------:|--------------:|------------:|-----------:|:---------------------------------------|:-----------------|:--------------------|:--------------|:------------------|:------------------------|:---------------|:-------------------------------|:---------------------------------------------------------------|:-------------------|:-----------|------------------:|:-----------------------------------|-------------------:|:----------------------------------------------|--------------------:|:--------------------------------------------------------|-----------------:|:---------------|:-------------------|---------------------:|--------------------:|:----------------------------|---------------------:|:----------------------------------------|-------------:|:-------------------|-----------------------:|-----------------:|:--------------------------------------|:---------------------|:----------------------------|:--------------------------------|
@@ -239,5 +240,68 @@
 | 199 | Grado_Pregrado | GAITAN NELLE, FABRIZIO GABRIEL          | FABRIZIO GABRIEL              | FABRIZIO GABRIEL              | GAITAN NELLE, FABRIZIO GABRIEL          | 43059402 | fabrygaitan@gmail.com                   | 5493834247054 |       nan | Exacto (DNI) | 14/1/2026                     |          907 |         nan |           nan |         nan |   43059402 | Fabrygaitan@gmail.com                  | 383 - 4247054    | 383 - 4247054       | Pregrado      | 2026-01-30        | 2026-03-01              | nan            | SALTA - CASTAÑARES PRESENCIAL  | CORREDOR INMOBILIARIO Y MARTILLERO PÚBLICO                     | Pregrado           | Presencial |               131 | CATAMARCA - CATAMARCA              |                  3 | CIENCIAS JURÍDICAS                            |                 244 | CORREDOR INMOBILIARIO Y MARTILLERO PÚBLICO              |                7 | CAMPUS VIRTUAL | DNI-LE-LC          |                   11 |                   2 | VENTAS-DISTANCIA            |                 1832 | MARIA JOSE FERNANDEZ                    |       143820 | PORTAL VENTAS      |                   2026 |          50      | 9-2222862,18392864                    | GAITAN NELLE         | FABRIZIO GABRIEL            | Sí                              |
 | 200 | Grado_Pregrado | QUISPE, ANTONELA CLARISEL               | ANTONELA CLARISEL             | ANTONELA CLARISEL             | QUISPE, ANTONELA CLARISEL               | 47814383 | antiquispe12@gmail.com                  | 5493884096523 |       nan | Exacto (DNI) | 14/1/2026                     |          907 |         nan |           nan |         nan |   47814383 | antiquispe12@gmail.com                 | 388 - 4096523    | 388 - 4096523       | Grado         | 2026-01-16        | 2026-03-01              | Contact_Center | SALTA - CASTAÑARES PRESENCIAL  | LICENCIATURA EN PSICOPEDAGOGÍA                                 | Grado              | Presencial |                 1 | SALTA - CASTAÑARES PRESENCIAL      |                  1 | ARTES Y CIENCIAS                              |                  69 | LICENCIATURA EN PSICOPEDAGOGÍA                          |                1 | PRESENCIAL     | DNI-LE-LC          |                    1 |                   2 | VENTAS-DISTANCIA            |                 2471 | MICAELA FABBRONI                        |       210715 | PORTAL VENTAS      |                   2026 |          50      | 8-1934380,18334210                    | QUISPE               | ANTONELA CLARISEL           | Sí                              |
 
-*...y 355 registros más. Ver Excel completo para el detalle total.*
+*...y 356 registros más. Ver Excel completo para el detalle total.*
+
+
+## Atribucion Causal (consulta <= fecha de pago)
+
+*Ventana: 01/09/2025 - 17/02/2026 | desde Sep 2025 (Cohorte Ingreso 2026)*
+
+Consultas post-pago excluidas: 823
+
+| Canal | Inscriptos (Any-Touch Causal) | % Participacion |
+|-------|---:|---:|
+| Google | 1,354 | 20.6% |
+| Facebook | 1,009 | 15.4% |
+| Bot | 315 | 4.8% |
+| Otros | 4,715 | 71.8% |
+| **Total Unico** | **6,565** | **100%** |
+
+Multi-canal: 1 canal=5,824, 2 canales=659, 3+=82
+
+Inscriptos sin lead/match: 1,145 de 5,553 (20.6%)
+
+*Nota: El modelo causal solo cuenta consultas cuya fecha es ANTERIOR O IGUAL a la fecha de pago. Consultas post-pago (soporte, seguimiento) excluidas.*
+
+
+## Atribucion Causal (consulta <= fecha de pago)
+
+*Ventana: 01/01/2026 - 14/02/2026 | desde Ene 2026 (ano calendario)*
+
+Consultas post-pago excluidas: 0
+
+| Canal | Inscriptos (Any-Touch Causal) | % Participacion |
+|-------|---:|---:|
+| Google | 0 | 0.0% |
+| Facebook | 0 | 0.0% |
+| Bot | 0 | 0.0% |
+| Otros | 2 | 100.0% |
+| **Total Unico** | **2** | **100%** |
+
+Multi-canal: 1 canal=2, 2 canales=0, 3+=0
+
+Inscriptos sin lead/match: 9 de 11 (81.8%)
+
+*Nota: El modelo causal solo cuenta consultas cuya fecha es ANTERIOR O IGUAL a la fecha de pago. Consultas post-pago (soporte, seguimiento) excluidas.*
+
+
+## Atribucion Causal (consulta <= fecha de pago)
+
+*Ventana: 01/01/2026 - 13/02/2026 | desde Ene 2026 (ano calendario)*
+
+Consultas post-pago excluidas: 2
+
+| Canal | Inscriptos (Any-Touch Causal) | % Participacion |
+|-------|---:|---:|
+| Google | 0 | 0.0% |
+| Facebook | 0 | 0.0% |
+| Bot | 2 | 40.0% |
+| Otros | 3 | 60.0% |
+| **Total Unico** | **5** | **100%** |
+
+Multi-canal: 1 canal=5, 2 canales=0, 3+=0
+
+Inscriptos sin lead/match: 29 de 33 (87.9%)
+
+*Nota: El modelo causal solo cuenta consultas cuya fecha es ANTERIOR O IGUAL a la fecha de pago. Consultas post-pago (soporte, seguimiento) excluidas.*
 

@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Asesores y Canales de Venta
 
-**Generado:** 2026-03-12 21:17:18
+**Generado:** 2026-03-14 20:25:32
 **Segmento:** Grado_Pregrado
 **Script:** `17_reporte_asesores.py`
 
@@ -11,27 +11,27 @@
 ## Volúmenes Macro
 | Métrica | Valor |
 |---|---|
-| Total Leads históricos | 398,556 |
+| Total Leads históricos | 398,442 |
 | Total Inscriptos físicos | 9,525 |
-| Leads en Contact Center | 135,406 (34.0%) |
-| Leads con Estado "Abierto" | 148,930 (37.4%) |
+| Leads en Contact Center | 135,367 (34.0%) |
+| Leads con Estado "Abierto" | 148,879 (37.4%) |
 
 ## Distribución de Estados (Top 10)
 | Estado            |   Cantidad |   Porcentaje |
 |:------------------|-----------:|-------------:|
-| Abierto           |     148930 |  37.3674     |
-| No interesado     |     128567 |  32.2582     |
-| Interesado        |      95744 |  24.0227     |
-| Solicitud creada  |      24634 |   6.18081    |
-| Desuscripto       |        656 |   0.164594   |
-| Pre Inscripción   |         18 |   0.0045163  |
-| Solicita Admisión |          7 |   0.00175634 |
+| Abierto           |     148879 |  37.3653     |
+| No interesado     |     128521 |  32.2559     |
+| Interesado        |      95728 |  24.0256     |
+| Solicitud creada  |      24633 |   6.18233    |
+| Desuscripto       |        656 |   0.164641   |
+| Pre Inscripción   |         18 |   0.0045176  |
+| Solicita Admisión |          7 |   0.00175684 |
 
 ## Origen de Inscripciones (Atribución por Canal)
 | Origen_Cierre             |   Cantidad |   Porcentaje |
 |:--------------------------|-----------:|-------------:|
-| Asesores UCASAL (Central) |       7782 |     81.7008  |
-| Sistemas / Automatizado   |       1348 |     14.1522  |
+| Asesores UCASAL (Central) |       7790 |     81.7848  |
+| Sistemas / Automatizado   |       1340 |     14.0682  |
 | Sedes / Delegaciones      |        395 |      4.14698 |
 
 ## Reglas de Negocio
@@ -53,4 +53,4 @@
 
 ## Nota Metodologica
 - **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI (5,333), Email (2,150), Telefono (237), Celular (217). Total: 7,937.

@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-12 21:17:57
+**Generado:** 2026-03-14 20:26:16
 **Segmento:** Grado_Pregrado
 **Script:** `04_reporte_final.py`
 
@@ -12,33 +12,37 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total Leads cargados | 398,556 |
-| Leads en período de conversión | 212,826 |
+| Total Consultas (ID Consulta único) | 398,442 |
+| Personas únicas que consultaron | 305,232 |
+| Consultas en período de conversión | 212,778 |
+| Personas en período de conversión | 170,073 |
 | Total Inscriptos | 9,525 |
-| Leads convertidos (Exacto) | 10,225 |
-| Leads convertidos (Fuzzy) | 155 |
-| Leads no convertidos | 385,231 |
-| Inscriptos atribuidos a Lead (Exacto) | 7,993 |
-| Inscriptos sin trazabilidad | 1,377 |
+| Personas convertidas (Exacto) | 6,895 |
+| Personas convertidas (Fuzzy) | 153 |
+| Personas no convertidas | 297,206 |
+| Inscriptos atribuidos a Lead (Exacto) | 7,984 |
+| Inscriptos sin trazabilidad | 1,388 |
 
-## Tasas de Conversión Calculadas
-| Ecosistema | Universo | Convertidos | Tasa |
-|---|---|---|---|
-| **General** | 212,826 | 10,225 | 4.80% |
-| **Google Ads** | 27,170 | 1,756 | 6.46% |
-| **Meta (FB/IG)** | 148,479 | 1,494 | 1.01% |
+> **Nota:** Cada consulta tiene un ID unico de Salesforce y un origen especifico. Una persona puede tener multiples consultas desde diferentes canales. Se presentan DOS tasas de conversion: sobre consultas (eficiencia por interaccion) y sobre personas (eficiencia por individuo, KPI principal). Embudo: Consultas -> Personas -> Inscriptos.
+
+## Tasas de Conversion Calculadas
+| Ecosistema | Consultas | Personas | Convertidas | Tasa s/Consultas | Tasa s/Personas |
+|---|---|---|---|---|---|
+| **General** | 212,778 | 170,073 | 6,895 | 3.24% | 4.05% |
+| **Google Ads** | 27,163 | 23,722 | 1,399 | 5.15% | 5.90% |
+| **Meta (FB/IG)** | 148,445 | 125,561 | 1,080 | 0.73% | 0.86% |
 
 ## Procedencia de Leads
 | Categoría | Cantidad | Porcentaje |
 |---|---|---|
-| Plataformas Pagas (UTM/Ads) | 321,665 | 80.7% |
-| Otros (Orgánico/Sin Tracking) | 76,891 | 19.3% |
+| Plataformas Pagas (UTM/Ads) | 321,617 | 80.7% |
+| Otros (Orgánico/Sin Tracking) | 76,825 | 19.3% |
 
 ## Atribución por Campaña
 | Métrica | Valor |
 |---|---|
-| Inscriptos campaña actual (Ingreso 2026) | 10,448 |
-| Inscriptos campaña anterior (match histórico) | 2,722 |
+| Inscriptos campaña actual (Ingreso 2026) | 6,381 |
+| Inscriptos campaña anterior (match histórico) | 1,556 |
 
 La columna `Campana_Lead` en el CSV maestro indica si la fecha de consulta del lead
 cae dentro de la ventana de la campaña actual o es anterior. Generada por `02_cruce_datos.py`.

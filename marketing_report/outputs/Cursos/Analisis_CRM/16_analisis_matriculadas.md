@@ -3,9 +3,9 @@
 Este informe expone las diferencias fundamentales entre el flag interno `Matriculadas` proveniente de la base de datos de **Salesforce (Leads)** y el **Cruce Físico Efectivo** contra la base contable/académica real de **Inscriptos**.
 
 ## Números Globales
-- **Total de Leads Analizados:** 44
+- **Total de Leads Analizados:** 41
 - **Leads marcados como 'Matriculados = 1' en Salesforce:** 5
-- **Inscriptos Reales Verificados (Cruce Exacto + Fuzzys confiables):** 4
+- **Inscriptos Reales Verificados (Cruce Exacto + Fuzzys confiables):** 5
 
 ## Nivel de Desvío (Falsos Positivos y Negativos)
 
@@ -21,14 +21,14 @@ Al cruzar a las personas uno por uno evaluamos la consistencia. De allí se desp
 
 ### Conclusión Matemática
 
-- **Diferencia Neta en Volumen (Reporte CRM vs Reporte Base de Datos Real):** 1 inscriptos faltantes en el reporte superficial.
+- **Diferencia Neta en Volumen (Reporte CRM vs Reporte Base de Datos Real):** 0 inscriptos faltantes en el reporte superficial.
 - **Leads que generaron una venta real y que el CRM NO se está atribuyendo:** 5,851 ventas "ciegas" en Salesforce.
-- **Total de expedientes discordantes a auditar:** 9 personas que tienen un estado de vida opuesto entre ambos sistemas informáticos.
+- **Total de expedientes discordantes a auditar:** 10 personas que tienen un estado de vida opuesto entre ambos sistemas informáticos.
 
 ## Nota Metodologica
 
 - **Modelo de atribucion:** Cruce directo Lead - Inscripto. Sin deduplicacion adicional (la dedup se realiza en `02_cruce_datos.py`).
-- **Match Exacto (prioridad):** DNI (10), Email (4), Telefono (3), Celular (2). Total Exacto: 19.
-- **Match Fuzzy:** Nombre aproximado (3), Email con 1-2 caracteres de error (1).
+- **Match Exacto (prioridad):** DNI (10), Email (4), Telefono (2), Celular (2). Total Exacto: 18.
+- **Match Fuzzy:** Nombre aproximado (3), Email con 1-2 caracteres de error (2).
 - **Huerfanos:** Inscriptos sin traza en CRM (71).
 - **Any-Touch:** Para atribucion multi-canal (inscriptos que consultaron por mas de un canal), referirse al Informe Analitico (04_reporte_final).

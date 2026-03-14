@@ -1,6 +1,6 @@
 # Memoria Técnica: Informe Analítico de Marketing
 
-**Generado:** 2026-03-12 21:27:02
+**Generado:** 2026-03-14 20:35:20
 **Segmento:** Cursos
 **Script:** `04_reporte_final.py`
 
@@ -12,33 +12,37 @@
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total Leads cargados | 44 |
-| Leads en período de conversión | 40 |
+| Total Consultas (ID Consulta único) | 41 |
+| Personas únicas que consultaron | 22 |
+| Consultas en período de conversión | 38 |
+| Personas en período de conversión | 19 |
 | Total Inscriptos | 94 |
-| Leads convertidos (Exacto) | 37 |
-| Leads convertidos (Fuzzy) | 4 |
-| Leads no convertidos | 0 |
-| Inscriptos atribuidos a Lead (Exacto) | 19 |
+| Personas convertidas (Exacto) | 15 |
+| Personas convertidas (Fuzzy) | 5 |
+| Personas no convertidas | 0 |
+| Inscriptos atribuidos a Lead (Exacto) | 18 |
 | Inscriptos sin trazabilidad | 71 |
 
-## Tasas de Conversión Calculadas
-| Ecosistema | Universo | Convertidos | Tasa |
-|---|---|---|---|
-| **General** | 40 | 37 | 92.50% |
-| **Google Ads** | 3 | 2 | 66.67% |
-| **Meta (FB/IG)** | 16 | 15 | 93.75% |
+> **Nota:** Cada consulta tiene un ID unico de Salesforce y un origen especifico. Una persona puede tener multiples consultas desde diferentes canales. Se presentan DOS tasas de conversion: sobre consultas (eficiencia por interaccion) y sobre personas (eficiencia por individuo, KPI principal). Embudo: Consultas -> Personas -> Inscriptos.
+
+## Tasas de Conversion Calculadas
+| Ecosistema | Consultas | Personas | Convertidas | Tasa s/Consultas | Tasa s/Personas |
+|---|---|---|---|---|---|
+| **General** | 38 | 19 | 15 | 39.47% | 78.95% |
+| **Google Ads** | 3 | 3 | 2 | 66.67% | 66.67% |
+| **Meta (FB/IG)** | 14 | 9 | 7 | 50.00% | 77.78% |
 
 ## Procedencia de Leads
 | Categoría | Cantidad | Porcentaje |
 |---|---|---|
-| Plataformas Pagas (UTM/Ads) | 22 | 50.0% |
-| Otros (Orgánico/Sin Tracking) | 22 | 50.0% |
+| Plataformas Pagas (UTM/Ads) | 19 | 46.3% |
+| Otros (Orgánico/Sin Tracking) | 22 | 53.7% |
 
 ## Atribución por Campaña
 | Métrica | Valor |
 |---|---|
-| Inscriptos campaña actual (2026) | 7 |
-| Inscriptos campaña anterior (match histórico) | 33 |
+| Inscriptos campaña actual (2026) | 4 |
+| Inscriptos campaña anterior (match histórico) | 13 |
 
 La columna `Campana_Lead` en el CSV maestro indica si la fecha de consulta del lead
 cae dentro de la ventana de la campaña actual o es anterior. Generada por `02_cruce_datos.py`.

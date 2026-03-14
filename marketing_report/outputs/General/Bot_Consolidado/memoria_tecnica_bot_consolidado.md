@@ -1,6 +1,6 @@
 # Memoria Técnica — 19_bot_consolidado.py
 
-**Generado automáticamente el 2026-03-12 21:28:10**
+**Generado automáticamente el 2026-03-14 20:36:33**
 **Datos actualizados al 17 de febrero de 2026** *(fecha del último inscripto registrado)*
 
 ---
@@ -12,7 +12,7 @@
 | Segmentos procesados | Grado_Pregrado, Cursos, Posgrados |
 | Archivos leads cargados | 3 |
 | Archivos inscriptos cargados | 3 |
-| Total leads consolidados | 398,778 |
+| Total leads consolidados | 398,622 |
 | Total inscriptos consolidados | 9,944 |
 
 ## 2. Métricas del Bot (FuenteLead = 907)
@@ -20,15 +20,15 @@
 | Métrica | Valor |
 |---------|-------|
 | Total Consultas (registros sin dedup) | 10,247 |
-| Personas Únicas vía Bot | 7,668 |
-| Inscriptos del Bot | 507 |
-| Tasa de Conversión Total | 6.61% |
+| Personas Únicas vía Bot | 7,777 |
+| Inscriptos del Bot | 508 |
+| Tasa de Conversión Total | 6.53% |
 
 ### Desglose por Segmento
 
 | Segmento       |   Consultas_Total |   Personas_Unicas |   Inscriptos |   Match_DNI |   Match_Email |   Match_Telefono |   Match_Celular |   Tasa_% |
 |:---------------|------------------:|------------------:|-------------:|------------:|--------------:|-----------------:|----------------:|---------:|
-| Grado_Pregrado |             10240 |              7663 |          502 |         271 |           167 |               33 |              31 |     6.55 |
+| Grado_Pregrado |             10240 |              7772 |          503 |         271 |           167 |               33 |              32 |     6.47 |
 | Cursos         |                 1 |                 0 |            0 |           0 |             0 |                0 |               0 |     0    |
 | Posgrados      |                 6 |                 5 |            5 |           2 |             2 |                1 |               0 |   100    |
 
@@ -38,10 +38,10 @@
 
 | Indicador | Cantidad | % del Total |
 |-----------|----------|-------------|
-| Total inscriptos del bot | 555 | 100.0% |
-| DNI presente (final, post-recuperación) | 555 | 100.0% |
+| Total inscriptos del bot | 556 | 100.0% |
+| DNI presente (final, post-recuperación) | 556 | 100.0% |
 | DNI vacío (final, post-recuperación) | 0 | 0.0% |
-| Insc_DNI presente (fuente inscriptos) | 555 | 100.0% |
+| Insc_DNI presente (fuente inscriptos) | 556 | 100.0% |
 
 ### 3.2 DNIs Recuperados desde Inscriptos
 
@@ -53,7 +53,7 @@ Sin embargo, la tabla de inscriptos sí contiene el DNI (`Insc_DNI`) de cada per
 2. Se verifica si `Insc_DNI` tiene valor para esas filas
 3. Se copia `Insc_DNI` → `DNI` para completar el dato
 
-**Resultado:** Se recuperaron **244** DNIs desde la tabla de inscriptos.
+**Resultado:** Se recuperaron **245** DNIs desde la tabla de inscriptos.
 
 ### 3.3 Distribución por Tipo de Match
 
@@ -62,7 +62,7 @@ Sin embargo, la tabla de inscriptos sí contiene el DNI (`Insc_DNI`) de cada per
 | Exacto (DNI) | 303 | Sí |
 | Exacto (Email) | 183 | No (recuperado de Insc) |
 | Exacto (Teléfono) | 37 | No (recuperado de Insc) |
-| Exacto (Celular) | 32 | No (recuperado de Insc) |
+| Exacto (Celular) | 33 | No (recuperado de Insc) |
 
 ### 3.4 Muestreo — Registros matcheados por Email (DNI recuperado de inscriptos)
 
@@ -91,8 +91,8 @@ Sin embargo, la tabla de inscriptos sí contiene el DNI (`Insc_DNI`) de cada per
 
 ### 3.6 Verificación: ¿Existen inscriptos sin DNI en ninguna fuente?
 
-**Resultado: NO.** De los 555 inscriptos del bot, el 100% tiene DNI disponible
-en al menos una fuente (CRM o tabla de inscriptos). Tras la recuperación, 555 de 555
+**Resultado: NO.** De los 556 inscriptos del bot, el 100% tiene DNI disponible
+en al menos una fuente (CRM o tabla de inscriptos). Tras la recuperación, 556 de 556
 tienen DNI completo en la columna `DNI` del listado final.
 
 ## 4. Verificación Temporal — Consulta Previa o Simultánea a Inscripción
@@ -103,7 +103,7 @@ día sean correctamente identificados como "Sí", sin importar la hora de la con
 
 | Indicador | Cantidad |
 |-----------|----------|
-| Consulta ANTERIOR o MISMA FECHA que inscripción (Sí) | 291 |
+| Consulta ANTERIOR o MISMA FECHA que inscripción (Sí) | 292 |
 | Consulta POSTERIOR a inscripción (No) | 264 |
 | Sin datos de fecha (alguna fecha faltante) | 0 |
 

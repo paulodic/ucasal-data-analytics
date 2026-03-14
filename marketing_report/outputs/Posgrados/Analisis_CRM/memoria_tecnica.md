@@ -1,6 +1,6 @@
 # Memoria Técnica: Auditoría CRM Matriculadas
 
-**Generado:** 2026-03-12 21:27:28
+**Generado:** 2026-03-14 20:35:47
 **Segmento:** Posgrados
 **Script:** `16_analisis_matriculadas.py`
 
@@ -11,21 +11,21 @@
 ## Auditoría CRM vs Base Contable
 | Métrica | Valor |
 |---|---|
-| Total Leads analizados | 178 |
+| Total Leads analizados | 139 |
 | Leads con Matriculadas=1 en CRM | 1 |
-| Inscriptos reales cruzados (verificados) | 45 |
+| Inscriptos reales cruzados (verificados) | 48 |
 | **Falsos positivos CRM** (marcados pero no inscriptos) | 1 |
-| **Falsos negativos CRM** (inscriptos pero no marcados) | 45 |
-| Diferencia bruta (CRM - Real) | 44 |
+| **Falsos negativos CRM** (inscriptos pero no marcados) | 48 |
+| Diferencia bruta (CRM - Real) | 47 |
 
 ## Atribución de Inscriptos Reales
 | Tipo de Match | Cantidad |
 |---|---|
 | Total inscriptos físicos (base contable) | 325 |
-| Rastreados por match Exacto | 58 |
-| Rastreados por match Fuzzy (nombre) | 30 |
+| Rastreados por match Exacto | 56 |
+| Rastreados por match Fuzzy (nombre) | 33 |
 | Rastreados por match Fuzzy (email) | 15 |
-| Huérfanos (sin traza en CRM) | 222 |
+| Huérfanos (sin traza en CRM) | 221 |
 
 ## Reglas de Negocio
 - **Matriculadas CRM:** Columna `Matriculadas` con valor `1.0` en los leads

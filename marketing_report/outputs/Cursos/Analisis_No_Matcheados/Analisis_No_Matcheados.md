@@ -6,15 +6,15 @@ Este informe analiza el comportamiento de los Leads que **no** lograron concreta
 
 ## 0. Proporción General: Personas Matcheadas vs No Matcheadas
 
-Se identificaron **25** personas únicas (agrupadas por persona) en la base de datos.
+Se identificaron **22** personas únicas (agrupadas por persona) en la base de datos.
 El tipo de match mostrado es el de mayor prioridad por persona (DNI > Email > Telefono > Celular).
 
-- **Personas Matcheadas (Exacto):** 21 (84.0%)
+- **Personas Matcheadas (Exacto):** 17 (77.3%)
   - por DNI: 9
   - por Email: 4
-  - por Telefono: 6
+  - por Telefono: 2
   - por Celular: 2
-- **Personas No Matcheadas:** 4 (16.0%)
+- **Personas No Matcheadas:** 5 (22.7%)
 
 ## 1. Distribución de Consultas por Persona
 
@@ -23,10 +23,10 @@ La siguiente tabla muestra cómo se distribuyen las personas según cuántas con
 
 | Rango         |   Inscriptos_Cant |   Inscriptos_% |   No_Inscriptos_Cant |   No_Inscriptos_% |
 |:--------------|------------------:|---------------:|---------------------:|------------------:|
-| 1 consulta    |                10 |           58.8 |                    4 |               100 |
-| 2 consultas   |                 4 |           23.5 |                    0 |                 0 |
-| 3 consultas   |                 1 |            5.9 |                    0 |                 0 |
-| 4 consultas   |                 2 |           11.8 |                    0 |                 0 |
+| 1 consulta    |                 6 |           46.2 |                    5 |               100 |
+| 2 consultas   |                 4 |           30.8 |                    0 |                 0 |
+| 3 consultas   |                 1 |            7.7 |                    0 |                 0 |
+| 4 consultas   |                 2 |           15.4 |                    0 |                 0 |
 | 5 consultas   |                 0 |            0   |                    0 |                 0 |
 | 6 consultas   |                 0 |            0   |                    0 |                 0 |
 | 7 consultas   |                 0 |            0   |                    0 |                 0 |
@@ -49,6 +49,28 @@ Esta tabla muestra, para los 15 dominios con más volumen de leads, qué porcent
 ## Nota Metodológica
 
 - **Modelo de atribución:** Deduplicado por persona (Correo o DNI). Match por prioridad: DNI > Email > Teléfono > Celular.
-- **Personas Matcheadas (Exacto):** 21 — por DNI: 9, por Email: 4, por Teléfono: 6, por Celular: 2.
-- **Any-Touch:** Para atribución multi-canal (inscriptos que consultaron por más de un canal), referirse al Informe Analítico (04_reporte_final).
+- **Personas Matcheadas (Exacto):** 17 — por DNI: 9, por Email: 4, por Teléfono: 2, por Celular: 2.
+- **Any-Touch ESTANDAR (este informe):** Incluye todas las consultas sin filtro de fecha vs pago.
+- **Modelo CAUSAL (informe separado):** Solo consultas con fecha <= fecha de pago. Ver Presupuesto_ROI_Causal.
 - **Ventana de conversión:** Año calendario 2026.
+
+## Atribucion Causal (consulta <= fecha de pago)
+
+*Ventana: 01/01/2026 - 14/02/2026 | desde Ene 2026 (ano calendario)*
+
+Consultas post-pago excluidas: 0
+
+| Canal | Inscriptos (Any-Touch Causal) | % Participacion |
+|-------|---:|---:|
+| Google | 0 | 0.0% |
+| Facebook | 0 | 0.0% |
+| Bot | 0 | 0.0% |
+| Otros | 2 | 100.0% |
+| **Total Unico** | **2** | **100%** |
+
+Multi-canal: 1 canal=2, 2 canales=0, 3+=0
+
+Inscriptos sin lead/match: 9 de 11 (81.8%)
+
+*Nota: El modelo causal solo cuenta consultas cuya fecha es ANTERIOR O IGUAL a la fecha de pago. Consultas post-pago (soporte, seguimiento) excluidas.*
+

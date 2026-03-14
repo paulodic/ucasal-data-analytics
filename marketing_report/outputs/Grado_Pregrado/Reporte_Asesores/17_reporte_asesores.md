@@ -2,8 +2,28 @@
 
 ## 1. Top Asesores por Volumen Cierre
 
-| Propietario   | Total_Inscriptos   |
-|---------------|--------------------|
+| Propietario                             |   Total_Inscriptos |
+|:----------------------------------------|-------------------:|
+| Sin Asignar                             |               1474 |
+| Contact Center                          |               1377 |
+| UCASAL Prod                             |                497 |
+| Fátima de los Ángeles Salvatierra Lopez |                275 |
+| Maria José Fernandez                    |                245 |
+| Florencia María Rosa Villarreal         |                229 |
+| Rocio Belén Aguirre                     |                199 |
+| VERONICA PACHTMAN                       |                198 |
+| Jennifer Marianela Saltos               |                198 |
+| Melina Salvatierra                      |                194 |
+| ALEJO AGUSTIN BONARI                    |                189 |
+| Camila Lamas Cil                        |                186 |
+| Gimena Vallejos                         |                176 |
+| Jorge Ariel Cabaña                      |                174 |
+| Micaela Fabbron                         |                172 |
+| Francisco Gerardo Jover                 |                171 |
+| Andrea Eliana Lamas                     |                162 |
+| VALERIA JESSICA PUIA                    |                157 |
+| Paula Luciana Martinez Rosas            |                153 |
+| Camila Nahir Abraham Romano             |                153 |
 
 ## 2. Top Vendedores (Sist. Financiero)
 
@@ -32,4 +52,4 @@
 
 ## Nota Metodologica
 - **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI (5,333), Email (2,150), Teléfono (237), Celular (217). Total: 7,937.

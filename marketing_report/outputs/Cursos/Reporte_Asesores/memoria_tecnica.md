@@ -1,6 +1,6 @@
 # Memoria Técnica: Reporte de Asesores y Canales de Venta
 
-**Generado:** 2026-03-12 21:26:58
+**Generado:** 2026-03-14 20:35:16
 **Segmento:** Cursos
 **Script:** `17_reporte_asesores.py`
 
@@ -11,18 +11,18 @@
 ## Volúmenes Macro
 | Métrica | Valor |
 |---|---|
-| Total Leads históricos | 44 |
+| Total Leads históricos | 41 |
 | Total Inscriptos físicos | 94 |
-| Leads en Contact Center | 20 (45.5%) |
-| Leads con Estado "Abierto" | 13 (29.5%) |
+| Leads en Contact Center | 16 (39.0%) |
+| Leads con Estado "Abierto" | 12 (29.3%) |
 
 ## Distribución de Estados (Top 10)
 | Estado           |   Cantidad |   Porcentaje |
 |:-----------------|-----------:|-------------:|
-| No interesado    |         18 |      40.9091 |
-| Abierto          |         13 |      29.5455 |
-| Interesado       |          8 |      18.1818 |
-| Solicitud creada |          5 |      11.3636 |
+| No interesado    |         15 |      36.5854 |
+| Abierto          |         12 |      29.2683 |
+| Interesado       |          9 |      21.9512 |
+| Solicitud creada |          5 |      12.1951 |
 
 ## Origen de Inscripciones (Atribución por Canal)
 | Origen_Cierre             |   Cantidad |   Porcentaje |
@@ -49,4 +49,4 @@
 
 ## Nota Metodologica
 - **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI (9), Email (4), Telefono (2), Celular (2). Total: 17.

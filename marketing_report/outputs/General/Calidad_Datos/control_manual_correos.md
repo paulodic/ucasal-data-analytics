@@ -1,6 +1,6 @@
 # Control Manual de Correos Fuzzy
 
-**Generado:** 2026-03-12 21:30:53
+**Generado:** 2026-03-14 20:39:10
 **Script:** `08_fuzzy_correos.py`
 
 ## Descripcion

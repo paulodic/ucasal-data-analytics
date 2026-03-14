@@ -70,7 +70,7 @@ Para evitar contar el mismo Lead más de una vez (una persona puede generar múl
 
 | Métrica | Valor |
 |---------|-------|
-| Personas únicas | 174,719 |
+| Personas únicas | 174,762 |
 | Personas convertidas (exacto) | 4,417 |
 | **Tasa de conversión real** | **2.53%** |
 

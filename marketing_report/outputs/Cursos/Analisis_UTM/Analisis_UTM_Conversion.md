@@ -12,4 +12,4 @@ Tasas de conversion para todos los campos UTM no vacios.
 
 ## Nota Metodologica
 - **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI (2), Email (1), Teléfono (0), Celular (1). Total: 4.

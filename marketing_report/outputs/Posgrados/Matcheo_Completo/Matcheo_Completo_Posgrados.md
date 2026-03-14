@@ -1,6 +1,6 @@
 # Matcheo Completo: Posgrados
 
-**Generado:** 2026-03-12 21:28:00
+**Generado:** 2026-03-14 20:36:18
 **Segmento:** Posgrados
 **Script:** `21_exportar_matcheo_completo.py`
 
@@ -11,33 +11,33 @@
 ## Totales Históricos
 | Métrica | Valor |
 |---|---|
-| Total registros leads (con duplicados) | 178 |
-| Personas únicas (deduplicadas) | 145 |
-| Match Exacto (DNI/Email/Teléfono) | 100 |
-| Match Fuzzy (revisión pendiente) | 45 |
+| Total registros leads (con duplicados) | 139 |
+| Personas únicas (deduplicadas) | 111 |
+| Match Exacto (DNI/Email/Teléfono) | 63 |
+| Match Fuzzy (revisión pendiente) | 48 |
 | Sin match (solo lead) | 0 |
 
 ## Atribución por Campaña
 | Métrica | Valor |
 |---|---|
-| Inscriptos campaña actual (2026) | 28 |
-| Inscriptos campaña anterior (match histórico) | 72 |
+| Inscriptos campaña actual (2026) | 7 |
+| Inscriptos campaña anterior (match histórico) | 56 |
 
 ## Ventana de Conversión (Cohorte)
 | Métrica | Valor |
 |---|---|
 | Ventana de análisis | Todos hasta 14/02/2026 |
-| Leads en ventana (dedup) | 123 |
-| Inscriptos en ventana | 84 |
-| Tasa de conversión | 68.29% |
+| Leads en ventana (dedup) | 104 |
+| Inscriptos en ventana | 62 |
+| Tasa de conversión | 59.62% |
 
 ## Archivos de Salida
 | Archivo | Filas | Descripcion |
 |---|---|---|
 | `Resumen_Posgrados.xlsx` | — | Métricas y estadísticas |
-| `Con_Duplicados_Posgrados.xlsx` | 178 | Todos los registros de leads |
-| `Deduplicados_Posgrados.xlsx` | 145 | 1 fila por persona (mejor match) |
-| `Solo_Matcheados_Posgrados.xlsx` | 100 | Solo matcheos exactos |
+| `Con_Duplicados_Posgrados.xlsx` | 139 | Todos los registros de leads |
+| `Deduplicados_Posgrados.xlsx` | 111 | 1 fila por persona (mejor match) |
+| `Solo_Matcheados_Posgrados.xlsx` | 63 | Solo matcheos exactos |
 
 ## Reglas de Negocio
 - **Deduplicación:** prioridad Exacto > Fuzzy > Sin_Match (misma clave pk)
