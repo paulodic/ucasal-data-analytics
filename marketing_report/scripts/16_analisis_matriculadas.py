@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_md, render_causal_pdf
 
 import sys
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
@@ -191,6 +192,7 @@ df_match_stats = pd.DataFrame({
     'Cantidad de Inscriptos': [inscriptos_exactos, inscriptos_por_dni, inscriptos_por_email, inscriptos_por_tel, inscriptos_por_cel,
                                inscriptos_fuzzys, inscriptos_fuzzys_email, inscriptos_huerfanos]
 })
+df_match_stats['%'] = (df_match_stats['Cantidad de Inscriptos'] / total_inscriptos_fisicos * 100).round(1)
 
 print(df_match_stats.to_string(index=False))
 
@@ -216,22 +218,40 @@ chart_table_path = os.path.join(report_output_dir, 'tabla_inscriptos_match.png')
 plt.savefig(chart_table_path, bbox_inches='tight')
 plt.close()
 
-# Generar Gráfico Visual (Torta)
-plt.figure(figsize=(7, 7))
-labels = df_match_stats['Tipo de Cruzamiento']
-sizes = df_match_stats['Cantidad de Inscriptos']
+# Generar Gráfico Visual (Torta) - categorías agrupadas para legibilidad
+pie_data = pd.DataFrame({
+    'Categoria': ['Exacto (DNI)', 'Exacto (Email)', 'Exacto (Tel/Cel)',
+                  'Fuzzy (Nombre)', 'Fuzzy (Email)', 'Sin traza en CRM'],
+    'Cantidad': [inscriptos_por_dni, inscriptos_por_email,
+                 inscriptos_por_tel + inscriptos_por_cel,
+                 inscriptos_fuzzys, inscriptos_fuzzys_email, inscriptos_huerfanos],
+})
+pie_data = pie_data[pie_data['Cantidad'] > 0]  # Solo categorías con datos
 
-# Paleta de colores ajustada
-colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-explode = (0.05, 0.05, 0.05, 0.05) if len(sizes) == 4 else None
-
-plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=colors, explode=explode, shadow=True, textprops={'fontsize': 9})
-plt.title('Distribución de Inscriptos Reales según Origen en CRM', fontsize=12, pad=20)
-plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+fig, ax = plt.subplots(figsize=(10, 7))
+colors_pie = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+wedges, texts, autotexts = ax.pie(
+    pie_data['Cantidad'], autopct='%1.1f%%', startangle=140,
+    colors=colors_pie[:len(pie_data)], pctdistance=0.75,
+    textprops={'fontsize': 10, 'fontweight': 'bold'})
+# Leyenda lateral con nombres y cantidades (evita amontonamiento)
+legend_labels = [f"{row['Categoria']} ({row['Cantidad']:,})" for _, row in pie_data.iterrows()]
+ax.legend(wedges, legend_labels, title='Tipo de Match', loc='center left',
+          bbox_to_anchor=(1, 0.5), fontsize=9, title_fontsize=10)
+ax.set_title('Distribucion de Inscriptos segun Tipo de Match', fontsize=13, pad=15)
 
 chart_bar_path = os.path.join(report_output_dir, 'pie_inscriptos_match.png')
 plt.savefig(chart_bar_path, bbox_inches='tight')
 plt.close()
+
+# Calcular período de leads para mostrar en el informe
+df_leads['_fecha_tmp'] = pd.to_datetime(
+    df_leads.get('Consulta: Fecha de creación', pd.Series(dtype='str')),
+    format='mixed', dayfirst=True, errors='coerce')
+fecha_min_leads = df_leads['_fecha_tmp'].min()
+fecha_max_leads = df_leads['_fecha_tmp'].max()
+periodo_leads_str = f"{fecha_min_leads.strftime('%d/%m/%Y') if pd.notna(fecha_min_leads) else '?'} al {fecha_max_leads.strftime('%d/%m/%Y') if pd.notna(fecha_max_leads) else '?'}"
+df_leads.drop(columns=['_fecha_tmp'], inplace=True)
 
 # Generar el PDF final
 pdf = FPDF()
@@ -240,8 +260,22 @@ pdf.add_page()
 pdf.set_font('Helvetica', 'B', 16)
 pdf.cell(0, 10, 'Auditoria de CRM: Estado de Matriculadas vs Realidad', ln=True, align='C')
 pdf.set_font('Helvetica', '', 10)
-pdf.cell(0, 6, f'Generado el {datetime.now().strftime("%d/%m/%Y")}', ln=True, align='C')
-pdf.ln(10)
+pdf.cell(0, 6, f'Generado el {datetime.now().strftime("%d/%m/%Y")}  |  Segmento: {segmento}', ln=True, align='C')
+pdf.cell(0, 6, f'Periodo de leads analizados: {periodo_leads_str}', ln=True, align='C')
+pdf.ln(3)
+
+# Caja de metodología
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font('Helvetica', 'B', 9)
+pdf.cell(0, 6, 'Metodologia aplicada:', ln=True, fill=True)
+pdf.set_font('Helvetica', '', 8)
+pdf.multi_cell(0, 4,
+    'MODELO ESTANDAR (este informe): Match Exacto por DNI > Email > Telefono > Celular. '
+    'Cruce directo Lead <-> Inscripto (deduplicado). Atribucion Any-Touch (suma > 100%). '
+    'Incluye TODAS las consultas sin filtro de fecha vs pago.\n'
+    'MODELO CAUSAL (ver Presupuesto_ROI_Causal): Solo consultas con fecha <= fecha de pago.', fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(5)
 
 pdf.set_font('Helvetica', 'B', 12)
 pdf.cell(0, 8, '1. Discrepancias en el campo "Matriculadas" (Salesforce)', ln=True)

@@ -25,6 +25,8 @@ import os
 from fpdf import FPDF
 from datetime import datetime
 
+from causal_utils import compute_anytouch_causal, render_causal_md, render_causal_pdf, make_pk
+
 import sys
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
 
@@ -34,6 +36,9 @@ os.makedirs(output_dir, exist_ok=True)
 base_output_dir = os.path.join(base_dir, "outputs", "Data_Base", segmento)
 leads_csv = os.path.join(base_output_dir, "reporte_marketing_leads_completos.csv")
 inscriptos_csv = os.path.join(base_output_dir, "reporte_marketing_inscriptos_origenes.csv")
+
+# Any-Touch Causal
+causal_data = compute_anytouch_causal(leads_csv, segmento, inscriptos_csv)
 
 # ======================================================
 # FECHA MÁXIMA: leer desde INSCRIPTOS (no leads)
@@ -99,11 +104,9 @@ def classify_mc(v):
 
 df['Grupo_Match'] = df['Match_Tipo'].apply(classify_mc)
 
-# Identificar persona única por Correo (preferido) o DNI
-df['Persona_ID'] = df['Correo'].fillna(df['DNI'].astype(str))
-df = df[df['Persona_ID'].notna()]
-df['Persona_ID'] = df['Persona_ID'].astype(str).str.lower().str.strip()
-df = df[~df['Persona_ID'].isin(['nan', '', 'na'])]
+# Identificar persona única (DNI > Email > Tel > Cel > idx)
+df['Persona_ID'] = make_pk(df)
+df = df[~df['Persona_ID'].isin(['nan', '', 'na', 'None'])]
 
 md_content = f"# Análisis Profundo: Leads No Matcheados\n\n**Datos actualizados al {max_date_str}**\n\n"
 md_content += "Este informe analiza el comportamiento de los Leads que **no** lograron concretar un cruce exitoso (No Matcheados) contra aquellos que sí lo hicieron (Exactos), explorando dimensiones de volumen de consultas, tiempos y dominios de correo electrónico.\n\n"
@@ -515,11 +518,14 @@ print("Guardando archivos y PDF...")
 md_content += "\n## Nota Metodológica\n\n"
 md_content += "- **Modelo de atribución:** Deduplicado por persona (Correo o DNI). Match por prioridad: DNI > Email > Teléfono > Celular.\n"
 md_content += f"- **Personas Matcheadas (Exacto):** {personas_exactas:,} — por DNI: {p_dni:,}, por Email: {p_email:,}, por Teléfono: {p_tel:,}, por Celular: {p_cel:,}.\n"
-md_content += "- **Any-Touch:** Para atribución multi-canal (inscriptos que consultaron por más de un canal), referirse al Informe Analítico (04_reporte_final).\n"
+md_content += "- **Any-Touch ESTANDAR (este informe):** Incluye todas las consultas sin filtro de fecha vs pago.\n"
+md_content += "- **Modelo CAUSAL (informe separado):** Solo consultas con fecha <= fecha de pago. Ver Presupuesto_ROI_Causal.\n"
 if segmento == 'Grado_Pregrado':
     md_content += "- **Ventana de conversión:** Leads desde 01/09/2025 (campaña ingreso 2026). Límite superior: última fecha de inscripción registrada.\n"
 else:
     md_content += "- **Ventana de conversión:** Año calendario 2026.\n"
+
+md_content += render_causal_md(causal_data, segmento)
 
 with open(os.path.join(output_dir, 'Analisis_No_Matcheados.md'), 'w', encoding='utf-8') as f:
     f.write(md_content)
@@ -548,6 +554,28 @@ class PDFReport(FPDF):
 
 pdf = PDFReport('L')
 pdf.add_page()
+
+# Período de leads y caja de metodología
+_fecha_tmp = pd.to_datetime(df['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
+_f_min = _fecha_tmp.min()
+_f_max = _fecha_tmp.max()
+_periodo_str = f"{_f_min.strftime('%d/%m/%Y') if pd.notna(_f_min) else '?'} al {_f_max.strftime('%d/%m/%Y') if pd.notna(_f_max) else '?'}"
+pdf.set_font('Helvetica', '', 9)
+pdf.cell(0, 5, f'Segmento: {segmento}  |  Periodo de leads: {_periodo_str}', ln=True, align='C')
+pdf.ln(2)
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font('Helvetica', 'B', 9)
+pdf.cell(0, 6, 'Metodologia aplicada:', ln=True, fill=True)
+pdf.set_font('Helvetica', '', 8)
+pdf.multi_cell(0, 4,
+    'MODELO ESTANDAR (este informe): Match Exacto por DNI > Email > Telefono > Celular. '
+    'Deduplicado por persona (DNI). Atribucion Any-Touch (suma > 100%). '
+    'Incluye TODAS las consultas sin filtro de fecha vs pago.\n'
+    'MODELO CAUSAL (ver Presupuesto_ROI_Causal): Solo consultas con fecha <= fecha de pago.'
+    + (' Ventana: leads desde Sep 2025 (cohorte Ingreso 2026).' if segmento == 'Grado_Pregrado' else ''),
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(5)
 
 # 0. Pie chart
 pdf.set_font("Helvetica", "B", 12)
@@ -662,6 +690,8 @@ if segmento == 'Grado_Pregrado':
     pdf.multi_cell(0, 6, "Ventana de conversion: Leads desde 01/09/2025 (campana ingreso 2026). Limite superior: ultima fecha de inscripcion registrada.")
 else:
     pdf.multi_cell(0, 6, "Ventana de conversion: Anio calendario 2026.")
+
+render_causal_pdf(pdf, causal_data, segmento)
 
 pdf.output(os.path.join(output_dir, 'Analisis_No_Matcheados_Reporte.pdf'))
 

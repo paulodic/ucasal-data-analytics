@@ -3,7 +3,7 @@
 Genera un ranking de las 20 carreras con mayor volumen de inscriptos atribuidos
 (solo cruces exactos Match_Tipo = Exacto).
 
-SALIDA (output_dir = outputs/Reporte_Carreras/):
+SALIDA (output_dir = outputs/General/Reporte_Carreras/):
   - Reporte_Carreras_Ranking.pdf   -> Informe visual con gráfico y tabla
   - Reporte_Carreras_Datos.xlsx    -> Datos del ranking (todas las carreras)
   - Reporte_Carreras.md            -> Documentación textual del ranking
@@ -24,7 +24,7 @@ from datetime import datetime
 # CONFIGURACIÓN DE RUTAS
 # ============================================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
-output_dir = os.path.join(base_dir, "outputs", "Reporte_Carreras")
+output_dir = os.path.join(base_dir, "outputs", "General", "Reporte_Carreras")
 os.makedirs(output_dir, exist_ok=True)
 base_output_dir = os.path.join(base_dir, "outputs", "Data_Base")
 

@@ -1,6 +1,6 @@
 """
 21_atribucion_causal.py
-Informe de Inversión Publicitaria y ROI — Modelo de Atribución Causal.
+Informe de Inversión Publicitaria y ROI -Modelo de Atribución Causal.
 
 Diferencia clave vs 20_presupuesto_roi.py:
   Solo se cuenta como conversión una consulta cuya fecha de creación es
@@ -21,13 +21,14 @@ import matplotlib.pyplot as plt
 from fpdf import FPDF
 from datetime import datetime
 import re
+from causal_utils import make_pk
 
 # ============================================================
 # CONFIG
 # ============================================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
 presupuesto_dir = os.path.join(base_dir, "data", "1_raw", "presupuestos")
-output_dir = os.path.join(base_dir, "outputs", "Presupuesto_ROI_Causal")
+output_dir = os.path.join(base_dir, "outputs", "General", "Presupuesto_ROI_Causal")
 os.makedirs(output_dir, exist_ok=True)
 
 SEGMENTOS = ['Grado_Pregrado', 'Cursos', 'Posgrados']
@@ -235,10 +236,8 @@ for seg in SEGMENTOS:
     # Excluir fuzzy de conteos de conversión
     df_main = df[df['_mc'] != 'fuzzy'].copy()
 
-    # PK dedup persona
-    df_main['_pk'] = df_main['DNI'].astype(str).str.split('.').str[0].str.strip()
-    df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
-        df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+    # PK dedup persona (DNI > Email > Tel > Cel)
+    df_main['_pk'] = make_pk(df_main)
 
     # UTM y fuente
     df_main['_utm'] = df_main.get('UtmSource', pd.Series('', index=df_main.index)).astype(str).str.lower().str.strip()
@@ -269,7 +268,7 @@ for seg in SEGMENTOS:
         m_otros = ~m_google & ~m_fb & ~m_bot
         return m_google, m_fb, m_bot, m_otros
 
-    # ---- MODELO ESTÁNDAR (sin filtro causal) — para referencia comparativa ----
+    # ---- MODELO ESTÁNDAR (sin filtro causal) -para referencia comparativa ----
     df_std = (df_conv
               .sort_values(['_mc', '_fecha'], ascending=[True, False])
               .drop_duplicates(subset='_pk', keep='first'))
@@ -360,11 +359,53 @@ for seg in SEGMENTOS:
                  .reset_index())
     sankey_matrix = sankey_df.groupby(['first_touch', 'last_touch']).size().reset_index(name='count')
 
+    # ---- INSCRIPTOS SIN LEAD/MATCH (huérfanos) ----
+    # Usar DNI limpio como clave en ambos lados para comparar manzanas con manzanas
+    insc_dnis = set(df_insc['DNI'].astype(str).str.split('.').str[0].str.strip().unique()) - {'nan', '', 'None'}
+    total_inscriptos_fisicos = len(insc_dnis)
+    # DNIs de inscriptos que matchearon causalmente
+    matched_dnis = set(df_exacto_causal['_pk'].unique()) & insc_dnis
+    inscriptos_con_match = len(matched_dnis)
+    inscriptos_sin_match = total_inscriptos_fisicos - inscriptos_con_match
+    pct_sin_match = safe_div(inscriptos_sin_match, total_inscriptos_fisicos) * 100
+
+    # ---- ANY-TOUCH: análisis de contribución multi-canal ----
+    # Cuántos canales tocaron a cada inscripto
+    at_canales_por_persona = df_exacto_causal.copy()
+    at_canales_por_persona['_canal'] = 'Otros'
+    at_canales_por_persona.loc[at_canales_por_persona['_fuente'] == 907, '_canal'] = 'Bot'
+    _meta_kw_at = ['fb', 'facebook', 'ig', 'instagram', 'meta']
+    at_canales_por_persona.loc[
+        at_canales_por_persona['_utm'].str.contains('|'.join(_meta_kw_at), na=False) |
+        (at_canales_por_persona['_fuente'] == 18), '_canal'] = 'Facebook'
+    at_canales_por_persona.loc[
+        at_canales_por_persona['_utm'].str.contains('google', na=False), '_canal'] = 'Google'
+
+    canales_por_inscripto = at_canales_por_persona.groupby('_pk')['_canal'].nunique()
+    n_1canal = int((canales_por_inscripto == 1).sum())
+    n_2canales = int((canales_por_inscripto == 2).sum())
+    n_3plus = int((canales_por_inscripto >= 3).sum())
+
+    # Combinaciones de canales más frecuentes
+    combos = (at_canales_por_persona.groupby('_pk')['_canal']
+              .apply(lambda x: ' + '.join(sorted(x.unique())))
+              .value_counts().head(10).reset_index())
+    combos.columns = ['Combinacion', 'Inscriptos']
+    combos['%'] = (combos['Inscriptos'] / at_total_unico * 100).round(1)
+
     print(f"    Any-Touch causal: Google={at_data['Google']['conv']} | "
           f"Facebook={at_data['Facebook']['conv']} | "
           f"Bot={at_data['Bot']['conv']} | "
           f"Otros={at_data['Otros']['conv']} | "
           f"Total unico={at_total_unico}")
+    print(f"    Inscriptos sin match: {inscriptos_sin_match:,} de {total_inscriptos_fisicos:,} ({pct_sin_match:.1f}%)")
+    print(f"    Multi-canal: 1 canal={n_1canal}, 2 canales={n_2canales}, 3+={n_3plus}")
+
+    # Desglose por tipo de match
+    _m_dni = int((df_dedup['Match_Tipo'] == 'Exacto (DNI)').sum())
+    _m_email = int((df_dedup['Match_Tipo'] == 'Exacto (Email)').sum())
+    _m_tel = int((df_dedup['Match_Tipo'] == 'Exacto (Teléfono)').sum())
+    _m_cel = int((df_dedup['Match_Tipo'] == 'Exacto (Celular)').sum())
 
     seg_data[seg] = {
         'max_insc_ts': max_insc_ts,
@@ -400,6 +441,18 @@ for seg in SEGMENTOS:
         'at': at_data,
         # Datos para Sankey
         'sankey_matrix': sankey_matrix,
+        # Inscriptos sin match
+        'total_inscriptos_fisicos': total_inscriptos_fisicos,
+        'inscriptos_con_match': inscriptos_con_match,
+        'inscriptos_sin_match': inscriptos_sin_match,
+        'pct_sin_match': pct_sin_match,
+        # Multi-canal
+        'n_1canal': n_1canal,
+        'n_2canales': n_2canales,
+        'n_3plus': n_3plus,
+        'combos': combos,
+        # Match breakdown
+        'm_dni': _m_dni, 'm_email': _m_email, 'm_tel': _m_tel, 'm_cel': _m_cel,
     }
 
     print(f"    Ventana: {seg_data[seg]['ventana']}")
@@ -691,15 +744,52 @@ pdf.set_auto_page_break(auto=True, margin=14)
 # =============== PÁGINA 1: RESUMEN EJECUTIVO ===============
 pdf.add_page()
 pdf.section_title('1. Resumen Ejecutivo - Atribucion Causal')
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font('Helvetica', 'B', 9)
+pdf.cell(0, 6, 'Metodologia aplicada:', new_x='LMARGIN', new_y='NEXT', fill=True)
+pdf.set_font('Helvetica', '', 8)
+pdf.multi_cell(0, 4,
+    'MODELO CAUSAL: Solo se atribuye una conversion si la consulta (lead) ocurrio ANTES o el MISMO DIA del pago. '
+    'Consultas post-pago (soporte, reactivacion) quedan excluidas del conteo de conversiones.\n'
+    'Match Exacto por DNI > Email > Telefono > Celular. Deduplicado por persona (DNI). '
+    'Se excluyen matches Fuzzy.\n'
+    + ''.join([f'{s}: DNI ({seg_data[s]["m_dni"]:,}), Email ({seg_data[s]["m_email"]:,}), Tel ({seg_data[s]["m_tel"]:,}), Cel ({seg_data[s]["m_cel"]:,}). Total: {seg_data[s]["total_conv"]:,}.\n' for s in SEGMENTOS if s in seg_data])
+    +
+    'Dos modelos de atribucion:\n'
+    '  - Last-Touch Causal: 1 canal por inscripto (el mas reciente antes del pago) - pags. 1-3, 6\n'
+    '  - Any-Touch Causal: inscripto se cuenta en CADA canal con contacto pre-pago (suma > 100%) - pags. 4-5\n'
+    'Ventana: Grado_Pregrado desde Sep 2025, Cursos/Posgrados desde Ene 2026.',
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(2)
 pdf.set_font('Helvetica', '', 9)
 pdf.set_text_color(*GRAY)
-pdf.cell(0, 5, f'Período Google Ads: {GOOGLE_PERIODO}  |  Período Facebook Ads: {fb_periodo}',
+pdf.cell(0, 5, f'Periodo Google Ads: {GOOGLE_PERIODO}  |  Periodo Facebook Ads: {fb_periodo}',
          new_x='LMARGIN', new_y='NEXT')
 pdf.set_text_color(*DARK)
 pdf.ln(1)
-pdf.alerta(
-    'MODELO CAUSAL: solo se cuentan como conversión las consultas cuya fecha de creación es '
-    'ANTERIOR O IGUAL a la fecha de pago de inscripción. Consultas post-pago excluidas.'
+
+# Inscriptos sin match por segmento
+pdf.subsection('Cobertura de Match por Segmento')
+hdrs_cob = ['Segmento', 'Inscriptos Totales', 'Con Match Causal', 'Sin Lead/Match', '% Sin Match']
+wids_cob = [40, 35, 35, 35, 25]
+aligns_cob = ['L', 'R', 'R', 'R', 'R']
+pdf.table_header(hdrs_cob, wids_cob, aligns_cob)
+for i, seg in enumerate(SEGMENTOS):
+    if seg not in seg_data:
+        continue
+    d = seg_data[seg]
+    pdf.table_row([
+        seg.replace('_', ' '),
+        f"{d['total_inscriptos_fisicos']:,}",
+        f"{d['inscriptos_con_match']:,}",
+        f"{d['inscriptos_sin_match']:,}",
+        f"{d['pct_sin_match']:.1f}%",
+    ], wids_cob, fill=(i % 2 == 0), aligns=aligns_cob)
+pdf.ln(2)
+pdf.nota(
+    'Sin Lead/Match = inscriptos que no tienen ninguna consulta (lead) asociada en Salesforce. '
+    'Pueden ser inscripciones directas, presenciales, o canales no rastreados por el CRM.'
 )
 pdf.ln(2)
 
@@ -973,10 +1063,125 @@ pdf.nota(
     'El % de Any-Touch se calcula sobre el total de inscriptos únicos causales.'
 )
 
-# =============== PÁGINA 5: KPIs POR GRUPO (Grado_Pregrado) ===============
+# =============== PÁGINA 5: ANÁLISIS ANY-TOUCH DETALLADO ===============
+pdf.add_page()
+pdf.section_title('5. Contribucion Real por Canal (Any-Touch Causal)')
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font('Helvetica', 'B', 9)
+pdf.cell(0, 6, 'Modelo Any-Touch Causal:', new_x='LMARGIN', new_y='NEXT', fill=True)
+pdf.set_font('Helvetica', '', 8)
+pdf.multi_cell(0, 4,
+    'El modelo Any-Touch cuenta a cada inscripto en TODOS los canales con los que tuvo contacto '
+    'causal (consulta anterior al pago). Esto permite entender la contribucion REAL de cada '
+    'plataforma a la inscripcion, incluyendo interacciones del Bot que preceden la conversion. '
+    'La suma por canal supera el total de inscriptos porque un inscripto puede haber interactuado '
+    'con multiples canales antes de pagar.',
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(3)
+
+for seg in SEGMENTOS:
+    if seg not in seg_data:
+        continue
+    d = seg_data[seg]
+    at = d['at']
+    seg_label = seg.replace('_', ' ')
+    total_at = at['Total_Unico']['conv']
+    if total_at == 0:
+        continue
+
+    pdf.subsection(f'{seg_label} -Participacion Any-Touch por Canal')
+    pdf.ln(1)
+
+    # Tabla de contribución
+    hdrs_cont = ['Canal', 'Inscriptos (Any-Touch)', '% Participacion', 'Revenue Atribuida',
+                 'vs Last-Touch', 'Inscriptos Extra']
+    wids_cont = [35, 35, 30, 35, 25, 25]
+    aligns_cont = ['L', 'R', 'R', 'R', 'R', 'R']
+    pdf.table_header(hdrs_cont, wids_cont, aligns_cont)
+
+    canal_order = [('Google Ads', 'Google', 'g_conv'),
+                   ('Facebook Ads', 'Facebook', 'f_conv'),
+                   ('Bot/Chatbot', 'Bot', 'b_conv'),
+                   ('Otros/Organico', 'Otros', 'o_conv')]
+    for i, (label, key, lt_key) in enumerate(canal_order):
+        at_conv = at[key]['conv']
+        at_rev = at[key]['rev']
+        lt_conv = d[lt_key]
+        pct = safe_div(at_conv, total_at) * 100
+        extra = at_conv - lt_conv
+        pdf.table_row([
+            label,
+            f"{at_conv:,}",
+            f"{pct:.1f}%",
+            fmt_ars_full(at_rev),
+            f"{extra:+,}" if extra != 0 else '-',
+            f"{extra:,}" if extra > 0 else '-',
+        ], wids_cont, fill=(i % 2 == 0), aligns=aligns_cont)
+
+    sum_at = sum(at[k]['conv'] for k in ['Google', 'Facebook', 'Bot', 'Otros'])
+    pdf.table_row([
+        'TOTAL (sum canales)',
+        f"{sum_at:,}",
+        f"{safe_div(sum_at, total_at)*100:.1f}%",
+        '-',
+        f"+{sum_at - d['total_conv']:,}",
+        '-',
+    ], wids_cont, bold=True, fill=True, aligns=aligns_cont)
+    pdf.set_font('Helvetica', 'I', 7)
+    pdf.set_text_color(*GRAY)
+    pdf.cell(0, 5, f'Inscriptos unicos causales: {total_at:,}  |  '
+             f'Suma bruta por canal: {sum_at:,}  |  '
+             f'Factor multi-touch: {safe_div(sum_at, total_at):.2f}x',
+             new_x='LMARGIN', new_y='NEXT')
+    pdf.set_text_color(*DARK)
+    pdf.ln(2)
+
+    # Multi-canal: cuántos inscriptos interactuaron con 1, 2, 3+ canales
+    pdf.subsection(f'{seg_label} -Interacciones Multi-Canal')
+    pdf.set_font('Helvetica', '', 9)
+    pdf.cell(0, 6,
+        f"1 solo canal: {d['n_1canal']:,} ({safe_div(d['n_1canal'], total_at)*100:.1f}%)  |  "
+        f"2 canales: {d['n_2canales']:,} ({safe_div(d['n_2canales'], total_at)*100:.1f}%)  |  "
+        f"3+ canales: {d['n_3plus']:,} ({safe_div(d['n_3plus'], total_at)*100:.1f}%)",
+        new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(2)
+
+    # Top combinaciones
+    combos = d['combos']
+    if not combos.empty:
+        pdf.subsection(f'{seg_label} -Top Combinaciones de Canales')
+        hdrs_cmb = ['Combinacion de Canales', 'Inscriptos', '% del Total']
+        wids_cmb = [100, 30, 25]
+        aligns_cmb = ['L', 'R', 'R']
+        pdf.table_header(hdrs_cmb, wids_cmb, aligns_cmb)
+        for i, (_, r) in enumerate(combos.head(8).iterrows()):
+            pdf.table_row([
+                str(r['Combinacion']),
+                f"{r['Inscriptos']:,}",
+                f"{r['%']:.1f}%",
+            ], wids_cmb, fill=(i % 2 == 0), aligns=aligns_cmb)
+        pdf.ln(2)
+
+    # Inscriptos sin match
+    pdf.subsection(f'{seg_label} -Inscriptos sin Traza en CRM')
+    pdf.set_font('Helvetica', '', 9)
+    pdf.cell(0, 6,
+        f"Inscriptos totales: {d['total_inscriptos_fisicos']:,}  |  "
+        f"Con match causal: {d['inscriptos_con_match']:,}  |  "
+        f"Sin lead/match: {d['inscriptos_sin_match']:,} ({d['pct_sin_match']:.1f}%)",
+        new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(1)
+    pdf.nota(
+        'Inscriptos sin traza = no tienen consulta (lead) registrada en Salesforce para esta ventana. '
+        'Pueden ser inscripciones presenciales, directas, o por canales no rastreados.'
+    )
+    pdf.ln(3)
+
+# =============== PÁGINA 6: KPIs POR GRUPO (Grado_Pregrado) ===============
 if 'Grado_Pregrado' in seg_data and fb_grupo_data:
     pdf.add_page()
-    pdf.section_title('5. KPIs por Grupo de Carreras (Grado_Pregrado - Facebook)')
+    pdf.section_title('6. KPIs por Grupo de Carreras (Grado_Pregrado - Facebook)')
     pdf.set_font('Helvetica', 'I', 8)
     pdf.set_text_color(*GRAY)
     pdf.cell(0, 5, 'Desglose de inversion y metricas de Facebook por grupo de carreras (inversion = igual en ambos modelos)',
@@ -1025,7 +1230,7 @@ for seg in SEGMENTOS:
     seg_label = seg.replace('_', ' ')
 
     pdf.add_page()
-    pdf.section_title(f'6. Detalle Causal: {seg_label}')
+    pdf.section_title(f'7. Detalle Causal: {seg_label}')
     pdf.set_font('Helvetica', '', 9)
     pdf.set_text_color(*GRAY)
     pdf.cell(0, 5, f'{PERIODO_LABEL[seg]}  |  Ventana: {d["ventana"]}  |  Última inscripción: {d["max_insc_str"]}  |  Consultas post-pago excluidas: {d["n_late"]:,}',
@@ -1111,13 +1316,13 @@ for seg in SEGMENTOS:
 
 # =============== PÁGINAS FINALES: CHARTS ===============
 pdf.add_page()
-pdf.section_title('7. Graficos Comparativos (Modelo Causal)')
+pdf.section_title('8. Graficos Comparativos (Modelo Causal)')
 if os.path.exists(cpl_cpa_path):
     pdf.image(cpl_cpa_path, x=15, w=250)
     pdf.ln(5)
 
 pdf.add_page()
-pdf.section_title('8. Facebook Ads: Distribucion de Inversion')
+pdf.section_title('9. Facebook Ads: Distribucion de Inversion')
 if os.path.exists(pie_path):
     pdf.image(pie_path, x=50, w=170)
     pdf.ln(5)
@@ -1139,7 +1344,7 @@ for seg in SEGMENTOS:
     # --- Página A: Bar chart FT vs LT ---
     if has_bar:
         pdf.add_page()
-        pdf.section_title(f'9. Distribucion First-Touch vs Last-Touch | Campana Ingreso {COHORTE_YEAR} [{seg_label}]')
+        pdf.section_title(f'10. Distribucion First-Touch vs Last-Touch | Campana Ingreso {COHORTE_YEAR} [{seg_label}]')
         pdf.set_font('Helvetica', 'I', 8)
         pdf.set_text_color(*GRAY)
         pdf.cell(0, 5,
@@ -1160,7 +1365,7 @@ for seg in SEGMENTOS:
     # --- Página B: Sankey FT -> LT ---
     if has_sankey:
         pdf.add_page()
-        pdf.section_title(f'9. Flujo de Atribucion: First-Touch >> Last-Touch | Campana Ingreso {COHORTE_YEAR} [{seg_label}]')
+        pdf.section_title(f'10. Flujo de Atribucion: First-Touch >> Last-Touch | Campana Ingreso {COHORTE_YEAR} [{seg_label}]')
         pdf.set_font('Helvetica', 'I', 8)
         pdf.set_text_color(*GRAY)
         total_uniq = seg_data[seg]['at']['Total_Unico']['conv']
@@ -1201,7 +1406,9 @@ pdf.multi_cell(0, 5,
     'Modelo de atribucion: Last-Touch Causal (consulta mas reciente anterior al pago). '
     'Alternativa First-Touch Causal disponible. Deduplicado por persona (DNI).\n\n'
     'Match Exacto: DNI > Email > Telefono > Celular (prioridad). '
-    'Solo se cuentan conversiones por Match Exacto.\n\n'
+    'Solo se cuentan conversiones por Match Exacto.\n'
+    + ''.join([f'{s}: DNI ({seg_data[s]["m_dni"]:,}), Email ({seg_data[s]["m_email"]:,}), Tel ({seg_data[s]["m_tel"]:,}), Cel ({seg_data[s]["m_cel"]:,}). Total: {seg_data[s]["total_conv"]:,}.\n' for s in SEGMENTOS if s in seg_data])
+    + '\n'
     'Any-Touch Causal: Un inscripto se cuenta en TODOS los canales con los que tuvo contacto causal. '
     'La suma por canal excede el total de inscriptos unicos. Detalle en pag. 4.\n\n'
     'Ventana de conversion:\n'
@@ -1307,7 +1514,41 @@ with pd.ExcelWriter(os.path.join(output_dir, 'Presupuesto_ROI_Causal_Datos.xlsx'
         })
     pd.DataFrame(rows_at).to_excel(writer, sheet_name='AnyTouch_vs_LastTouch', index=False)
 
-    # Hoja 4: Facebook por campaña (solo cohorte)
+    # Hoja 4: Cobertura de match e inscriptos sin traza
+    rows_cob = []
+    for seg in SEGMENTOS:
+        if seg not in seg_data:
+            continue
+        d = seg_data[seg]
+        rows_cob.append({
+            'Segmento': seg,
+            'Inscriptos_Totales': d['total_inscriptos_fisicos'],
+            'Con_Match_Causal': d['inscriptos_con_match'],
+            'Sin_Lead_Match': d['inscriptos_sin_match'],
+            'Pct_Sin_Match': round(d['pct_sin_match'], 1),
+            'Multi_1_Canal': d['n_1canal'],
+            'Multi_2_Canales': d['n_2canales'],
+            'Multi_3_Plus': d['n_3plus'],
+        })
+    pd.DataFrame(rows_cob).to_excel(writer, sheet_name='Cobertura_Match', index=False)
+
+    # Hoja 5: Combinaciones de canales
+    rows_combos = []
+    for seg in SEGMENTOS:
+        if seg not in seg_data:
+            continue
+        combos = seg_data[seg]['combos']
+        for _, r in combos.iterrows():
+            rows_combos.append({
+                'Segmento': seg,
+                'Combinacion': r['Combinacion'],
+                'Inscriptos': r['Inscriptos'],
+                'Pct': r['%'],
+            })
+    if rows_combos:
+        pd.DataFrame(rows_combos).to_excel(writer, sheet_name='Combinaciones_Canales', index=False)
+
+    # Hoja 6: Facebook por campaña (solo cohorte)
     if not fb_cohorte.empty:
         fb_cohorte.copy().to_excel(writer, sheet_name='Facebook_Detalle', index=False)
 
@@ -1328,4 +1569,4 @@ with pd.ExcelWriter(os.path.join(output_dir, 'Presupuesto_ROI_Causal_Datos.xlsx'
 
 print(f"-> Excel generado: {os.path.join(output_dir, 'Presupuesto_ROI_Causal_Datos.xlsx')}")
 print(f"-> Total invertido: {fmt_ars_full(grand_total_g + grand_total_f)} ARS")
-print("Proceso finalizado — Modelo Causal.")
+print("Proceso finalizado -Modelo Causal.")

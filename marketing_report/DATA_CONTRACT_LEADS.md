@@ -2,7 +2,7 @@
 
 **Repo:** `paulodic/ucasal-data-analytics`
 
-**Última actualización:** 2026-03-06
+**Última actualización:** 2026-03-14
 
 ## 1. Objetivo
 Este documento define el **contrato de datos** (data contract) y la **guía de desarrollo** del pipeline que:
@@ -178,13 +178,27 @@ Además filtra filas completamente vacías de claves:
 - Leads: `dropna(subset=['Candidato','DNI','Telefono'], how='all')`
 - Inscriptos: `dropna(subset=['Apellido y Nombre','DNI','Telefono'], how='all')`
 
+### 8.1b Limpieza de campos para matching (case-insensitive, normalizado)
+
+Antes del matching, cada campo se limpia con funciones dedicadas en `02_cruce_datos.py`:
+
+| Campo | Función | Limpieza aplicada |
+|---|---|---|
+| DNI | `clean_dni(val)` | `str(val).strip().lower()` → quita espacios, minúsculas, elimina `.0` decimal |
+| Email | `clean_email(val)` | `str(val).strip().lower()` → minúsculas, conserva puntos del dominio |
+| Teléfono/Celular | `clean_phone(val)` | Quita prefijos internacionales (549, 54), 0 inicial, 15 intercalado; normaliza a dígitos puros; trunca a 10 dígitos; **mínimo 7 dígitos** (menor = `pd.NA`, evita falsos positivos por prefijos sueltos como "11", "387") |
+
+**Todos los matches son case-insensitive.** Los campos se comparan siempre en minúsculas tras limpieza.
+
+Los campos limpios se almacenan en columnas temporales (`*_match`) que se usan solo durante el proceso de cruce y no se exportan al CSV final.
+
 ### 8.2 Etapa 1 — Match exacto por DNI
 `Match_Tipo = 'Exacto (DNI)'`
 
 ### 8.3 Etapa 2 — Match exacto por Email
 `Match_Tipo = 'Exacto (Email)'`
 
-### 8.4 Etapa 3 — Match exacto por Teléfono/Celular (6 combinaciones)
+### 8.4 Etapa 3 — Match exacto por Teléfono/Celular (4 combinaciones)
 
 La función `cruce_exacto()` prueba todas las combinaciones posibles entre teléfonos del lead y del inscripto:
 
@@ -317,7 +331,37 @@ Gráficos generados:
 - `chart_multitouch_por_campana.png` — Distribución de canales desagregada por campaña actual vs anterior
 - `chart_2b_campana_comparativa.png` — Barras comparando inscriptos por canal entre campañas
 
-### 10b.5 Análisis Any-Touch (participación por canal)
+### 10b.4b Consultas vs Personas (distinción fundamental)
+
+El pipeline maneja **dos niveles de agregación** que NO deben confundirse:
+
+| Nivel | Clave | Significado | Ejemplo |
+|---|---|---|---|
+| **Consulta** | `Consulta: ID Consulta` | Una interacción única en Salesforce con origen específico | *(ver informe generado)* |
+| **Persona** | `_pk` (via `make_pk()`) | Un individuo que puede tener múltiples consultas | *(ver informe generado)* |
+
+> **Nota:** Los valores numéricos cambian con cada corrida al agregar nuevos datos. Siempre consultar el informe generado para datos actualizados.
+
+**Reglas:**
+- **Consultas NO se fusionan** si tienen diferente `Consulta: ID Consulta` — cada una tiene un valor asociado y un origen específico.
+- **Consultas SÍ se fusionan** si tienen el mismo `Consulta: ID Consulta` (dedup por `groupby().first()` en `02_cruce_datos.py`).
+- **Personas** se identifican por `make_pk()` (DNI > Email > Tel > Cel > idx).
+- **Tasas de conversión** se calculan SIEMPRE en DOS versiones complementarias (ambas obligatorias en informes):
+  - **Tasa sobre Consultas** = inscriptos / consultas en ventana — mide eficiencia por interacción
+  - **Tasa sobre Personas (KPI principal)** = inscriptos / personas únicas en ventana — mide eficiencia por individuo
+  - **Embudo:** Consultas → Personas → Inscriptos. Las personas son el KPI intermedio entre consultas e inscriptos.
+  - **Tasa por Plataforma (Any-Touch)**: misma lógica dual, dentro de cada canal. Ej Google: convertidos / consultas Google = X%, convertidos / personas Google = Y%
+  - **Tasa por Plataforma (Last-Touch)**: para CPL/CPA en scripts 20/21, cada persona se asigna a 1 solo canal
+- **Ambas métricas** (consultas y personas) y **ambas tasas** deben aparecer en los informes — son datos diferentes y necesarios.
+
+**En el informe:**
+- "Total Consultas" = `len(df_leads)` (ya deduplicado por ID Consulta)
+- "Personas que consultaron" = `df_leads['_pk'].nunique()`
+- Ratio típico: varia por corrida. Consultar `memoria_tecnica.md` de cada segmento para valores actuales.
+
+### 10b.5 Análisis Any-Touch (participación por canal) — OBLIGATORIO
+
+> **REGLA FUNDAMENTAL:** Any-Touch es el modelo de atribución principal y obligatorio en TODOS los informes de conversión. Un inscripto que consultó por Google, Meta Y Bot se cuenta como conversión en los TRES canales simultáneamente. NUNCA se debe priorizar un canal sobre otro ni usar masks excluyentes entre canales (`& ~bot_mask` está PROHIBIDO).
 
 Responde a la pregunta: **"¿En cuántas inscripciones intervino cada canal?"**
 
@@ -335,6 +379,14 @@ Esto revela la participación real de cada canal en el journey completo.
 **Importante:** La suma de inscriptos por canal supera el 100% del total, porque un inscripto
 multi-touch se cuenta en cada canal que consultó. Por ejemplo, una persona que consultó por
 Google y luego por Bot aparece en ambos canales.
+
+**Prohibiciones de implementación (LEY):**
+- NUNCA usar `mask_meta = mask_meta & ~bot_mask` ni equivalentes — esto excluye personas multi-canal.
+- NUNCA crear categorías mutuamente excluyentes entre Google, Meta y Bot.
+- La categoría "Otros" SÍ puede ser residual (`~google & ~meta & ~bot`).
+- Para CPL/CPA/ROI (scripts 20, 21): last-touch/first-touch es válido porque se divide presupuesto, pero el **conteo de conversiones** por canal siempre es any-touch.
+
+**Test de verificación:** `test_max_match_bot.py` verifica independientemente que el pipeline captura el máximo teórico de matches posibles usando las 6 combinaciones de cruce.
 
 **Desglose por Tipo de Match:** Todos los informes incluyen siempre el desglose de inscriptos
 por método de cruce exacto, en este orden (incremental, sin repetir):
@@ -658,7 +710,7 @@ Las campañas de Facebook se filtran por el **año de la cohorte/período que se
 
 > **Para cambiar el año de análisis:** Modificar `COHORTE_YEAR = 2026` en el script.
 
-### 16.3 Atribución de canal (leads CRM)
+### 16.3 Atribución de canal (leads CRM)(REVISAR!!! para que modelo de atribucion es valido)
 
 Los leads del CRM se clasifican en 4 canales usando las columnas `UtmSource` y `FuenteLead`:
 
@@ -669,7 +721,7 @@ Los leads del CRM se clasifican en 4 canales usando las columnas `UtmSource` y `
 | **Bot/Chatbot** | `FuenteLead == 907` | 3ra evaluación |
 | **Otros/Orgánico** | Todo lo que no cae en los anteriores | Residual |
 
-**Reglas de exclusión mutua:** Las masks se evalúan de modo que un lead puede caer en solo un canal:
+**Reglas de exclusión mutua(REVISAR!!! para que modelo de atribucion es valido):** Las masks se evalúan de modo que un lead puede caer en solo un canal:
 - `mask_otros = ~mask_google & ~mask_fb & ~mask_bot`
 - Si un lead tiene `UtmSource = 'google'` Y `FuenteLead = 907`, se clasifica como Google (la primera mask que matchea).
 
@@ -682,9 +734,13 @@ Los leads del CRM se clasifican en 4 canales usando las columnas `UtmSource` y `
 #### 16.4.1 Leads CRM (deduplicados)
 
 - **Definición:** Cantidad de personas únicas que consultaron en la ventana del segmento.
-- **Deduplicación:** Se usa una clave `_pk` compuesta:
-  - Prioridad 1: `DNI` (sin decimales ni puntos)
-  - Prioridad 2: `Correo` (si DNI es nulo/vacío)
+- **Deduplicación:** Se usa la función centralizada `make_pk()` de `causal_utils.py` con cadena de fallback:
+  - Prioridad 1: `DNI` (sin decimales `.0`, strip)
+  - Prioridad 2: `Correo` (lower + strip, conserva puntos del dominio)
+  - Prioridad 3: `Telefono` (sin decimales `.0`, strip)
+  - Prioridad 4: `Celular` (sin decimales `.0`, strip)
+  - Prioridad 5: índice de fila (`_idx_N`) como último recurso
+  - **IMPORTANTE:** Todos los scripts de reporte (04-23) usan `make_pk()` vía import. Nunca definir `_pk` inline.
 - **Filtro de matcheo:** Se excluyen matches fuzzy — solo se cuentan leads con match `Exacto` o `No (Solo Lead)`.
 - **Ordenamiento dedup:** `sort_values('_mc')` → `exacto` < `no_match`, por lo que `drop_duplicates(subset='_pk', keep='first')` prioriza el registro que tiene match exacto.
 

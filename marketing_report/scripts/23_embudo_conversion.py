@@ -25,7 +25,7 @@ from tabulate import tabulate
 base_dir = r"h:\Test-Antigravity\marketing_report"
 data_dir = os.path.join(base_dir, "outputs", "Data_Base")
 raw_dir = os.path.join(base_dir, "data", "1_raw")
-output_dir = os.path.join(base_dir, "outputs", "Embudo_Conversion")
+output_dir = os.path.join(base_dir, "outputs", "General", "Embudo_Conversion")
 os.makedirs(output_dir, exist_ok=True)
 
 SEGMENTOS = ['Grado_Pregrado', 'Cursos', 'Posgrados']
@@ -203,6 +203,12 @@ for seg in SEGMENTOS:
     print(f"  Boletas sin lead: {fmt_n(len(bol_sin_lead))}")
     print(f"  Inscriptos sin lead: {fmt_n(len(insc_sin_lead))}")
 
+    # Desglose por tipo de match exacto
+    _m_dni  = int((df_personas['Match_Tipo'] == 'Exacto (DNI)').sum()) if 'Match_Tipo' in df_personas.columns else 0
+    _m_email = int((df_personas['Match_Tipo'] == 'Exacto (Email)').sum()) if 'Match_Tipo' in df_personas.columns else 0
+    _m_tel  = int((df_personas['Match_Tipo'] == 'Exacto (Teléfono)').sum()) if 'Match_Tipo' in df_personas.columns else 0
+    _m_cel  = int((df_personas['Match_Tipo'] == 'Exacto (Celular)').sum()) if 'Match_Tipo' in df_personas.columns else 0
+
     funnel = {
         'Segmento': seg,
         'Leads (personas)': n_personas,
@@ -216,6 +222,10 @@ for seg in SEGMENTOS:
         'Tasa Lead->Pago': tasa_lead_pago,
         'Boletas sin Lead': len(bol_sin_lead),
         'Inscriptos sin Lead': len(insc_sin_lead),
+        'Match_DNI': _m_dni,
+        'Match_Email': _m_email,
+        'Match_Telefono': _m_tel,
+        'Match_Celular': _m_cel,
     }
     all_funnel.append(funnel)
 
@@ -401,6 +411,56 @@ for seg, canal_dict in sankey_data.items():
         print(f"  [!] No se pudo generar PNG del Sankey ({e})")
 
 # ==========================================
+# SANKEY 2: Solo boletas (No Pagada + Pagada, sin "Sin Boleta")
+# ==========================================
+print("Generando Sankeys de boletas...")
+
+for seg, canal_dict in sankey_data.items():
+    canales = list(canal_dict.keys())
+    # Filtrar canales que tienen al menos 1 boleta
+    canales_bol = [c for c in canales if canal_dict[c]['bol_no_pago'] + canal_dict[c]['bol_pago'] > 0]
+    if not canales_bol:
+        continue
+
+    # Nodes: 0..N-1 = canales con boleta, N = Boleta No Pagada, N+1 = Boleta Pagada
+    node_labels = canales_bol + ['Boleta No Pagada*', 'Boleta Pagada']
+    canal_colors = {'Google': '#3498db', 'Meta': '#9b59b6', 'Bot': '#e67e22', 'Otros': '#95a5a6'}
+    node_colors = [canal_colors.get(c, '#95a5a6') for c in canales_bol] + ['#e74c3c', '#2ecc71']
+
+    idx_no_pago = len(canales_bol)
+    idx_pago = len(canales_bol) + 1
+
+    sources, targets, values, link_colors = [], [], [], []
+    for i, canal in enumerate(canales_bol):
+        d = canal_dict[canal]
+        if d['bol_no_pago'] > 0:
+            sources.append(i); targets.append(idx_no_pago); values.append(d['bol_no_pago'])
+            link_colors.append('rgba(231,76,60,0.4)')
+        if d['bol_pago'] > 0:
+            sources.append(i); targets.append(idx_pago); values.append(d['bol_pago'])
+            link_colors.append('rgba(46,204,113,0.4)')
+
+    fig_sankey2 = go.Figure(go.Sankey(
+        node=dict(pad=20, thickness=25, label=node_labels, color=node_colors),
+        link=dict(source=sources, target=targets, value=values, color=link_colors),
+    ))
+    fig_sankey2.update_layout(
+        title_text=f'Sankey: Canal -> Boleta (No Pagada / Pagada)  |  {seg}',
+        font_size=12, width=1000, height=450,
+        annotations=[dict(
+            text='* "Boleta No Pagada" refleja el snapshot actual. Boletas ya pagadas desaparecen del archivo fuente.',
+            xref='paper', yref='paper', x=0.5, y=-0.08,
+            showarrow=False, font=dict(size=9, color='gray'),
+        )],
+    )
+    sankey2_png = os.path.join(output_dir, f'sankey_boletas_{seg}.png')
+    try:
+        fig_sankey2.write_image(sankey2_png, width=1000, height=450, scale=2)
+        print(f"  -> {sankey2_png}")
+    except Exception as e:
+        print(f"  [!] No se pudo generar Sankey de boletas ({e})")
+
+# ==========================================
 # MARKDOWN
 # ==========================================
 print("Generando Markdown...")
@@ -446,12 +506,23 @@ for seg in SEGMENTOS:
         md.append('> *"Boleta No Pagada" refleja el snapshot actual del archivo. Boletas ya pagadas')
         md.append('> desaparecen del archivo fuente, por lo que la cifra real de boletas generadas es mayor.*\n')
 
+md.append('\n## Sankey: Canal -> Boleta (Solo Generadas)\n')
+for seg in SEGMENTOS:
+    sankey2_path = os.path.join(output_dir, f'sankey_boletas_{seg}.png')
+    if os.path.exists(sankey2_path):
+        md.append(f'### {seg}\n')
+        md.append(f'![Sankey Boletas {seg}](sankey_boletas_{seg}.png)\n')
+        md.append('> Este diagrama muestra solo las personas que generaron boleta,')
+        md.append('> separando entre las que pagaron y las que no.\n')
+
 md.append('\n## Nota Metodológica\n')
 md.append('- **Modelo de atribución:** Embudo por persona (DNI). Deduplicado por DNI limpio.')
 md.append('- **Persona** = DNI limpio único. Leads sin DNI no se incluyen en el embudo.')
 md.append('- **Consulta**: persona que generó al menos 1 lead/consulta en Salesforce.')
 md.append('- **Boleta**: persona cuyo DNI aparece en el archivo de boletas generadas.')
 md.append('- **Inscripto**: persona cuyo lead matcheó exactamente con un inscripto (pagó matrícula). Match Exacto: DNI > Email > Teléfono > Celular (prioridad).')
+for f in all_funnel:
+    md.append(f'  - {f["Segmento"]}: DNI ({f["Match_DNI"]:,}), Email ({f["Match_Email"]:,}), Teléfono ({f["Match_Telefono"]:,}), Celular ({f["Match_Celular"]:,}). Total: {f["Inscriptos (lead)"]:,}.')
 md.append('- La tasa Lead->Boleta puede subestimarse si la persona usó datos diferentes en Salesforce vs sistema de boletas.')
 md.append('- La tasa Boleta->Pago se calcula sobre TODAS las boletas del segmento (no solo las conectadas a leads).')
 md.append('- **Any-Touch:** Para atribución multi-canal (inscriptos que consultaron por más de un canal), referirse al Informe Analítico (04_reporte_final).')
@@ -633,6 +704,19 @@ for seg in SEGMENTOS:
             'Cuando una boleta se paga, desaparece del listado. '
             'La cifra real de boletas generadas es mayor que las visibles en el archivo.')
 
+# Sankey de boletas (solo generadas)
+for seg in SEGMENTOS:
+    sankey2_img = os.path.join(output_dir, f'sankey_boletas_{seg}.png')
+    if os.path.exists(sankey2_img):
+        pdf.add_page()
+        pdf.section_title(f'Sankey: Canal -> Boleta (Solo Generadas)  |  {seg}')
+        pdf.image(sankey2_img, x=10, y=30, w=270)
+        pdf.set_y(-25)
+        pdf.nota(
+            'Este diagrama muestra solo las personas que generaron boleta, '
+            'separando entre las que pagaron y las que no. '
+            '"Boleta No Pagada" refleja el snapshot actual del archivo.')
+
 # Nota Metodológica
 pdf.add_page()
 pdf.section_title('Nota Metodologica')
@@ -641,7 +725,9 @@ pdf.multi_cell(0, 5,
     'Modelo de atribucion: Embudo por persona (DNI limpio unico). '
     'Leads sin DNI no se incluyen en el embudo.\n\n'
     'Etapas: Consulta (lead en Salesforce) -> Boleta Generada (DNI en archivo de boletas) -> '
-    'Pago (inscripto con Match Exacto: DNI > Email > Telefono > Celular).\n\n'
+    'Pago (inscripto con Match Exacto: DNI > Email > Telefono > Celular).\n'
+    + ''.join([f'{f["Segmento"]}: DNI ({f["Match_DNI"]:,}), Email ({f["Match_Email"]:,}), Tel ({f["Match_Telefono"]:,}), Cel ({f["Match_Celular"]:,}). Total: {f["Inscriptos (lead)"]:,}.\n' for f in all_funnel])
+    + '\n'
     'Canal: Clasificado por UTM/FuenteLead del lead mas reciente de la persona.\n\n'
     'La tasa Boleta->Pago se calcula sobre TODAS las boletas del segmento, '
     'no solo las conectadas a leads.\n\n'

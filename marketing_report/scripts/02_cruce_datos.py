@@ -108,7 +108,12 @@ def clean_phone(val):
 
     if len(s) > 10:
         s = s[-10:]
-        
+
+    # Mínimo 7 dígitos para evitar falsos positivos con prefijos sueltos
+    # (ej: "11", "387", "388" que matchean accidentalmente)
+    if len(s) < 7:
+        return pd.NA
+
     return s if s else pd.NA
 
 def clean_name(val):

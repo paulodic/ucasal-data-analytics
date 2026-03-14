@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import make_pk
 
 sns.set_theme(style="whitegrid")
 
@@ -68,9 +69,7 @@ for col in utm_cols:
         df_main[col] = df_main[col].astype(str).replace('nan', '').str.strip()
 
 # Deduplicar por persona
-df_main['_pk'] = df_main['DNI'].astype(str).str.replace(r'\.0$', '', regex=True)
-df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
-    df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+df_main['_pk'] = make_pk(df_main)
 
 # Filtrar: cualquier UTM no vacio
 mask_utm = (df_main['UtmSource'] != '') | (df_main['UtmCampaign'] != '') | \
@@ -95,6 +94,12 @@ df_utm_dedup_conv = df_utm_conv.drop_duplicates(subset='_pk')
 total_utm_conv = len(df_utm_dedup_conv)
 conv_utm = len(df_utm_dedup_conv[df_utm_dedup_conv['_mc'] == 'exacto'])
 tasa_utm = (conv_utm / total_utm_conv * 100) if total_utm_conv > 0 else 0
+
+# Desglose por tipo de match
+insc_dni = len(df_utm_dedup_conv[df_utm_dedup_conv['Match_Tipo'] == 'Exacto (DNI)'])
+insc_email = len(df_utm_dedup_conv[df_utm_dedup_conv['Match_Tipo'] == 'Exacto (Email)'])
+insc_tel = len(df_utm_dedup_conv[df_utm_dedup_conv['Match_Tipo'] == 'Exacto (Teléfono)'])
+insc_cel = len(df_utm_dedup_conv[df_utm_dedup_conv['Match_Tipo'] == 'Exacto (Celular)'])
 
 print(f"Personas con algun UTM: {total_utm:,} | Convertidos: {conv_utm:,} | Tasa: {tasa_utm:.2f}%")
 
@@ -218,7 +223,7 @@ with open(md_path, 'w', encoding='utf-8') as f:
     f.write(f"- Tasa de Conversion UTM Global (Muestra): {tasa_utm:.2f}%\n")
     f.write("\n## Nota Metodologica\n")
     f.write("- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).\n")
-    f.write("- **Match:** Exacto por DNI, Email, Telefono y Celular.\n")
+    f.write(f"- **Match Exacto:** DNI ({insc_dni:,}), Email ({insc_email:,}), Teléfono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {conv_utm:,}.\n")
 print(f"-> Textos exportados a MD: {md_path}\n")
 
 # ==========================================
@@ -347,7 +352,7 @@ pdf.cell(0, 10, 'Nota Metodologica', new_x="LMARGIN", new_y="NEXT")
 pdf.ln(3)
 pdf.set_font('Helvetica', '', 9)
 pdf.multi_cell(0, 5,
-    'Cruce de datos: Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.\n'
+    f'Cruce de datos: Deduplicado por persona (DNI). Match Exacto: DNI ({insc_dni:,}), Email ({insc_email:,}), Telefono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {conv_utm:,}.\n'
     'Modelo Any-Touch: Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). '
     'Detalle en el Informe Analitico (04_reporte_final).\n'
     'Fuente: Consultas exportadas de Salesforce, inscriptos del sistema academico.')

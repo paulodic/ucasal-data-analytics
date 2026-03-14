@@ -1,7 +1,7 @@
 # 🚀 Marketing Report Automation - DEV HANDOVER
 
-**Última actualización:** 6 de Marzo de 2026
-**Estado del Proyecto:** ✅ **Estable y Funcional (Fase 4 — Boletas + Embudo)**
+**Última actualización:** 14 de Marzo de 2026
+**Estado del Proyecto:** ✅ **Estable y Funcional (Fase 5 — Any-Touch + Consultas vs Personas + Tasas Duales)**
 
 ## 📌 Estado Actual del Desarrollo
 El esquema de reportes está 100% automatizado, procesando bases de datos de Leads, Inscriptos y Boletas mediante ~20 scripts secuenciales.
@@ -19,19 +19,24 @@ h:\Test-Antigravity\marketing_report\
 │       └── boletas/        <- Boletas generadas sin pago (paso previo a inscripción)
 ├── outputs/            <- (GENERADO POR LOS SCRIPTS. No tocar manualmente salvo para auditoria)
 │   ├── Data_Base/
-│   ├── Informe_Analitico/
-│   ├── Analisis_UTM/
-│   ├── Google_Ads_Deep_Dive/
-│   ├── Facebook_Deep_Dive/
-│   ├── Bot_Deep_Dive/
-│   ├── Analisis_No_Matcheados/
-│   ├── Calidad_Datos/
-│   ├── Bot_Consolidado/
-│   ├── Presupuesto_ROI/
-│   ├── Presupuesto_ROI_Causal/
-│   ├── Embudo_Conversion/
-│   ├── Reporte_Asesores/
-│   └── Reporte_Promociones/
+│   │   ├── Grado_Pregrado/   <- CSVs maestros por segmento
+│   │   ├── Cursos/
+│   │   └── Posgrados/
+│   ├── Grado_Pregrado/       <- Reportes por segmento
+│   │   ├── Informe_Analitico/
+│   │   ├── Analisis_CRM/
+│   │   ├── Analisis_UTM/
+│   │   ├── Analisis_No_Matcheados/
+│   │   ├── Google_Ads_Deep_Dive/
+│   │   ├── Facebook_Deep_Dive/
+│   │   ├── Bot_Deep_Dive/
+│   │   ├── Matcheo_Completo/
+│   │   ├── Reporte_Asesores/
+│   │   ├── Reporte_Promociones/   <- (solo Grado_Pregrado)
+│   │   └── Otros_Reportes/
+│   ├── Cursos/               <- (misma estructura que Grado_Pregrado)
+│   ├── Posgrados/            <- (misma estructura que Grado_Pregrado)
+│   └── General/              <- Reportes globales (Bot_Consolidado, Presupuesto_ROI, etc.)
 └── scripts/            <- (Lógica Core)
     ├── 00_run_all.py ... 23_embudo_conversion.py
 ```
@@ -238,8 +243,8 @@ pd.to_datetime(df['Consulta: Fecha de creación'], errors='coerce')
 
 ### 7. 🤖 Tasa de Conversión del Bot — Criterio Canónico
 **Descubrimiento:** Dos métodos de cálculo producían tasas diferentes para el mismo canal (Bot):
-- **Método A (incorrecto):** Deduplicar TODOS los leads → filtrar por `FuenteLead=907` → calcular tasa. Resultado: ~7.89%. Undercounts porque personas que consultaron por otro canal primero y luego por bot quedan excluidas.
-- **Método B (correcto):** Filtrar por `FuenteLead=907` → deduplicar personas del bot → aplicar filtro cohorte → calcular tasa. Resultado: 6.12%.
+- **Método A (incorrecto):** Deduplicar TODOS los leads → filtrar por `FuenteLead=907` → calcular tasa. Undercounts porque personas que consultaron por otro canal primero y luego por bot quedan excluidas.
+- **Método B (correcto):** Filtrar por `FuenteLead=907` → deduplicar personas del bot → aplicar filtro cohorte → calcular tasa.
 
 **Regla de negocio:** El informe bot consolidado (`19`) y el informe general (`07`) deben usar el **Método B** para que las tasas del bot sean idénticas en ambos informes.
 
@@ -248,22 +253,130 @@ pd.to_datetime(df['Consulta: Fecha de creación'], errors='coerce')
 df_bot = df_main[df_main['_fl'] == '907']           # todos los registros bot
 df_bot_dedup = df_bot.drop_duplicates(subset='_pk')  # personas únicas del bot
 if segmento == 'Grado_Pregrado':
-    df_bot_dedup = df_bot_dedup[df_bot_dedup['fecha'] >= '2024-09-01']  # cohorte
-tasa = bot_inscriptos / len(df_bot_dedup) * 100
+    df_bot_dedup = df_bot_dedup[df_bot_dedup['fecha'] >= '2025-09-01']  # cohorte Ingreso 2026
+tasa_personas = bot_inscriptos / len(df_bot_dedup) * 100   # tasa s/personas (KPI)
+tasa_consultas = bot_inscriptos / len(df_bot_leads) * 100  # tasa s/consultas
 ```
 
+> **Nota:** Los valores numéricos de las tasas dependen de la corrida. No hardcodear valores en la documentación — siempre consultar el informe generado.
+
 ### 8. 📧 Dominios de correo inválidos comunes
-**Descubrimiento:** Una cantidad significativa de leads (1,378) tienen dominios con errores de tipeo. Los más frecuentes:
+**Descubrimiento:** Una cantidad significativa de leads tienen dominios con errores de tipeo. Los más frecuentes (valores de corridas anteriores, consultar informe actualizado):
 - `gmail.com.ar` (434 leads) — **NO EXISTE**, es un error común de argentinos
 - `gmail.con` (354 leads) — falta la "m"
 - `gamil.com` (171 leads) — inversión de letras
 - Otros: `gmai.com`, `gmail.comm`, `gmail.co`, `hotmail.con`
 
-Se estima que corregir estos dominios recuperaría ~43 matches adicionales.
+Corregir estos dominios podría recuperar matches adicionales (consultar `15_dominios_invalidos.py` para datos actualizados).
 
 ---
 
-## ⚠️ Known Issues / Próximos pasos para el siguiente Dev
+### 9. `make_pk()` — Función centralizada de deduplicación por persona
+**Archivo:** `scripts/causal_utils.py` — importar con `from causal_utils import make_pk`
+
+**Cadena de fallback:** `DNI > Correo > Telefono > Celular > _idx_{N}`
+
+**Limpieza por tipo de campo:**
+- DNI/Telefono/Celular: `.str.split('.').str[0].str.strip()` (quita decimales `.0`)
+- Correo: `.str.strip().str.lower()` (conserva puntos del dominio, case-insensitive)
+
+**REGLA:** NUNCA definir `_pk` inline en ningún script. Siempre usar `make_pk(df)`. Los 17 scripts de reporte (04-23) ya usan esta función.
+
+**Criterios de match** (implementados en `02_cruce_datos.py` → `cruce_exacto()`):
+
+| Paso | Campo Lead | Campo Inscripto | Match_Tipo | Limpieza |
+|------|-----------|-----------------|------------|----------|
+| 1 | DNI_match | Insc_DNI_match | Exacto (DNI) | `clean_dni`: strip, lower, sin `.0` |
+| 2 | Email_match | Insc_Email_match | Exacto (Email) | `clean_email`: strip, lower |
+| 3 | Phone_match | Insc_Phone_match | Exacto (Teléfono) | `clean_phone`: solo dígitos, sin prefijo internacional |
+| 4 | Phone_match | Insc_Cel_match | Exacto (Celular) | idem |
+| 5 | Cel_lead_match | Insc_Phone_match | Exacto (Celular) | idem |
+| 6 | Cel_lead_match | Insc_Cel_match | Exacto (Celular) | idem |
+
+Todos los matches son **case-insensitive** y secuenciales (cada paso excluye IDs ya matcheados).
+
+**`clean_phone` — filtro min 7 dígitos:** Teléfonos con menos de 7 dígitos se descartan como inválidos (prefijos sueltos como "11", "387" causaban falsos positivos de matching).
+
+### 10. Consultas vs Personas — Dos métricas diferentes
+
+| Concepto | Clave | Qué mide |
+|---|---|---|
+| **Consulta** | `Consulta: ID Consulta` | Interacción única en Salesforce con origen y canal específico |
+| **Persona** | `_pk` (via `make_pk()`) | Individuo único, puede tener múltiples consultas |
+
+- Las consultas con **diferente** ID de Salesforce **NUNCA se fusionan** — cada una tiene un valor propio.
+- Las consultas con **mismo** ID de Salesforce SÍ se fusionan (`groupby().first()` en `02_cruce_datos.py`).
+- Las **tasas de conversión** se calculan en DOS versiones: sobre consultas (eficiencia por interaccion) y sobre personas (KPI principal). Ver seccion 11.
+- **Ambas métricas** (consultas y personas) y **ambas tasas** deben aparecer en los informes.
+
+### 11. Tasas de Conversion — Dos metricas obligatorias
+
+Todos los informes que reporten tasas de conversion deben incluir **ambas**:
+
+| Tasa | Formula | Que mide |
+|---|---|---|
+| **Tasa s/Consultas** | inscriptos / consultas en ventana | Eficiencia por interaccion |
+| **Tasa s/Personas (KPI)** | inscriptos / personas unicas en ventana | Eficiencia por individuo |
+
+**Embudo:** Consultas → Personas → Inscriptos. Las personas son el paso intermedio del embudo entre consultas e inscriptos.
+
+**Aplica a:** General + por plataforma (Google, Meta, Bot). Scripts afectados: `04_reporte_final.py`, `07_pdf_completo.py`, y cualquier otro que reporte tasas de conversion.
+
+### 12. Any-Touch — Regla obligatoria (LEY)
+
+**Any-Touch es el modelo de atribución principal.** Un inscripto que consultó por Google, Meta Y Bot se cuenta como conversión en los TRES canales. NUNCA se prioriza ni recorta un canal sobre otro.
+
+**Prohibiciones:**
+- `mask_meta = mask_meta & ~bot_mask` → **PROHIBIDO** (excluye personas multi-canal)
+- Crear categorías mutuamente excluyentes entre Google, Meta y Bot → **PROHIBIDO**
+- La categoría "Otros" SÍ puede ser residual (`~google & ~meta & ~bot`)
+
+**Excepción:** Para CPL/CPA/ROI (scripts 20, 21), se permite last-touch/first-touch porque se divide presupuesto, pero el conteo de conversiones por canal siempre es any-touch.
+
+**Verificación:** `test_max_match_bot.py` valida que el pipeline captura el máximo teórico de matches con las 6 combinaciones.
+
+### 13. Test Independiente de Matching (`test_max_match_bot.py`)
+
+Script de verificación que valida que el pipeline de matching (`02_cruce_datos.py`) captura el 100% de los inscriptos matcheables.
+
+**Como ejecutar:**
+```bash
+cd h:\Test-Antigravity\marketing_report\scripts
+python test_max_match_bot.py
+```
+
+**Prerequisito:** Haber ejecutado `02_cruce_datos.py` previamente (necesita los CSVs en `outputs/Data_Base/`).
+
+**Que hace:**
+1. Lee inscriptos y leads desde los CSVs de salida del pipeline
+2. Construye indices de busqueda independientes (DNI, Email, Tel+Cel) con funciones `clean_*` identicas a las de `02_cruce_datos.py`
+3. Ejecuta cross-match con las **6 combinaciones** de campos telefonicos:
+   - DNI lead → DNI inscripto
+   - Email lead → Email inscripto
+   - Telefono lead → Telefono inscripto
+   - Telefono lead → Celular inscripto
+   - Celular lead → Telefono inscripto
+   - Celular lead → Celular inscripto
+4. Compara el resultado contra lo que el pipeline produjo (via `_pk` + any-touch)
+5. Identifica inscriptos "truly missed" (con lead bot pero no matcheados por ningun canal)
+
+**Normalizacion telefonica:**
+- Quita prefijo internacional (549, 54)
+- Quita 0 inicial (interurbano)
+- Quita 15 movil intercalado
+- Trunca a 10 digitos
+- **Minimo 7 digitos** (valores menores se descartan como prefijos sueltos)
+
+**Resultado esperado:** "OK: Pipeline captura el 100% de los matches posibles" para todos los segmentos.
+
+**Cuando correrlo:**
+- Despues de cualquier cambio en `02_cruce_datos.py` (logica de matching, `clean_phone`, etc.)
+- Despues de agregar nuevos archivos de leads o inscriptos
+- Como validacion de regresion antes de entregar informes
+
+---
+
+## Known Issues / Proximos pasos para el siguiente Dev
 
 1. **Retroalimentación de Fuzzy Matches Humanos:** El script `08` genera un Excel de control manual. Falta programar un script intermediario (ej. `02_b_integrar_fuzzy_manual.py`) que recoja los "Sí" de ese Excel en futuras ejecuciones y force a considerarlos "Exacto" en el cruce principal del script `02_cruce_datos.py`.
 2. **Alertas de Linter / Typos en Type Hints:** Algunos scripts en Python (`04`, `07`, `09`) arrojan warnings de linter por compatibilidad de tipos (ej. Pandas Dataframes operando con Literales), o el uso de *DeprecationWarnings* en `fpdf2` respecto del parámetro `ln=True`. Funcionan perfectamente, pero para subir a producción estricta se debería migrar a `new_x=XPos.LMARGIN, new_y=YPos.NEXT`.

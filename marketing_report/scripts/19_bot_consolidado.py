@@ -21,12 +21,13 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_md, render_causal_pdf, make_pk
 
 # ==========================================
 # CONFIGURACIÓN
 # ==========================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
-output_dir = os.path.join(base_dir, "outputs", "Bot_Consolidado")
+output_dir = os.path.join(base_dir, "outputs", "General", "Bot_Consolidado")
 os.makedirs(output_dir, exist_ok=True)
 
 SEGMENTOS = ['Grado_Pregrado', 'Cursos', 'Posgrados']
@@ -107,6 +108,15 @@ else:
 print(f"Total leads cargados: {len(df_all):,}")
 print(f"Fecha máxima: {max_date_str}")
 
+# Any-Touch Causal por segmento
+causal_por_seg = {}
+for seg in SEGMENTOS:
+    seg_dir = os.path.join(base_output_dir, seg)
+    l_csv = os.path.join(seg_dir, "reporte_marketing_leads_completos.csv")
+    i_csv = os.path.join(seg_dir, "reporte_marketing_inscriptos_origenes.csv")
+    if os.path.exists(l_csv):
+        causal_por_seg[seg] = compute_anytouch_causal(l_csv, seg, i_csv if os.path.exists(i_csv) else None)
+
 # ==========================================
 # CLASIFICACIÓN
 # ==========================================
@@ -115,9 +125,7 @@ df_all['_fl'] = df_all['FuenteLead'].astype(str).str.split('.').str[0].str.strip
 df_main = df_all[df_all['_mc'] != 'fuzzy'].copy()
 
 # Deduplicar por persona
-df_main['_pk'] = df_main['DNI'].astype(str).str.replace(r'\.0$', '', regex=True)
-df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
-    df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+df_main['_pk'] = make_pk(df_main)
 
 # ==========================================
 # FILTRO BOT (FuenteLead == 907)
@@ -275,8 +283,9 @@ md += "> Este informe consolida el rendimiento del canal Bot/Chatbot (FuenteLead
 md += "### Nota Metodologica\n"
 md += "- **Modelo de atribucion:** Deduplicado por persona (DNI). Cada inscripto se cuenta una vez.\n"
 md += "- **Tipos de match:** Exacto por DNI, Email, Telefono y Celular.\n"
-md += "- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Ver Informe Analitico (04) para detalle any-touch.\n"
-md += "- **Este informe:** Modelo directo — solo incluye inscriptos cuyo lead del Bot (FuenteLead=907) matcheo exactamente con un inscripto.\n"
+md += "- **Modelo Any-Touch ESTANDAR (este informe):** Incluye todas las consultas sin filtro de fecha vs pago.\n"
+md += "- **Modelo CAUSAL (informe separado):** Solo consultas con fecha <= fecha de pago. Excluye consultas post-pago (soporte, seguimiento). Ver Presupuesto_ROI_Causal.\n"
+md += "- **Este informe:** Modelo directo - solo incluye inscriptos cuyo lead del Bot (FuenteLead=907) matcheo exactamente con un inscripto.\n"
 md += "- **Ventana:** Grado_Pregrado desde Sep 2025. Cursos/Posgrados del ano calendario.\n\n"
 
 md += "## 1. Resumen Ejecutivo Consolidado\n\n"
@@ -298,6 +307,9 @@ md += f"**Total: {len(df_listado):,} inscriptos confirmados originados por el Bo
 md += df_listado.head(200).to_markdown(index=True) + "\n\n"
 if len(df_listado) > 200:
     md += f"*...y {len(df_listado) - 200} registros más. Ver Excel completo para el detalle total.*\n\n"
+
+for seg, cd in causal_por_seg.items():
+    md += render_causal_md(cd, seg)
 
 md_path = os.path.join(output_dir, "Informe_Bot_Consolidado.md")
 with open(md_path, 'w', encoding='utf-8') as f:
@@ -398,6 +410,18 @@ pdf.add_page()
 # Resumen ejecutivo
 pdf.set_font("Helvetica", "B", 12)
 pdf.cell(0, 10, "1. Resumen Ejecutivo Consolidado", new_x="LMARGIN", new_y="NEXT")
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font("Helvetica", "B", 9)
+pdf.cell(0, 6, "Metodologia aplicada:", new_x="LMARGIN", new_y="NEXT", fill=True)
+pdf.set_font("Helvetica", "", 8)
+pdf.multi_cell(0, 4,
+    "MODELO ESTANDAR (este informe): Match Exacto por DNI > Email > Telefono > Celular. "
+    "Deduplicado por persona (DNI). Atribucion Any-Touch (suma > 100%). "
+    "Incluye TODAS las consultas sin filtro de fecha vs pago.\n"
+    "MODELO CAUSAL (ver Presupuesto_ROI_Causal): Solo consultas con fecha <= fecha de pago.",
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(3)
 pdf.set_font("Helvetica", size=10)
 pdf.multi_cell(0, 6,
     f"Total Consultas (Registros) via Bot: {total_consultas_bot:,}\n"
@@ -530,6 +554,10 @@ for idx, (_, row) in enumerate(df_listado.iterrows()):
         val = str(row.get(col, ''))[:25]
         pdf.cell(col_w_pdf[i], 5, val, border=1, fill=True)
     pdf.ln()
+
+for seg, cd in causal_por_seg.items():
+    pdf.add_page()
+    render_causal_pdf(pdf, cd, seg)
 
 pdf_path = os.path.join(output_dir, "Informe_Bot_Consolidado.pdf")
 pdf.output(pdf_path)

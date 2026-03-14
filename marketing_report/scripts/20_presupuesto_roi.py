@@ -16,13 +16,14 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_pdf, make_pk
 
 # ============================================================
 # CONFIG
 # ============================================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
 presupuesto_dir = os.path.join(base_dir, "data", "1_raw", "presupuestos")
-output_dir = os.path.join(base_dir, "outputs", "Presupuesto_ROI")
+output_dir = os.path.join(base_dir, "outputs", "General", "Presupuesto_ROI")
 os.makedirs(output_dir, exist_ok=True)
 
 SEGMENTOS = ['Grado_Pregrado', 'Cursos', 'Posgrados']
@@ -263,10 +264,8 @@ for seg in SEGMENTOS:
     # Excluir fuzzy de conteos de conversión
     df_main = df[df['_mc'] != 'fuzzy'].copy()
 
-    # PK dedup persona
-    df_main['_pk'] = df_main['DNI'].astype(str).str.split('.').str[0].str.strip()
-    df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
-        df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+    # PK dedup persona (DNI > Email > Tel > Cel)
+    df_main['_pk'] = make_pk(df_main)
 
     # UTM y fuente
     df_main['_utm'] = df_main.get('UtmSource', pd.Series('', index=df_main.index)).astype(str).str.lower().str.strip()
@@ -332,21 +331,33 @@ for seg in SEGMENTOS:
     g_spend = GOOGLE_SPEND.get(seg, 0)
     total_spend = g_spend + f_spend
 
-    # Tasa de conversión
+    # Tasa de conversión (sobre personas = KPI principal, Last-Touch)
     tasa_google = safe_div(g_conv, g_leads) * 100
     tasa_fb = safe_div(f_conv, f_leads) * 100
     tasa_bot = safe_div(b_conv, b_leads) * 100
     tasa_total = safe_div(t_conv, t_leads) * 100
+
+    # Tasa sobre consultas (complementaria)
+    total_consultas_conv = len(df_conv)  # consultas (sin dedup) en ventana
+    tasa_total_consultas = safe_div(t_conv, total_consultas_conv) * 100
+
+    # Desglose por tipo de match
+    _m_dni = int((df_dedup['Match_Tipo'] == 'Exacto (DNI)').sum())
+    _m_email = int((df_dedup['Match_Tipo'] == 'Exacto (Email)').sum())
+    _m_tel = int((df_dedup['Match_Tipo'] == 'Exacto (Teléfono)').sum())
+    _m_cel = int((df_dedup['Match_Tipo'] == 'Exacto (Celular)').sum())
 
     seg_data[seg] = {
         'max_insc_ts': max_insc_ts,
         'max_insc_str': max_insc_ts.strftime('%d/%m/%Y'),
         'inicio': inicio,
         'ventana': f"{inicio.strftime('%d/%m/%Y')} - {max_insc_ts.strftime('%d/%m/%Y')}",
-        'total_leads_crm': t_leads,
+        'total_consultas_conv': total_consultas_conv,
+        'total_leads_crm': t_leads,  # personas dedup
         'total_conv': t_conv,
         'total_rev': t_rev,
-        'tasa_total': tasa_total,
+        'tasa_total': tasa_total,  # s/personas (KPI)
+        'tasa_total_consultas': tasa_total_consultas,  # s/consultas
         # Google
         'g_spend': g_spend, 'g_leads': g_leads, 'g_conv': g_conv, 'g_rev': g_rev,
         'g_cpl': safe_div(g_spend, g_leads), 'g_cpa': safe_div(g_spend, g_conv),
@@ -369,6 +380,8 @@ for seg in SEGMENTOS:
         'roi_total': safe_div(t_rev - total_spend, total_spend) * 100 if total_spend > 0 else 0,
         # First-touch (modelo alternativo)
         'ft': ft_data,
+        # Match breakdown
+        'm_dni': _m_dni, 'm_email': _m_email, 'm_tel': _m_tel, 'm_cel': _m_cel,
     }
     print(f"  {seg} [{PERIODO_LABEL[seg]}]:")
     print(f"    Ventana: {seg_data[seg]['ventana']}")
@@ -385,6 +398,14 @@ for seg in SEGMENTOS:
         seg_data[seg]['n_camp_actual'] = n_camp_act
         seg_data[seg]['n_camp_anterior'] = n_camp_ant
         print(f"    Campana actual: {n_camp_act:,} insc | Campana anterior: {n_camp_ant:,} insc")
+
+# Any-Touch Causal por segmento
+causal_por_seg = {}
+for seg in SEGMENTOS:
+    l_csv = os.path.join(base_dir, "outputs", "Data_Base", seg, "reporte_marketing_leads_completos.csv")
+    i_csv = os.path.join(base_dir, "outputs", "Data_Base", seg, "reporte_marketing_inscriptos_origenes.csv")
+    if os.path.exists(l_csv):
+        causal_por_seg[seg] = compute_anytouch_causal(l_csv, seg, i_csv if os.path.exists(i_csv) else None)
 
 # ============================================================
 # 3. CHARTS
@@ -548,6 +569,20 @@ pdf.set_auto_page_break(auto=True, margin=14)
 # =============== PÁGINA 1: RESUMEN EJECUTIVO ===============
 pdf.add_page()
 pdf.section_title('1. Resumen Ejecutivo de Inversión')
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font('Helvetica', 'B', 9)
+pdf.cell(0, 6, 'Metodologia aplicada:', new_x='LMARGIN', new_y='NEXT', fill=True)
+pdf.set_font('Helvetica', '', 8)
+pdf.multi_cell(0, 4,
+    'MODELO ESTANDAR (este informe): Match Exacto por DNI > Email > Telefono > Celular. '
+    'Deduplicado por persona (DNI). Atribucion Any-Touch (suma > 100%). '
+    'Incluye TODAS las consultas sin filtro de fecha vs pago.\n'
+    + ''.join([f'{s}: DNI ({seg_data[s]["m_dni"]:,}), Email ({seg_data[s]["m_email"]:,}), Tel ({seg_data[s]["m_tel"]:,}), Cel ({seg_data[s]["m_cel"]:,}). Total: {seg_data[s]["total_conv"]:,}.\n' for s in SEGMENTOS if s in seg_data])
+    + 'MODELO CAUSAL (ver Presupuesto_ROI_Causal): Solo consultas con fecha <= fecha de pago. '
+    'Excluye consultas post-pago.',
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(2)
 pdf.set_font('Helvetica', '', 9)
 pdf.set_text_color(*GRAY)
 pdf.cell(0, 5, f'Período Google Ads: {GOOGLE_PERIODO}  |  Período Facebook Ads: {fb_periodo}',
@@ -586,10 +621,10 @@ pdf.ln(4)
 
 # Tabla KPIs consolidada por segmento
 pdf.subsection('KPIs Consolidados por Segmento (todos los canales)')
-hdrs2 = ['Segmento', 'Período', 'Leads CRM', 'Inscriptos', 'Tasa Conv.', 'Inversión Total',
-         'CPL', 'CPA', 'Rev. Atribuida', 'ROI']
-wids2 = [30, 40, 22, 22, 20, 32, 28, 28, 32, 20]
-aligns2 = ['L', 'C', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R']
+hdrs2 = ['Segmento', 'Período', 'Consultas', 'Personas', 'Inscriptos', 'Tasa s/Cons.', 'Tasa s/Pers.',
+         'Inversión Total', 'CPA', 'Rev. Atribuida', 'ROI']
+wids2 = [28, 36, 22, 22, 20, 20, 20, 28, 26, 28, 18]
+aligns2 = ['L', 'C', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R']
 pdf.table_header(hdrs2, wids2, aligns2)
 
 for i, seg in enumerate(SEGMENTOS):
@@ -599,11 +634,12 @@ for i, seg in enumerate(SEGMENTOS):
     pdf.table_row([
         seg.replace('_', ' '),
         d['ventana'],
+        f"{d['total_consultas_conv']:,}",
         f"{d['total_leads_crm']:,}",
         f"{d['total_conv']:,}",
+        f"{d['tasa_total_consultas']:.2f}%",
         f"{d['tasa_total']:.2f}%",
         fmt_ars_full(d['total_spend']),
-        fmt_ars_full(safe_div(d['total_spend'], d['total_leads_crm'])) if d['total_spend'] > 0 else '-',
         fmt_ars_full(safe_div(d['total_spend'], d['total_conv'])) if d['total_spend'] > 0 else '-',
         fmt_ars_full(d['total_rev']),
         fmt_pct(d['roi_total']),
@@ -611,7 +647,7 @@ for i, seg in enumerate(SEGMENTOS):
 
 pdf.ln(3)
 pdf.nota(
-    'CPL = Inversion / Leads CRM (personas deduplicadas en ventana). '
+    'Tasa s/Cons. = Inscriptos / Consultas en ventana. Tasa s/Pers. = Inscriptos / Personas unicas en ventana (KPI principal). '
     'CPA = Inversion / Inscriptos (Match Exacto unicamente). '
     'Rev. Atribuida = suma de Insc_Haber de inscriptos cuyo lead se origino en ese canal. '
     'ROI = (Rev.Atribuida - Inversion) / Inversion x 100. '
@@ -685,7 +721,7 @@ pdf.ln(3)
 pdf.nota(
     'CPL = Inversion / Leads CRM deduplicados en ventana. '
     'CPA = Inversion / Inscriptos Match Exacto. '
-    'Tasa Conv. = Inscriptos Exacto / Leads CRM x 100. '
+    'Tasa Conv. = Inscriptos / Personas dedup del canal (modelo Last-Touch, cada persona en 1 solo canal). '
     'Grado/Pregrado: cohorte desde 01/09/2025. Cursos y Posgrados: anio calendario desde 01/01/2026.'
 )
 
@@ -957,6 +993,11 @@ for seg in SEGMENTOS:
 # ============================================================
 # 5. OUTPUT
 # ============================================================
+# Any-Touch Causal por segmento
+for seg, cd in causal_por_seg.items():
+    pdf.add_page()
+    render_causal_pdf(pdf, cd, seg)
+
 # Nota Metodológica
 pdf.add_page()
 pdf.section_title('Nota Metodologica')
@@ -965,7 +1006,9 @@ pdf.multi_cell(0, 5,
     'Modelo de atribucion: Last-Touch (consulta exacta mas reciente asigna el canal). '
     'Alternativa First-Touch disponible en pag. 3. Deduplicado por persona (DNI).\n\n'
     'Match Exacto: DNI > Email > Telefono > Celular (prioridad). '
-    'Solo se cuentan conversiones por Match Exacto (Fuzzy excluido de KPIs financieros).\n\n'
+    'Solo se cuentan conversiones por Match Exacto (Fuzzy excluido de KPIs financieros).\n'
+    + ''.join([f'{s}: DNI ({seg_data[s]["m_dni"]:,}), Email ({seg_data[s]["m_email"]:,}), Tel ({seg_data[s]["m_tel"]:,}), Cel ({seg_data[s]["m_cel"]:,}). Total: {seg_data[s]["total_conv"]:,}.\n' for s in SEGMENTOS if s in seg_data])
+    + '\n'
     'Any-Touch: Para ver cuantos inscriptos tuvieron contacto con cada canal (sin dedup entre canales), '
     'referirse al Informe Analitico (04_reporte_final).\n\n'
     'Ventana de conversion:\n'

@@ -15,6 +15,7 @@ import pandas as pd
 import os
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_pdf, make_pk
 # ==========================================
 import sys
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
@@ -32,6 +33,8 @@ inscriptos_csv = os.path.join(base_output_dir, "reporte_marketing_inscriptos_ori
 print("Cargando datos para resumen...")
 df = pd.read_csv(leads_csv, low_memory=False)
 df_insc = pd.read_csv(inscriptos_csv, low_memory=False)
+
+causal_data = compute_anytouch_causal(leads_csv, segmento, inscriptos_csv)
 
 def get_max_date(df_i):
     """Retorna (Timestamp, string_formateado) de la última fecha de pago de inscriptos."""
@@ -63,9 +66,7 @@ df_main = df[df['_mc'] != 'fuzzy'].copy()
 df_fuzzy = df[df['_mc'] == 'fuzzy'].copy()
 
 # Deduplicar por persona (Histórico de leads para no perder volumen)
-df_main['_pk'] = df_main['DNI'].astype(str).str.replace(r'\.0$', '', regex=True)
-df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
-    df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+df_main['_pk'] = make_pk(df_main)
 
 personas = df_main.drop_duplicates(subset='_pk')
 total_personas = len(personas)
@@ -88,9 +89,11 @@ else:
     df_main_conv = df_main[df_main['Fecha_Limpia'] <= max_insc_ts].copy()
     personas_conv_base = df_main_conv.drop_duplicates(subset='_pk')
 
-total_personas_conv = len(personas_conv_base)
+total_consultas_conv = len(df_main_conv)  # consultas en ventana de conversion
+total_personas_conv = len(personas_conv_base)  # personas unicas en ventana
 personas_conv = len(personas_conv_base[personas_conv_base['_mc'] == 'exacto'])
 tasa_dedup = (personas_conv / total_personas_conv * 100) if total_personas_conv > 0 else 0
+tasa_dedup_consultas = (personas_conv / total_consultas_conv * 100) if total_consultas_conv > 0 else 0
 
 # Totales
 total_registros = len(df_main)
@@ -167,15 +170,18 @@ with open(md_path, 'w', encoding='utf-8') as f:
     f.write("## Nota Metodologica\n")
     f.write("- **Modelo de atribucion principal:** Deduplicado por persona (DNI). Cada inscripto se cuenta una vez.\n")
     f.write("- **Tipos de match:** Exacto por DNI, Email, Telefono y Celular (en ese orden de prioridad).\n")
-    f.write("- **Modelo Any-Touch:** Disponible en el Informe Analitico (04). Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%).\n")
+    f.write("- **Modelo Any-Touch ESTANDAR (este informe):** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Incluye todas las consultas sin filtro de fecha vs pago.\n")
+    f.write("- **Modelo CAUSAL (informe separado):** Solo cuenta consultas cuya fecha <= fecha de pago. Excluye consultas post-pago. Ver Presupuesto_ROI_Causal.\n")
     f.write("- **Ventana de conversion:** Grado_Pregrado: leads desde Sep 2025. Cursos/Posgrados: leads del año calendario.\n")
     f.write("- **Datos fuente:** Salesforce (leads) + Sistema academico (inscriptos).\n\n")
     f.write("## Resumen Ejecutivo\n")
     if segmento == 'Grado_Pregrado':
         f.write("*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con la inscripcion a la primera cohorte. En mayo se abren a la segunda.)*\n\n")
+    f.write(f"- Total Consultas en Ventana de Conversion: {total_consultas_conv:,}\n")
+    f.write(f"- Personas Unicas en Ventana de Conversion: {total_personas_conv:,}\n")
     f.write(f"- Total Registros de Leads (Historico): {total_registros:,}\n")
-    f.write(f"- Personas Unicas (Muestra para conversion): {total_personas_conv:,}\n")
-    f.write(f"- Tasa de Conversion Global (deduplicada): {tasa_dedup:.2f}%\n")
+    f.write(f"- Tasa de Conversion sobre Consultas: {tasa_dedup_consultas:.2f}% (inscriptos / consultas)\n")
+    f.write(f"- Tasa de Conversion sobre Personas: {tasa_dedup:.2f}% (inscriptos / personas) **KPI principal**\n")
     f.write(f"- Inscriptos Atribuidos (exacto): {insc_exactos:,}\n")
     f.write(f"  - Match por DNI: {insc_por_dni:,}\n")
     f.write(f"  - Match por Email: {insc_por_email:,}\n")
@@ -273,6 +279,20 @@ pdf.ln(8)
 # ============================
 pdf.set_font('Helvetica', 'B', 18)
 pdf.cell(0, 12, 'Resumen Ejecutivo', new_x="LMARGIN", new_y="NEXT")
+pdf.ln(3)
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font('Helvetica', 'B', 9)
+pdf.cell(0, 6, 'Metodologia aplicada:', new_x="LMARGIN", new_y="NEXT", fill=True)
+pdf.set_font('Helvetica', '', 8)
+pdf.multi_cell(0, 4,
+    'MODELO ESTANDAR (este informe): Match Exacto por DNI > Email > Telefono > Celular. '
+    'Deduplicado por persona (DNI). Atribucion Any-Touch: un inscripto se cuenta en CADA canal (suma > 100%). '
+    'Se excluyen matches Fuzzy. Incluye TODAS las consultas sin filtro de fecha vs pago.\n'
+    'MODELO CAUSAL (informe separado): Solo consultas con fecha <= fecha de pago. '
+    'Excluye consultas post-pago. Ver Presupuesto_ROI_Causal.'
+    + (' Ventana: leads desde Sep 2025 (cohorte Ingreso 2026).' if segmento == 'Grado_Pregrado' else ''),
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
 pdf.ln(5)
 
 # Tabla principal
@@ -292,11 +312,12 @@ def table_row(label, val, bold=False):
     pdf.cell(180, 7, f'  {label}', border=1)
     pdf.cell(80, 7, f'  {val}', border=1, new_x="LMARGIN", new_y="NEXT")
 
-table_row('Total Registros de Leads', f'{total_registros:,}')
-table_row('Personas Unicas (Muestra Evaluada)', f'{total_personas_conv:,}')
-table_row('Leads Convertidos a Inscripto (exacto en muestra)', f'{total_exactos:,}')
-table_row('Personas Convertidas (deduplicado)', f'{personas_conv:,}')
-table_row('TASA DE CONVERSION REAL (deduplicada)', f'{tasa_dedup:.2f}%', bold=True)
+table_row('Total Registros de Leads (historico)', f'{total_registros:,}')
+table_row('Consultas en Ventana de Conversion', f'{total_consultas_conv:,}')
+table_row('Personas Unicas en Ventana de Conversion', f'{total_personas_conv:,}')
+table_row('Personas Convertidas (exacto, deduplicado)', f'{personas_conv:,}')
+table_row('Tasa de Conversion s/Consultas', f'{tasa_dedup_consultas:.2f}%')
+table_row('TASA DE CONVERSION s/Personas (KPI)', f'{tasa_dedup:.2f}%', bold=True)
 
 pdf.ln(3)
 pdf.set_font('Helvetica', 'B', 10)
@@ -423,6 +444,18 @@ for section_title, charts in sections:
             pdf.ln(8)
 
 # ============================
+# SECCION CAUSAL (Any-Touch Causal)
+# ============================
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 16)
+pdf.set_fill_color(52, 73, 94)
+pdf.set_text_color(255, 255, 255)
+pdf.cell(0, 12, '  Atribucion Causal (Any-Touch)', new_x="LMARGIN", new_y="NEXT", fill=True)
+pdf.set_text_color(0, 0, 0)
+pdf.ln(5)
+render_causal_pdf(pdf, causal_data, segmento)
+
+# ============================
 # CONCLUSIONES
 # ============================
 pdf.add_page()
@@ -496,10 +529,12 @@ memoria = f"""# Memoria Técnica: PDF Informe Analítico Completo
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total registros de leads | {total_registros:,} |
-| Personas únicas evaluadas (cohorte) | {total_personas_conv:,} |
+| Total registros de leads (historico) | {total_registros:,} |
+| Consultas en ventana de conversion | {total_consultas_conv:,} |
+| Personas unicas en ventana de conversion | {total_personas_conv:,} |
 | Personas convertidas (Exacto, dedup) | {personas_conv:,} |
-| Tasa conversión deduplicada | {tasa_dedup:.2f}% |
+| Tasa conversion s/Consultas | {tasa_dedup_consultas:.2f}% |
+| **Tasa conversion s/Personas (KPI)** | **{tasa_dedup:.2f}%** |
 | Matches Fuzzy (excluidos de tasa) | {total_fuzzy:,} |
 | Inscriptos exactos deduplicados | {insc_exactos:,} |
 |   - Match por DNI | {insc_por_dni:,} |

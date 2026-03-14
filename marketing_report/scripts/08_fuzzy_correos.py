@@ -10,7 +10,7 @@ debe ser completada manualmente (SI / NO) para confirmar si el match es correcto
 Nota: Es incremental — si ya existe el archivo Excel, solo agrega pares nuevos sin pisar
 las validaciones humanas previas.
 
-SALIDA (output_dir = outputs/Calidad_Datos/):
+SALIDA (output_dir = outputs/General/Calidad_Datos/):
   - control_manual_correos.xlsx   -> Pares candidatos (lleva columna Validado para revisión)
   - control_manual_correos.md     -> Documentación del proceso y estadísticas
 """
@@ -24,7 +24,7 @@ from datetime import datetime
 # CONFIGURACIÓN DE RUTAS
 # ============================================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
-output_dir = os.path.join(base_dir, "outputs", "Calidad_Datos")
+output_dir = os.path.join(base_dir, "outputs", "General", "Calidad_Datos")
 os.makedirs(output_dir, exist_ok=True)
 base_output_dir = os.path.join(base_dir, "outputs", "Data_Base")
 

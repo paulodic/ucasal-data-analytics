@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import os
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_md, render_causal_pdf, make_pk
 
 import sys
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
@@ -69,21 +70,26 @@ print(f"Fecha máxima: {max_date_str}")
 # Primero leemos los headers (nrows=1) para verificar qué columnas existen.
 print("Cargando datos de leads...")
 try:
-    usecols = ['Id. candidato/contacto', 'Correo', 'Match_Tipo', 'ColaNombre', 'PrimeraCola',
+    usecols = ['Id. candidato/contacto', 'Correo', 'DNI', 'Match_Tipo', 'ColaNombre', 'PrimeraCola',
                'FuenteLead', 'UtmSource', 'UtmCampaign', 'Carrera', 'Sede Nombre',
                'Consulta: Fecha de creación', 'Estado']
     cols_avail = pd.read_csv(leads_csv, nrows=1).columns.tolist()
     usecols = [c for c in usecols if c in cols_avail]  # Solo pedir las que existen
     df = pd.read_csv(leads_csv, usecols=usecols, low_memory=False)
+    causal_data = compute_anytouch_causal(leads_csv, segmento, inscriptos_csv)
 except Exception:
     # Fallback: cargar todo (lento, puede agotar RAM)
     df = pd.read_csv(leads_csv, low_memory=False)
+    causal_data = compute_anytouch_causal(leads_csv, segmento, inscriptos_csv)
 
 # ======================================================
 # FILTRO DE CATEGORÍAS (BOT VS META VS GOOGLE VS OTROS)
 # ======================================================
 df['FuenteLead_Num'] = pd.to_numeric(df['FuenteLead'], errors='coerce')
 df['UtmSource_Clean'] = df['UtmSource'].astype(str).str.lower().str.strip()
+
+# Clave única por persona para deduplicar inscriptos (DNI > Email > Tel > Cel)
+df['_pk'] = make_pk(df)
 
 # Máscaras Históricas (Volumen)
 bot_mask = df['FuenteLead_Num'] == 907
@@ -94,10 +100,9 @@ mask_meta = df['UtmSource_Clean'].str.contains('|'.join(meta_keywords), na=False
 google_keywords = ['google', 'gads']
 mask_google = df['UtmSource_Clean'].str.contains('|'.join(google_keywords), na=False)
 
-# Evitar superposiciones (prevalecen las definiciones nativas)
-mask_meta = mask_meta & ~bot_mask
-mask_google = mask_google & ~bot_mask & ~mask_meta
-
+# ANY-TOUCH: cada canal es independiente, sin exclusiones.
+# Un lead puede contar en múltiples canales simultáneamente.
+# "Otros" = leads que no pertenecen a ninguno de los 3 canales principales.
 mask_otros = ~(bot_mask | mask_meta | mask_google)
 
 df_bot = df[bot_mask].copy()
@@ -106,30 +111,19 @@ df_google = df[mask_google].copy()
 df_otros = df[mask_otros].copy()
 df_nobot = df[~bot_mask].copy()
 
-total_leads = len(df)
-total_bot = len(df_bot)
-total_meta = len(df_meta)
-total_google = len(df_google)
-total_otros = len(df_otros)
-total_nobot = len(df_nobot)
-
-pct_bot = (total_bot / total_leads * 100) if total_leads > 0 else 0
-
-print(f"Leads -> Bot: {total_bot:,} | Meta: {total_meta:,} | Google: {total_google:,} | Otros: {total_otros:,}")
-
-# REGLA DE NEGOCIO COHORTES (Muestra para Conversión)
+# REGLA DE NEGOCIO COHORTES: para Grado_Pregrado, solo leads desde Sep 2025
 if segmento == 'Grado_Pregrado':
     df['Fecha_Limpia'] = pd.to_datetime(df['Consulta: Fecha de creación'], format='mixed', dayfirst=True, errors='coerce')
     df_conv = df[df['Fecha_Limpia'] >= '2025-09-01'].copy()
 else:
     df_conv = df.copy()
 
+# Recalcular máscaras sobre df_conv (filtrado por cohorte)
 bot_mask_conv = df_conv['FuenteLead_Num'] == 907
 mask_meta_conv = df_conv['UtmSource_Clean'].str.contains('|'.join(meta_keywords), na=False) | (df_conv['FuenteLead_Num'] == 18)
 mask_google_conv = df_conv['UtmSource_Clean'].str.contains('|'.join(google_keywords), na=False)
 
-mask_meta_conv = mask_meta_conv & ~bot_mask_conv
-mask_google_conv = mask_google_conv & ~bot_mask_conv & ~mask_meta_conv
+# ANY-TOUCH: sin exclusiones entre canales
 mask_otros_conv = ~(bot_mask_conv | mask_meta_conv | mask_google_conv)
 
 df_bot_conv = df_conv[bot_mask_conv].copy()
@@ -144,6 +138,18 @@ total_google_conv = len(df_google_conv)
 total_otros_conv = len(df_otros_conv)
 total_nobot_conv = len(df_nobot_conv)
 
+# Totales para visualización (= cohorte filtrada)
+total_leads = len(df_conv)
+total_bot = total_bot_conv
+total_meta = total_meta_conv
+total_google = total_google_conv
+total_otros = total_otros_conv
+total_nobot = total_nobot_conv
+
+pct_bot = (total_bot / total_leads * 100) if total_leads > 0 else 0
+
+print(f"Leads (cohorte) -> Bot: {total_bot:,} | Meta: {total_meta:,} | Google: {total_google:,} | Otros: {total_otros:,}")
+
 # Clasificar match
 df_conv['Es_Exacto'] = df_conv['Match_Tipo'].astype(str).str.contains('Exacto', case=False, na=False).astype(int)
 
@@ -153,36 +159,51 @@ df_google_conv['Es_Exacto'] = df_conv['Es_Exacto'][mask_google_conv].copy()
 df_otros_conv['Es_Exacto'] = df_conv['Es_Exacto'][mask_otros_conv].copy()
 df_nobot_conv['Es_Exacto'] = df_conv['Es_Exacto'][~bot_mask_conv].copy()
 
-tasa_bot = (df_bot_conv['Es_Exacto'].sum() / total_bot_conv * 100) if total_bot_conv > 0 else 0
-tasa_meta = (df_meta_conv['Es_Exacto'].sum() / total_meta_conv * 100) if total_meta_conv > 0 else 0
-tasa_google = (df_google_conv['Es_Exacto'].sum() / total_google_conv * 100) if total_google_conv > 0 else 0
-tasa_otros = (df_otros_conv['Es_Exacto'].sum() / total_otros_conv * 100) if total_otros_conv > 0 else 0
-tasa_nobot = (df_nobot_conv['Es_Exacto'].sum() / total_nobot_conv * 100) if total_nobot_conv > 0 else 0
+# Contar inscriptos deduplicados por persona (no por fila de lead)
+def _count_insc_dedup(sub):
+    """Cuenta personas únicas con match exacto."""
+    return sub[sub['Es_Exacto'] == 1].drop_duplicates(subset='_pk')['_pk'].nunique()
+
+total_bot_insc = _count_insc_dedup(df_bot_conv)
+total_meta_insc = _count_insc_dedup(df_meta_conv)
+total_google_insc = _count_insc_dedup(df_google_conv)
+total_otros_insc = _count_insc_dedup(df_otros_conv)
+total_nobot_insc = _count_insc_dedup(df_nobot_conv)
+total_insc = _count_insc_dedup(df_conv)
+
+tasa_bot = (total_bot_insc / total_bot_conv * 100) if total_bot_conv > 0 else 0
+tasa_meta = (total_meta_insc / total_meta_conv * 100) if total_meta_conv > 0 else 0
+tasa_google = (total_google_insc / total_google_conv * 100) if total_google_conv > 0 else 0
+tasa_otros = (total_otros_insc / total_otros_conv * 100) if total_otros_conv > 0 else 0
+tasa_nobot = (total_nobot_insc / total_nobot_conv * 100) if total_nobot_conv > 0 else 0
+
+# Desglose por tipo de match (todos los canales, deduplicado por persona)
+insc_dni = df_conv[df_conv['Match_Tipo'] == 'Exacto (DNI)'].drop_duplicates(subset='_pk')['_pk'].nunique()
+insc_email = df_conv[df_conv['Match_Tipo'] == 'Exacto (Email)'].drop_duplicates(subset='_pk')['_pk'].nunique()
+insc_tel = df_conv[df_conv['Match_Tipo'] == 'Exacto (Teléfono)'].drop_duplicates(subset='_pk')['_pk'].nunique()
+insc_cel = df_conv[df_conv['Match_Tipo'] == 'Exacto (Celular)'].drop_duplicates(subset='_pk')['_pk'].nunique()
 
 # ============ MARKDOWN ============
 md = f"# Análisis de Leads Originados por Bot/Chatbot\n\n"
 md += f"**Datos actualizados al {max_date_str}**\n\n"
 md += "### Nota Metodologica\n"
 md += "- **Modelo de atribucion:** Deduplicado por persona (DNI). Cada canal se evalua por separado.\n"
-md += "- **Tipos de match:** Exacto por DNI, Email, Telefono y Celular.\n"
-md += "- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (Bot, Google, Meta, Otros). La suma supera 100%.\n"
-md += "- **Tabla 1 (Volumen):** Modelo directo por canal — cada lead se clasifica en UN canal segun su FuenteLead/UTM.\n"
+md += f"- **Match Exacto:** DNI ({insc_dni:,}), Email ({insc_email:,}), Teléfono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {int(total_insc):,}.\n"
+md += "- **Modelo Any-Touch ESTANDAR (este informe):** Un inscripto se cuenta en CADA canal por el que consulto (Bot, Google, Meta, Otros). La suma supera 100%. Incluye todas las consultas sin filtro de fecha vs pago.\n"
+md += "- **Modelo CAUSAL (informe separado):** Solo cuenta consultas cuya fecha <= fecha de pago. Excluye consultas post-pago (soporte, seguimiento). Ver Presupuesto_ROI_Causal.\n"
+md += "- **Tabla 1 (Volumen):** Modelo directo por canal - cada lead se clasifica en UN canal segun su FuenteLead/UTM.\n"
 md += "- **Tabla 3 (Match):** Desglose algoritmico del tipo de cruce Lead-Inscripto.\n\n"
 if segmento == 'Grado_Pregrado':
     md += "*(Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con la inscripcion a la primera cohorte.)*\n\n"
 
-# Resumen
-total_bot_insc = df_bot_conv['Es_Exacto'].sum()
-total_nobot_insc = df_nobot_conv['Es_Exacto'].sum()
-total_insc = df_conv['Es_Exacto'].sum()
-
+periodo_label = "desde Sep 2025 (Cohorte Ingreso 2026)" if segmento == 'Grado_Pregrado' else "año 2026"
 md += "## 1. Volumen y Proporción\n\n"
+md += f"*Datos filtrados: leads {periodo_label}*\n\n"
 md += f"| Métrica | Bot/Chatbot | Meta Ads | Google Ads | Otros Canales | Total |\n"
 md += f"|---------|------------|----------|------------|---------------|-------|\n"
-md += f"| Leads (Histórico) | {total_bot:,} | {total_meta:,} | {total_google:,} | {total_otros:,} | {total_leads:,} |\n"
-md += f"| Leads (Muestra Conv.) | {total_bot_conv:,} | {total_meta_conv:,} | {total_google_conv:,} | {total_otros_conv:,} | {len(df_conv):,} |\n"
-md += f"| Inscriptos Confirmados | {total_bot_insc:,} | {df_meta_conv['Es_Exacto'].sum():,} | {df_google_conv['Es_Exacto'].sum():,} | {df_otros_conv['Es_Exacto'].sum():,} | {total_insc:,} |\n"
-md += f"| Conversión (Muestra) | {tasa_bot:.2f}% | {tasa_meta:.2f}% | {tasa_google:.2f}% | {tasa_otros:.2f}% | {(total_insc/len(df_conv)*100) if len(df_conv)>0 else 0:.2f}% |\n\n"
+md += f"| Leads (Cohorte) | {total_bot:,} | {total_meta:,} | {total_google:,} | {total_otros:,} | {total_leads:,} |\n"
+md += f"| Inscriptos Confirmados | {total_bot_insc:,} | {total_meta_insc:,} | {total_google_insc:,} | {total_otros_insc:,} | {total_insc:,} |\n"
+md += f"| Tasa de Conversión | {tasa_bot:.2f}% | {tasa_meta:.2f}% | {tasa_google:.2f}% | {tasa_otros:.2f}% | {(total_insc/len(df_conv)*100) if len(df_conv)>0 else 0:.2f}% |\n\n"
 
 # Pie chart
 plt.figure(figsize=(8, 8))
@@ -193,15 +214,40 @@ plt.title('Proporción de Leads: Naturaleza del Contacto', fontsize=14)
 plt.savefig(os.path.join(output_dir, 'pie_bot_leads.png'), bbox_inches='tight')
 plt.close()
 
-# Conversión
-md += "## 2. Tasa de Conversión (Inscripción)\n\n"
-plt.figure(figsize=(8, 5))
-bars = plt.bar(['Bot/Chatbot', 'Meta Ads', 'Google Ads'], [tasa_bot, tasa_meta, tasa_google], color=['#9b59b6', '#3b5998', '#ea4335'])
-for bar, val in zip(bars, [tasa_bot, tasa_meta, tasa_google]):
-    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1, f'{val:.2f}%', ha='center', fontsize=12)
+# Conversión comparativa
+insc_meta = int(total_meta_insc)
+insc_google = int(total_google_insc)
+insc_otros = int(total_otros_insc)
+tasa_total = (total_insc / len(df_conv) * 100) if len(df_conv) > 0 else 0
+
+md += "## 2. Tasa de Conversión Comparativa (Bot vs Plataformas Pagas)\n\n"
+md += "| Canal | Leads (Muestra) | Inscriptos | Tasa Conversión | vs Promedio |\n"
+md += "|-------|----------------:|-----------:|----------------:|------------:|\n"
+canales_comp = [
+    ('Bot/Chatbot', total_bot_conv, int(total_bot_insc), tasa_bot),
+    ('Meta Ads', total_meta_conv, insc_meta, tasa_meta),
+    ('Google Ads', total_google_conv, insc_google, tasa_google),
+    ('Otros Canales', total_otros_conv, insc_otros, tasa_otros),
+]
+for nombre, leads_c, insc_c, tasa_c in canales_comp:
+    diff = tasa_c - tasa_total
+    signo = '+' if diff >= 0 else ''
+    md += f"| {nombre} | {leads_c:,} | {insc_c:,} | {tasa_c:.2f}% | {signo}{diff:.2f} pp |\n"
+md += f"| **Promedio General** | **{len(df_conv):,}** | **{int(total_insc):,}** | **{tasa_total:.2f}%** | — |\n\n"
+
+plt.figure(figsize=(10, 6))
+nombres = ['Bot/Chatbot', 'Meta Ads', 'Google Ads', 'Otros']
+tasas = [tasa_bot, tasa_meta, tasa_google, tasa_otros]
+colores = ['#9b59b6', '#3b5998', '#ea4335', '#95a5a6']
+bars = plt.bar(nombres, tasas, color=colores)
+for bar, val in zip(bars, tasas):
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1, f'{val:.2f}%', ha='center', fontsize=12, fontweight='bold')
+plt.axhline(y=tasa_total, color='#2c3e50', linestyle='--', linewidth=1.5, label=f'Promedio: {tasa_total:.2f}%')
+plt.legend(fontsize=11)
 plt.ylabel('Tasa de Inscripción (%)')
-plt.title('Tasa de Conversión Real (Inscriptos / Consultas de la Fuente)')
+plt.title('Tasa de Conversión: Bot vs Plataformas Pagas')
 plt.grid(axis='y', alpha=0.3)
+plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'conversion_bot.png'), bbox_inches='tight')
 plt.close()
 
@@ -309,7 +355,7 @@ class PDFBot(FPDF):
         self.cell(0, 6, f"Datos actualizados al {max_date_str}", ln=True, align="C")
         if segmento == 'Grado_Pregrado':
             self.set_font("Helvetica", 'I', 8)
-            self.cell(0, 6, "Nota Cohortes: Las tasas de conversion se calculan asumiendo como denominador los leads desde Septiembre 2024.", ln=True, align="C")
+            self.cell(0, 6, "Nota Cohortes: Todos los datos filtrados desde Septiembre 2025 (Cohorte Ingreso 2026).", ln=True, align="C")
         self.ln(8)
     def footer(self):
         self.set_y(-15)
@@ -321,11 +367,24 @@ pdf.add_page()
 
 pdf.set_font("Helvetica", "B", 12)
 pdf.cell(0, 10, "1. Proporción de Leads y Tasa de Conversión Comparativa", ln=True)
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font("Helvetica", "B", 9)
+pdf.cell(0, 6, "Metodologia aplicada:", ln=True, fill=True)
+pdf.set_font("Helvetica", "", 8)
+pdf.multi_cell(0, 4,
+    f"MODELO ESTANDAR (este informe): Match Exacto: DNI ({insc_dni:,}), Email ({insc_email:,}), Telefono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {int(total_insc):,}. "
+    "Deduplicado por persona (DNI). Atribucion Any-Touch: un inscripto se cuenta en CADA canal (suma > 100%). "
+    "Incluye TODAS las consultas sin filtro de fecha vs pago.\n"
+    "MODELO CAUSAL (ver Presupuesto_ROI_Causal): Solo consultas con fecha <= fecha de pago. "
+    "Excluye consultas post-pago (soporte, seguimiento)."
+    + (" Ventana: leads desde Sep 2025 (cohorte Ingreso 2026)." if segmento == 'Grado_Pregrado' else ''),
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(3)
 pdf.set_font("Helvetica", size=10)
-pdf.multi_cell(0, 6, f"Consultas Originadas (Histórico) -> Bot: {total_bot:,} | Meta: {total_meta:,} | Google: {total_google:,} | Otros: {total_otros:,}\n"
-                     f"Consultas (Muestra) -> Bot: {total_bot_conv:,} | Meta: {total_meta_conv:,} | Google: {total_google_conv:,} | Otros: {total_otros_conv:,}\n"
-                     f"Inscriptos Ratificados -> Bot: {df_bot_conv['Es_Exacto'].sum():,} | Meta: {df_meta_conv['Es_Exacto'].sum():,} | Google: {df_google_conv['Es_Exacto'].sum():,} | Otros: {df_otros_conv['Es_Exacto'].sum():,}\n"
-                     f"Tasa Modulada de Inscripción -> Bot: {tasa_bot:.2f}% | Meta: {tasa_meta:.2f}% | Google: {tasa_google:.2f}% | Otros: {tasa_otros:.2f}%")
+pdf.multi_cell(0, 6, f"Leads (Cohorte) -> Bot: {total_bot:,} | Meta: {total_meta:,} | Google: {total_google:,} | Otros: {total_otros:,}\n"
+                     f"Inscriptos Confirmados -> Bot: {int(total_bot_insc):,} | Meta: {total_meta_insc:,} | Google: {total_google_insc:,} | Otros: {total_otros_insc:,}\n"
+                     f"Tasa de Conversion -> Bot: {tasa_bot:.2f}% | Meta: {tasa_meta:.2f}% | Google: {tasa_google:.2f}% | Otros: {tasa_otros:.2f}%")
 pdf.ln(5)
 try:
     pdf.image(os.path.join(output_dir, 'pie_bot_leads.png'), w=130)
@@ -333,8 +392,34 @@ except Exception: pass
 
 pdf.add_page()
 pdf.set_font("Helvetica", "B", 12)
-pdf.cell(0, 10, "2. Tasa de Conversión", ln=True)
-pdf.ln(5)
+pdf.cell(0, 10, "2. Tasa de Conversion: Bot vs Plataformas Pagas", ln=True)
+pdf.ln(3)
+
+# Tabla comparativa en PDF
+pdf.set_font("Helvetica", "B", 9)
+col_w = [40, 35, 30, 35, 30]
+hdr = ['Canal', 'Leads (Muestra)', 'Inscriptos', 'Tasa Conversion', 'vs Promedio']
+for h, w in zip(hdr, col_w):
+    pdf.cell(w, 7, h, border=1, align='C')
+pdf.ln()
+pdf.set_font("Helvetica", "", 9)
+for i, (nombre, leads_c, insc_c, tasa_c) in enumerate(canales_comp):
+    diff = tasa_c - tasa_total
+    signo = '+' if diff >= 0 else ''
+    fill = (i % 2 == 0)
+    if fill:
+        pdf.set_fill_color(235, 245, 255)
+    vals = [nombre, f'{leads_c:,}', f'{insc_c:,}', f'{tasa_c:.2f}%', f'{signo}{diff:.2f} pp']
+    for v, w in zip(vals, col_w):
+        pdf.cell(w, 6, v, border=1, fill=fill)
+    pdf.ln()
+    pdf.set_fill_color(255, 255, 255)
+pdf.set_font("Helvetica", "B", 9)
+vals_tot = ['Promedio General', f'{len(df_conv):,}', f'{int(total_insc):,}', f'{tasa_total:.2f}%', '--']
+for v, w in zip(vals_tot, col_w):
+    pdf.cell(w, 6, v, border=1)
+pdf.ln(8)
+
 try:
     pdf.image(os.path.join(output_dir, 'conversion_bot.png'), w=200)
 except Exception: pass

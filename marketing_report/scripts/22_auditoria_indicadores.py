@@ -8,7 +8,7 @@ PROPOSITO: Verificar que los datos del pipeline son coherentes entre sí y con
 los reportes PDF generados. Detecta anomalias (tasa > 30%, Fuzzy excesivo, etc.)
 y compara KPIs entre segmentos.
 
-SALIDA (output_dir = outputs/Auditoria_Indicadores/):
+SALIDA (output_dir = outputs/General/Auditoria_Indicadores/):
   - Auditoria_Indicadores.xlsx    -> Excel con 5 hojas (KPIs, canales, checks, alertas)
   - Auditoria_Indicadores.pdf     -> Informe visual con KPIs y tabla de checks
   - Auditoria_Indicadores.md      -> Documentacion textual con resumen ejecutivo
@@ -18,6 +18,7 @@ import numpy as np
 import os
 import sys
 from datetime import datetime
+from causal_utils import make_pk as _make_pk_shared
 from fpdf import FPDF
 
 # ============================================================
@@ -25,7 +26,7 @@ from fpdf import FPDF
 # ============================================================
 BASE_DIR = r"h:\Test-Antigravity\marketing_report"
 DB_DIR   = os.path.join(BASE_DIR, "outputs", "Data_Base")
-OUT_DIR  = os.path.join(BASE_DIR, "outputs", "Auditoria_Indicadores")
+OUT_DIR  = os.path.join(BASE_DIR, "outputs", "General", "Auditoria_Indicadores")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 SEGMENTOS = ["Grado_Pregrado", "Cursos", "Posgrados"]
@@ -77,17 +78,8 @@ def classify_match(v):
 
 
 def make_pk(df: pd.DataFrame) -> pd.Series:
-    """Clave de deduplicación: prioriza DNI > Correo > ID Consulta."""
-    pk = df.get('DNI', pd.Series(dtype=str)).astype(str).str.split('.').str[0].str.strip()
-    pk = pk.replace({'nan': '', 'None': ''})
-    for fallback_col in ['Correo', 'Consulta: ID Consulta']:
-        if fallback_col in df.columns:
-            mask = pk == ''
-            pk[mask] = df.loc[mask, fallback_col].astype(str).str.strip().replace({'nan': '', 'None': ''})
-    # Último recurso: índice
-    mask = pk == ''
-    pk[mask] = df.index[mask].astype(str)
-    return pk
+    """Delega a la función compartida en causal_utils (DNI > Email > Tel > Cel > idx)."""
+    return _make_pk_shared(df)
 
 
 def classify_fuente(df: pd.DataFrame) -> pd.Series:
@@ -185,6 +177,12 @@ for seg in SEGMENTOS:
     n_fuzzy_dedup  = (df_dedup['_mc'] == 'Fuzzy').sum()
     n_sin_dedup    = (df_dedup['_mc'] == 'Sin_Match').sum()
 
+    # Desglose por tipo de match exacto
+    n_dni  = int((df_dedup['Match_Tipo'] == 'Exacto (DNI)').sum())
+    n_email = int((df_dedup['Match_Tipo'] == 'Exacto (Email)').sum())
+    n_tel  = int((df_dedup['Match_Tipo'] == 'Exacto (Teléfono)').sum())
+    n_cel  = int((df_dedup['Match_Tipo'] == 'Exacto (Celular)').sum())
+
     # Ventana de conversión: período relevante para calcular tasa de conversión
     start = COHORT_START.get(seg)
     if start:
@@ -265,6 +263,10 @@ for seg in SEGMENTOS:
         'Check_Raw_Sum':          int(n_exacto + n_fuzzy + n_sinmatch),  # debe == Leads_Raw
         'Personas_Dedup':         n_dedup,
         'Exacto_Dedup':           int(n_exacto_dedup),
+        'Exacto_DNI':             n_dni,
+        'Exacto_Email':           n_email,
+        'Exacto_Telefono':        n_tel,
+        'Exacto_Celular':         n_cel,
         'Fuzzy_Dedup':            int(n_fuzzy_dedup),
         'Sin_Match_Dedup':        int(n_sin_dedup),
         'Check_Dedup_Sum':        int(n_exacto_dedup + n_fuzzy_dedup + n_sin_dedup),  # debe == Personas_Dedup
@@ -508,7 +510,7 @@ def safe_pdf_text(s):
             .encode('latin-1', errors='replace').decode('latin-1'))
 
 print("\nGenerando PDF de auditoria...")
-pdf = FPDF()
+pdf = FPDF('L')  # Landscape para que las tablas no se corten
 pdf.add_page()
 
 # Encabezado
@@ -526,13 +528,14 @@ pdf.set_font('Helvetica', '', 9)
 # Métricas a mostrar en el PDF (subconjunto de todas las métricas del Excel)
 metricas_pdf = [
     'Leads_Raw', 'Personas_Dedup', 'Exacto_Dedup',
+    'Exacto_DNI', 'Exacto_Email', 'Exacto_Telefono', 'Exacto_Celular',
     'Leads_Ventana_Dedup', 'Conv_Ventana_Exacto', 'Tasa_Conv_%',
     'Google_Spend_ARS', 'Facebook_Spend_ARS', 'CPL_Google', 'CPA_Google',
     'CPL_Facebook', 'CPA_Facebook', 'ROI_Google_%', 'ROI_Facebook_%',
 ]
 # Encabezado de tabla
-col_w_m = 65
-col_w_v = 55
+col_w_m = 80
+col_w_v = 60
 pdf.set_font('Helvetica', 'B', 8)
 pdf.set_fill_color(31, 78, 121)
 pdf.set_text_color(255, 255, 255)
@@ -572,7 +575,7 @@ pdf.cell(0, 8, '2. Checks de Consistencia del Pipeline', ln=True)
 pdf.set_font('Helvetica', 'B', 8)
 pdf.set_fill_color(31, 78, 121)
 pdf.set_text_color(255, 255, 255)
-chk_ws = [30, 100, 25, 25, 20]
+chk_ws = [40, 110, 35, 35, 25]
 chk_hs = ['Segmento', 'Check', 'Esperado', 'Obtenido', 'OK']
 for h, w in zip(chk_hs, chk_ws):
     pdf.cell(w, 7, h, border=1, fill=True, align='C')
@@ -589,9 +592,9 @@ for i, (_, row) in enumerate(df_checks.iterrows()):
         pdf.set_fill_color(255, 235, 156)   # amarillo (ALERTA)
     vals = [
         safe_pdf_text(row.get('Segmento', '')),
-        safe_pdf_text(str(row.get('Check', ''))[:65]),
-        safe_pdf_text(str(row.get('Esperado', ''))[:18]),
-        safe_pdf_text(str(row.get('Obtenido', ''))[:18]),
+        safe_pdf_text(str(row.get('Check', ''))[:75]),
+        safe_pdf_text(str(row.get('Esperado', ''))[:25]),
+        safe_pdf_text(str(row.get('Obtenido', ''))[:25]),
         ok_val,
     ]
     for v, w in zip(vals, chk_ws):

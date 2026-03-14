@@ -17,7 +17,7 @@ def generar_pdf():
     # El archivo origen (Artefacto MD de Gemini que actua como fuente de verdad)
     md_file = r'C:\Users\Paulo\.gemini\antigravity\brain\31c83128-f29d-4b23-9261-3273ffb5adad\EDA_Anomalies_Ads_Integration.md'
     # Destino físico en la carpeta root del marketing report o en reportes
-    output_dir = r'h:\Test-Antigravity\marketing_report\outputs'
+    output_dir = r'h:\Test-Antigravity\marketing_report\outputs\General'
     pdf_out = os.path.join(output_dir, 'EDA_Anomalies_Report.pdf')
 
     if not os.path.exists(md_file):

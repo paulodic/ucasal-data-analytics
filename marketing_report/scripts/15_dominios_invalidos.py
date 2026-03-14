@@ -14,7 +14,7 @@ DESCUBRIMIENTO CLAVE:
   gmail.com.ar NO EXISTE como dominio. Es el error más común en Argentina
   (434 leads afectados). Ver README_DEV.md Lección 6.
 
-SALIDA (output_dir = outputs/Calidad_Datos/):
+SALIDA (output_dir = outputs/General/Calidad_Datos/):
   - dominios_invalidos.pdf    -> Informe visual con tablas de typos y dominios sospechosos
   - dominios_invalidos.md     -> Documentación markdown del análisis
   - dominios_invalidos.xlsx   -> Datos en Excel (2 hojas: Typos_Conocidos, Dominios_Sospechosos)
@@ -29,7 +29,7 @@ from fpdf import FPDF
 # CONFIGURACIÓN DE RUTAS
 # ============================================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
-output_dir = os.path.join(base_dir, "outputs", "Calidad_Datos")
+output_dir = os.path.join(base_dir, "outputs", "General", "Calidad_Datos")
 os.makedirs(output_dir, exist_ok=True)
 base_output_dir = os.path.join(base_dir, "outputs", "Data_Base")
 # CSV consolidado (todos los segmentos)
@@ -68,7 +68,13 @@ CORRECCIONES = {
     'gmail.om': 'gmail.com',
     'gmail.coom': 'gmail.com',    # doble 'o'
     'gmail.comm': 'gmail.com',    # doble 'm'
+    'gmail.comc': 'gmail.com',   # 'c' extra al final
+    'gmil.com': 'gmail.com',     # falta la 'a'
+    'gimail.com': 'gmail.com',   # inversión g-i
+    'gmeil.com': 'gmail.com',    # 'e' en lugar de 'a'
+    'hmail.com': 'gmail.com',    # falta la 'g'
     'hotmail.con': 'hotmail.com',
+    'gotmail.com': 'hotmail.com', # 'g' en lugar de 'h'
     'hotamil.com': 'hotmail.com',
     'hotmal.com': 'hotmail.com',
     'hotmil.com': 'hotmail.com',
@@ -205,6 +211,14 @@ for _, row in small_domains.head(30).iterrows():
 df_sospechosos = pd.DataFrame(susp_results)
 md_content += df_sospechosos.to_markdown(index=False) + "\n\n"
 
+md_content += "## Nota Importante\n\n"
+md_content += ("**A la fecha (marzo 2026), las correcciones de dominios identificadas en este informe "
+               "NO se aplican en el proceso de matching de leads con inscriptos** (`02_cruce_datos.py`). "
+               "Este reporte es exclusivamente de auditoria y diagnostico. Los emails con dominios "
+               "erroneos siguen sin matchear contra la base de inscriptos. "
+               "Si se implementara la correccion previa al cruce, los matches recuperables estimados "
+               "en la tabla anterior podrian concretarse.\n\n")
+
 # ============================================================
 # GUARDAR MARKDOWN Y EXCEL
 # ============================================================
@@ -221,7 +235,7 @@ with pd.ExcelWriter(os.path.join(output_dir, 'dominios_invalidos.xlsx')) as writ
 # ============================================================
 print("Generando PDF de calidad de datos...")
 
-pdf = FPDF()
+pdf = FPDF('L')  # Landscape para que las tablas no se corten
 pdf.add_page()
 
 # Encabezado
@@ -305,6 +319,20 @@ for i, (_, r) in enumerate(df_sospechosos.iterrows()):
     pdf.ln()
     pdf.set_fill_color(255, 255, 255)
 
+# Nota importante
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 11)
+pdf.cell(0, 8, 'Nota Importante', ln=True)
+pdf.set_font('Helvetica', '', 10)
+pdf.multi_cell(0, 6,
+    "A la fecha (marzo 2026), las correcciones de dominios identificadas en este informe "
+    "NO se aplican en el proceso de matching de leads con inscriptos (02_cruce_datos.py). "
+    "Este reporte es exclusivamente de auditoria y diagnostico. Los emails con dominios "
+    "erroneos siguen sin matchear contra la base de inscriptos. "
+    "Si se implementara la correccion previa al cruce, los matches recuperables estimados "
+    "podrian concretarse.")
+pdf.ln(5)
+
 pdf_path = os.path.join(output_dir, 'dominios_invalidos.pdf')
 pdf.output(pdf_path)
 print(f"-> PDF generado: {pdf_path}")
@@ -334,6 +362,11 @@ memoria = f"""# Memoria Tecnica: Analisis de Dominios Invalidos
 | Leads afectados | {total_afectados:,} |
 | Matches recuperables estimados | {total_recuperables:,} |
 | Dominios sospechosos sin clasificar | {len(df_sospechosos)} |
+
+## Nota Importante
+A la fecha (marzo 2026), las correcciones de dominios identificadas en este informe
+**NO se aplican en el proceso de matching** de leads con inscriptos (`02_cruce_datos.py`).
+Este reporte es exclusivamente de auditoria y diagnostico.
 
 ## Archivos de Salida
 | Archivo | Descripcion |

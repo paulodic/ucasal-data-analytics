@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import make_pk
 
 import locale
 # Intentar setear locale para formateo de moneda; fallback a formateo manual si falla
@@ -133,11 +134,25 @@ plt.close()
 
 # Gráfica 3: ranking de asesores por cantidad de inscriptos cerrados (solo exactos)
 # Solo Leads con Match_Tipo exacto (excluye Fuzzy para pureza en la atribucion comercial)
-df_inscriptos_por_asesor = df[df['Match_Tipo'].astype(str).str.contains('Si') & ~df['Match_Tipo'].astype(str).str.contains('Fuzzy')]
 
-# Agrupar por asesor y contar el volumen de Inscriptos ganados
-ranking_inscriptos = df_inscriptos_por_asesor.groupby('Propietario').size().reset_index(name='Total_Inscriptos')
+# Clave de persona para deduplicar (DNI > Email > Tel > Cel)
+df['_pk'] = make_pk(df)
+
+df_inscriptos_por_asesor = df[df['Match_Tipo'].astype(str).str.contains('Exacto', case=False, na=False)]
+
+# Agrupar por asesor y contar PERSONAS ÚNICAS inscritas (no filas de leads)
+ranking_inscriptos = df_inscriptos_por_asesor.groupby('Propietario')['_pk'].nunique().reset_index(name='Total_Inscriptos')
 ranking_inscriptos = ranking_inscriptos.sort_values(by='Total_Inscriptos', ascending=False)
+
+# Desglose por tipo de match exacto (dedup por persona, prioridad DNI>Email>Tel>Cel)
+_mt_prio = {'Exacto (DNI)': 0, 'Exacto (Email)': 1, 'Exacto (Teléfono)': 2, 'Exacto (Celular)': 3}
+df['_mt_prio'] = df['Match_Tipo'].map(_mt_prio).fillna(9)
+df_dedup_match = df.sort_values('_mt_prio').drop_duplicates(subset='_pk', keep='first')
+total_exactos = len(df_dedup_match[df_dedup_match['Match_Tipo'].str.contains('Exacto', case=False, na=False)])
+insc_dni = len(df_dedup_match[df_dedup_match['Match_Tipo'] == 'Exacto (DNI)'])
+insc_email = len(df_dedup_match[df_dedup_match['Match_Tipo'] == 'Exacto (Email)'])
+insc_tel = len(df_dedup_match[df_dedup_match['Match_Tipo'] == 'Exacto (Teléfono)'])
+insc_cel = len(df_dedup_match[df_dedup_match['Match_Tipo'] == 'Exacto (Celular)'])
 
 # Excluir 'Sin Asignar' del ranking superior si se desea, o lo dejamos para transparencia
 top_20_inscriptos = ranking_inscriptos.head(20)
@@ -435,6 +450,14 @@ for index, row in origen_breakdown.iterrows():
     pdf.cell(50, 8, f"{row['Cantidad']:,}", 1, align='C')
     pdf.cell(30, 8, f"{row['Porcentaje']:.1f}%", 1, ln=True, align='C')
 
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 12)
+pdf.cell(0, 10, 'Nota Metodologica', new_x='LMARGIN', new_y='NEXT')
+pdf.set_font('Helvetica', '', 9)
+pdf.multi_cell(0, 5,
+    f'Match Exacto: DNI ({insc_dni:,}), Email ({insc_email:,}), Telefono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {total_exactos:,}.\n'
+    'Any-Touch: Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).')
+
 pdf_file = os.path.join(output_dir_base, '17_reporte_asesores.pdf')
 pdf.output(pdf_file)
 print(f"\\n>>> Reporte de Asesores generado con éxito en: {pdf_file}")
@@ -479,7 +502,7 @@ with open(md_file, "w", encoding="utf-8") as f:
     f.write(top_20_vend.to_markdown(index=False))
     f.write("\n\n## Nota Metodologica\n")
     f.write("- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).\n")
-    f.write("- **Match:** Exacto por DNI, Email, Telefono y Celular.\n")
+    f.write(f"- **Match Exacto:** DNI ({insc_dni:,}), Email ({insc_email:,}), Teléfono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {total_exactos:,}.\n")
 
 # ==========================================
 # MEMORIA TÉCNICA
@@ -527,7 +550,7 @@ memoria = f"""# Memoria Técnica: Reporte de Asesores y Canales de Venta
 
 ## Nota Metodologica
 - **Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto. Para atribucion multi-canal, referirse al Informe Analitico (04_reporte_final).
-- **Match:** Exacto por DNI, Email, Telefono y Celular.
+- **Match Exacto:** DNI ({insc_dni:,}), Email ({insc_email:,}), Telefono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {total_exactos:,}.
 """
 with open(os.path.join(output_dir_base, 'memoria_tecnica.md'), 'w', encoding='utf-8') as f:
     f.write(memoria)

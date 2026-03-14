@@ -9,6 +9,7 @@ SALIDA (outputs/<Segmento>/Informe_Analitico/):
 """
 import pandas as pd
 import os
+from causal_utils import make_pk
 
 import sys
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
@@ -39,9 +40,7 @@ df['_mc'] = df['Match_Tipo'].apply(classify)
 df_main = df[df['_mc'] != 'fuzzy'].copy()
 
 # Deduplicar por persona
-df_main['_pk'] = df_main['DNI'].astype(str).str.replace(r'\.0$', '', regex=True)
-df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
-    df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+df_main['_pk'] = make_pk(df_main)
 
 personas = df_main.drop_duplicates(subset='_pk')
 

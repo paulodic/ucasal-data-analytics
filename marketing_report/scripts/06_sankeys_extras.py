@@ -17,6 +17,7 @@ import pandas as pd
 import os
 import re
 import plotly.graph_objects as go
+from causal_utils import make_pk
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -28,7 +29,7 @@ sns.set_theme(style="whitegrid")
 # CONFIGURACIÓN DE RUTAS
 # ==========================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
-output_dir = os.path.join(base_dir, "outputs", "Informe_Analitico")
+output_dir = os.path.join(base_dir, "outputs", "General", "Informe_Analitico")
 os.makedirs(output_dir, exist_ok=True)
 base_output_dir = os.path.join(base_dir, "outputs", "Data_Base")
 data_dir = os.path.join(base_dir, "data", "1_raw")
@@ -91,10 +92,8 @@ df_main = df[df['_mc'] != 'fuzzy'].copy()
 # ==========================================
 print("Calculando tasa de conversión deduplicada (por persona única)...")
 
-# Crear una clave de persona: usar DNI preferentemente, si no Email, si no Candidato
-df_main['_persona_key'] = df_main['DNI'].astype(str).str.replace(r'\.0$', '', regex=True)
-df_main.loc[df_main['_persona_key'].isin(['nan', '', 'None']), '_persona_key'] = \
-    df_main.loc[df_main['_persona_key'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+# Crear una clave de persona: DNI > Email > Telefono > Celular
+df_main['_persona_key'] = make_pk(df_main)
 
 # Personas únicas
 personas = df_main.drop_duplicates(subset='_persona_key')

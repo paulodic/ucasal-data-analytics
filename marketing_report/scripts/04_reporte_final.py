@@ -6,6 +6,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_md, make_pk
 # ==========================================
 import sys
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
@@ -59,6 +60,10 @@ def get_max_date(df_i):
     return (d, f"{d.day} de {meses[d.month]} de {d.year}")
 
 max_insc_ts, max_date_str = get_max_date(df_insc)
+
+# Clave de persona para deduplicar conteos de inscriptos (DNI > Email > Tel > Cel)
+df_leads['_pk'] = make_pk(df_leads)
+
 # ==========================================
 # CÁLCULO DE MÉTRICAS Y GRÁFICOS
 # ==========================================
@@ -87,21 +92,38 @@ if segmento == 'Grado_Pregrado':
 else:
     df_leads_conv = df_leads[df_leads['Fecha_Limpia_Consulta'] <= max_insc_ts].copy()
 
-total_leads = len(df_leads)
-total_leads_conv = len(df_leads_conv)
-leads_convertidos_exact = len(df_leads_conv[df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')])
-leads_convertidos_fuzzy = len(df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Posible Match Fuzzy')])
-leads_no_convertidos = len(df_leads[df_leads['Match_Tipo'] == 'No (Solo Lead)'])
-tasa_conversion_leads = (leads_convertidos_exact / total_leads_conv) * 100 if total_leads_conv > 0 else 0
+total_leads = len(df_leads)           # consultas únicas (por ID Consulta)
+total_leads_conv = len(df_leads_conv)  # consultas en ventana de conversión
+total_personas = df_leads['_pk'].nunique()          # personas únicas (todas)
+total_personas_conv = df_leads_conv['_pk'].nunique()  # personas en ventana
+
+# Deduplicar por persona para contar inscriptos (no filas de leads)
+# Priorizar Exacto sobre otros match types al deduplicar
+_prio_map = {'Exacto': 0, 'Fuzzy': 1, 'Sin_Match': 2}
+df_leads_conv['_mc_label'] = df_leads_conv['Match_Tipo'].astype(str).apply(
+    lambda v: 'Exacto' if 'Exacto' in v else ('Fuzzy' if 'Fuzzy' in v else 'Sin_Match'))
+df_leads_conv['_mc_prio'] = df_leads_conv['_mc_label'].map(_prio_map)
+df_leads_conv_dedup = df_leads_conv.sort_values('_mc_prio').drop_duplicates(subset='_pk', keep='first')
+
+leads_convertidos_exact = len(df_leads_conv_dedup[df_leads_conv_dedup['_mc_label'] == 'Exacto'])
+_fuzzy_prio = df_leads['Match_Tipo'].astype(str).apply(lambda v: 0 if 'Fuzzy' in v else 1)
+leads_convertidos_fuzzy = len(df_leads.assign(_fz_prio=_fuzzy_prio).sort_values('_fz_prio').drop_duplicates(
+    subset='_pk', keep='first').query('_fz_prio == 0'))
+leads_no_convertidos = len(df_leads[df_leads['Match_Tipo'] == 'No (Solo Lead)'].drop_duplicates(subset='_pk'))
+tasa_conversion_personas = (leads_convertidos_exact / total_personas_conv) * 100 if total_personas_conv > 0 else 0
+tasa_conversion_consultas = (leads_convertidos_exact / total_leads_conv) * 100 if total_leads_conv > 0 else 0
 
 # Clasificación por campaña (usa Campana_Lead de 02_cruce_datos.py)
 # Se busca sobre TODOS los leads (df_leads), no solo los de la ventana de conversión,
 # porque el propósito es identificar inscriptos cuyo lead vino de campaña anterior.
 if 'Campana_Lead' in df_leads.columns:
     label_campana_actual = 'Ingreso 2026' if segmento == 'Grado_Pregrado' else '2026'
-    all_exact = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')]
-    insc_campana_actual = len(all_exact[all_exact['Campana_Lead'] == label_campana_actual])
-    insc_campana_anterior = len(all_exact[all_exact['Campana_Lead'] == 'Campaña Anterior'])
+    # Deduplicar por persona: priorizar exacto, luego agrupar por campaña
+    df_leads['_mc_label'] = df_leads['Match_Tipo'].astype(str).apply(
+        lambda v: 'Exacto' if 'Exacto' in v else ('Fuzzy' if 'Fuzzy' in v else 'Sin_Match'))
+    all_exact_dedup = df_leads[df_leads['_mc_label'] == 'Exacto'].drop_duplicates(subset='_pk', keep='first')
+    insc_campana_actual = len(all_exact_dedup[all_exact_dedup['Campana_Lead'] == label_campana_actual])
+    insc_campana_anterior = len(all_exact_dedup[all_exact_dedup['Campana_Lead'] == 'Campaña Anterior'])
 else:
     label_campana_actual = ''
     insc_campana_actual = 0
@@ -117,23 +139,29 @@ df_leads['UtmCampaign_Clean'] = df_leads['UtmCampaign'].astype(str).str.strip().
 df_leads['FuenteLead_Num'] = pd.to_numeric(df_leads['FuenteLead'], errors='coerce')
 
 # 2. Tasa de Conversión Meta (Facebook/IG)
-# Aislamos matemáticamente SOLO el universo de leads que vinieron por Meta 
+# Aislamos matemáticamente SOLO el universo de leads que vinieron por Meta
 # (usando keywords en UTM o el ID 18 nativo de FB Lead Ads).
 meta_keywords = ['fb', 'facebook', 'ig', 'instagram', 'meta']
 mask_meta_conv = df_leads_conv['UtmSource_Clean'].str.contains('|'.join(meta_keywords), na=False) | (df_leads_conv['FuenteLead_Num'] == 18)
-total_meta_conv = len(df_leads_conv[mask_meta_conv])
-# Dentro de ESE mini-universo, contamos cuántos dicen EXACTO.
-meta_convertidos = len(df_leads_conv[mask_meta_conv & df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')])
-tasa_conversion_meta = (meta_convertidos / total_meta_conv) * 100 if total_meta_conv > 0 else 0
+# Deduplicar por persona dentro del ecosistema Meta
+df_meta_conv_dedup = df_leads_conv[mask_meta_conv].sort_values('_mc_prio').drop_duplicates(subset='_pk', keep='first')
+total_meta_conv = len(df_meta_conv_dedup)            # personas únicas Meta
+consultas_meta_conv = int(mask_meta_conv.sum())       # consultas Meta
+meta_convertidos = len(df_meta_conv_dedup[df_meta_conv_dedup['_mc_label'] == 'Exacto'])
+tasa_conversion_meta_personas = (meta_convertidos / total_meta_conv) * 100 if total_meta_conv > 0 else 0
+tasa_conversion_meta_consultas = (meta_convertidos / consultas_meta_conv) * 100 if consultas_meta_conv > 0 else 0
 
 # 3. Tasa de Conversión Google
 # Aislamos matemáticamente SOLO el universo de leads que vinieron por Google.
 google_keywords = ['google', 'gads']
 mask_google_conv = df_leads_conv['UtmSource_Clean'].str.contains('|'.join(google_keywords), na=False)
-total_google_conv = len(df_leads_conv[mask_google_conv])
-# Dentro de ESE mini-universo, contamos cuántos dicen EXACTO.
-google_convertidos = len(df_leads_conv[mask_google_conv & df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')])
-tasa_conversion_google = (google_convertidos / total_google_conv) * 100 if total_google_conv > 0 else 0
+# Deduplicar por persona dentro del ecosistema Google
+df_google_conv_dedup = df_leads_conv[mask_google_conv].sort_values('_mc_prio').drop_duplicates(subset='_pk', keep='first')
+total_google_conv = len(df_google_conv_dedup)          # personas únicas Google
+consultas_google_conv = int(mask_google_conv.sum())     # consultas Google
+google_convertidos = len(df_google_conv_dedup[df_google_conv_dedup['_mc_label'] == 'Exacto'])
+tasa_conversion_google_personas = (google_convertidos / total_google_conv) * 100 if total_google_conv > 0 else 0
+tasa_conversion_google_consultas = (google_convertidos / consultas_google_conv) * 100 if consultas_google_conv > 0 else 0
 
 # =========================================================
 # Plataformas Pagas (UTM Campaign o Meta Ads) vs Otros
@@ -169,28 +197,42 @@ plt.close()
 # Esto garantiza que el foco del informe sea exclusivamente la campaña vigente.
 if 'Campana_Lead' in df_leads_conv.columns:
     df_insc_2026 = df_leads_conv[
-        (df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')) &
+        (df_leads_conv['_mc_label'] == 'Exacto') &
         (df_leads_conv['Campana_Lead'] == label_campana_actual)
-    ].copy()
+    ].sort_values('_mc_prio').drop_duplicates(subset='_pk', keep='first').copy()
     titulo_pie = f'Origenes de Inscriptos - Campana {label_campana_actual}'
 else:
-    df_insc_2026 = df_leads_conv[df_leads_conv['Match_Tipo'].astype(str).str.contains('Exacto')].copy()
+    df_insc_2026 = df_leads_conv_dedup[df_leads_conv_dedup['_mc_label'] == 'Exacto'].copy()
     titulo_pie = 'Origenes de Inscriptos (Exacto)'
 
-# Clasificar por canal
-df_insc_2026['_utm_pie'] = df_insc_2026['UtmSource'].astype(str).str.lower().str.strip()
-df_insc_2026['_fl_pie'] = pd.to_numeric(df_insc_2026['FuenteLead'], errors='coerce')
+# Clasificar por canal — ANY-TOUCH: cada persona cuenta en TODOS sus canales.
+# Usamos df_leads_conv (sin dedup) para encontrar todos los canales de cada persona,
+# luego contamos personas únicas por canal.
+_insc_pks_2026 = set(df_insc_2026['_pk'].unique())
+if 'Campana_Lead' in df_leads_conv.columns:
+    _df_canales = df_leads_conv[
+        (df_leads_conv['_pk'].isin(_insc_pks_2026)) &
+        (df_leads_conv['Campana_Lead'] == label_campana_actual)
+    ].copy()
+else:
+    _df_canales = df_leads_conv[df_leads_conv['_pk'].isin(_insc_pks_2026)].copy()
+_df_canales['_utm_pie'] = _df_canales['UtmSource'].astype(str).str.lower().str.strip()
+_df_canales['_fl_pie'] = pd.to_numeric(_df_canales['FuenteLead'], errors='coerce')
 meta_kw = ['fb', 'facebook', 'ig', 'instagram', 'meta']
-m_google_pie = df_insc_2026['_utm_pie'].str.contains('google', na=False)
-m_fb_pie = df_insc_2026['_utm_pie'].str.contains('|'.join(meta_kw), na=False) | (df_insc_2026['_fl_pie'] == 18)
-m_bot_pie = df_insc_2026['_fl_pie'] == 907
-m_otros_pie = ~m_google_pie & ~m_fb_pie & ~m_bot_pie
+
+# Para cada canal, contar personas únicas (any-touch)
+_pks_google = set(_df_canales[_df_canales['_utm_pie'].str.contains('google', na=False)]['_pk'].unique())
+_pks_meta = set(_df_canales[
+    _df_canales['_utm_pie'].str.contains('|'.join(meta_kw), na=False) | (_df_canales['_fl_pie'] == 18)
+]['_pk'].unique())
+_pks_bot = set(_df_canales[_df_canales['_fl_pie'] == 907]['_pk'].unique())
+_pks_otros = _insc_pks_2026 - _pks_google - _pks_meta - _pks_bot
 
 pie_data = {
-    'Google Ads': int(m_google_pie.sum()),
-    'Meta (FB/IG)': int(m_fb_pie.sum()),
-    'Bot (907)': int(m_bot_pie.sum()),
-    'Otros / Organico': int(m_otros_pie.sum()),
+    'Google Ads': len(_pks_google),
+    'Meta (FB/IG)': len(_pks_meta),
+    'Bot (907)': len(_pks_bot),
+    'Otros / Organico': len(_pks_otros),
 }
 # Agregar inscriptos sin lead (directos) como categoría separada
 pie_data['Sin trazabilidad'] = inscriptos_directos
@@ -211,7 +253,7 @@ plt.close()
 # Solo se genera si existe la columna Campana_Lead y hay inscriptos de ambas campañas.
 # Usa df_leads (todos los leads, no solo ventana) para ver ambas campañas.
 if 'Campana_Lead' in df_leads.columns and insc_campana_anterior > 0:
-    df_exact_all = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')].copy()
+    df_exact_all = df_leads[df_leads['_mc_label'] == 'Exacto'].drop_duplicates(subset='_pk', keep='first').copy()
     df_exact_all['_utm_cmp'] = df_exact_all['UtmSource'].astype(str).str.lower().str.strip()
     df_exact_all['_fl_cmp'] = pd.to_numeric(df_exact_all['FuenteLead'], errors='coerce')
 
@@ -261,8 +303,8 @@ chart5_path = os.path.join(output_dir, "chart_5_leads_pagos_vs_otros.png")
 plt.savefig(chart5_path, bbox_inches='tight')
 plt.close()
 
-# Gráfico 7: Distribución Pagados vs Otros (Solo Inscriptos Exactos)
-df_exactos = df_leads[df_leads['Match_Tipo'].astype(str).str.contains('Exacto')].copy()
+# Gráfico 7: Distribución Pagados vs Otros (Solo Inscriptos Exactos, dedup por persona)
+df_exactos = df_leads[df_leads['_mc_label'] == 'Exacto'].drop_duplicates(subset='_pk', keep='first').copy()
 mask_pago_exactos = (df_exactos['UtmCampaign_Clean'] != '') | (df_exactos['FuenteLead_Num'] == 18)
 insc_pago = len(df_exactos[mask_pago_exactos])
 insc_otros = len(df_exactos) - insc_pago
@@ -331,10 +373,8 @@ if not df_tiempos.empty:
 # por Bot, y finalmente inscribirse. El análisis multi-touch revela qué
 # combinaciones de canales son más efectivas.
 
-# Clave de persona: DNI limpio (sin decimal), fallback a Correo
-df_leads['_pk_mt'] = df_leads['DNI'].astype(str).str.split('.').str[0].str.strip()
-df_leads.loc[df_leads['_pk_mt'].isin(['nan', '', 'None']), '_pk_mt'] = \
-    df_leads.loc[df_leads['_pk_mt'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+# Reusar _pk como clave de persona para multi-touch
+df_leads['_pk_mt'] = df_leads['_pk']
 
 # Identificar canal de cada lead
 df_leads['_utm_mt'] = df_leads['UtmSource'].astype(str).str.lower().str.strip()
@@ -719,23 +759,28 @@ report_content = f"""# Informe Analítico de Marketing y Trazabilidad
 Este informe consolida el análisis generado a partir del cruce de bases de datos de **Consultas (Leads en Salesforce)** e **Inscriptos**, unificando los orígenes y calculando el "Journey" de las personas. Durante la lectura de las bases de datos originales se aplicaron procesos de **deduplicación** para garantizar que los solapamientos de archivos no duplicaran los registros.
 
 ## 1. Resumen Ejecutivo
-Se analizaron un total de **{total_leads:,}** leads únicos y **{total_inscriptos:,}** inscriptos únicos para identificar qué campañas e interacciones previas generaron las inscripciones finales.
+Se procesaron **{total_leads:,}** consultas únicas de Salesforce (cada una con su propio ID y origen), correspondientes a **{total_personas:,}** personas distintas. Se cruzaron contra **{total_inscriptos:,}** inscriptos únicos.
 
 | Métrica | Valor |
 |---------|-------|
-| Total Leads | {total_leads:,} |
+| Total Consultas (ID Consulta único) | {total_leads:,} |
+| Personas que consultaron | {total_personas:,} |
 | Total Inscriptos | {total_inscriptos:,} |
-| Inscriptos Atribuidos a un Lead (Exacto) | {inscriptos_con_origen:,} ({tasa_atribucion:.1f}% del total) |
+| Personas convertidas (Exacto) | {leads_convertidos_exact:,} |
+| Inscriptos atribuidos a Lead (Exacto) | {inscriptos_con_origen:,} ({tasa_atribucion:.1f}% del total) |
 | Inscriptos sin trazabilidad | {inscriptos_directos:,} |
-| **Tasa de Conversión General Leads (Exacta)** | **{tasa_conversion_leads:.2f}%** |
+| **Tasa de Conversion sobre Consultas** | **{tasa_conversion_consultas:.2f}%** *(inscriptos / consultas en ventana)* |
+| **Tasa de Conversion sobre Personas** | **{tasa_conversion_personas:.2f}%** *(inscriptos / personas en ventana)* |
 
-### Desglose por Ecosistema Principal
-*(Nota: Las tasas de conversión reflejan estrictamente cruces exactos sin contemplar coincidencias difusas)*
-{f'*(Nota Cohortes: Para {segmento}, las tasas de conversión asumen como denominador los leads ingresados a partir de Septiembre 2025, coincidiendo con el inicio de inscripción a la primera cohorte. En mayo se abren a la segunda.)*' if segmento == 'Grado_Pregrado' else ''}
-| Ecosistema | Total Leads Analizados | Inscriptos Atribuidos | Tasa de Conversión |
-|------------|------------------------|-----------------------|--------------------|
-| **Google Ads** | {total_google_conv:,} | {google_convertidos:,} | **{tasa_conversion_google:.2f}%** |
-| **Meta (FB/IG)** | {total_meta_conv:,} | {meta_convertidos:,} | **{tasa_conversion_meta:.2f}%** |
+> **Consultas vs Personas (Embudo):** Cada consulta tiene un ID unico de Salesforce y proviene de un canal especifico. Una persona puede generar multiples consultas desde distintos canales. Se presentan DOS tasas de conversion: sobre consultas (eficiencia por interaccion) y sobre personas (eficiencia por individuo). La tasa sobre personas es el KPI principal del embudo: Consultas -> Personas -> Inscriptos.
+
+### Desglose por Ecosistema Principal (Any-Touch)
+*(Nota: Las tasas de conversión reflejan cruces exactos. Modelo Any-Touch: una persona que consultó por Google Y por Meta se cuenta en ambos canales.)*
+{f'*(Nota Cohortes: Para {segmento}, las tasas de conversión asumen como denominador las personas que consultaron a partir de Septiembre 2025, coincidiendo con el inicio de inscripción a la primera cohorte. En mayo se abren a la segunda.)*' if segmento == 'Grado_Pregrado' else ''}
+| Ecosistema | Consultas | Personas | Convertidas | Tasa s/Consultas | Tasa s/Personas |
+|------------|-----------|----------|-------------|------------------|-----------------|
+| **Google Ads** | {consultas_google_conv:,} | {total_google_conv:,} | {google_convertidos:,} | {tasa_conversion_google_consultas:.2f}% | **{tasa_conversion_google_personas:.2f}%** |
+| **Meta (FB/IG)** | {consultas_meta_conv:,} | {total_meta_conv:,} | {meta_convertidos:,} | {tasa_conversion_meta_consultas:.2f}% | **{tasa_conversion_meta_personas:.2f}%** |
 
 ### Procedencia de Leads (Pagado vs Orgánico/Desconocido)
 De los {total_leads:,} leads capturados, se analizó cuántos poseen parámetros tracking (UTM) o provienen directamente de formularios dentro de redes (ej. Facebook Lead Ads), frente a los que no tienen este tracking:
@@ -860,8 +905,9 @@ Analizando los días con las caídas más fuertes de inscripciones, podemos obse
 report_content += f"""
 ## Nota Metodologica
 - **Cruce de datos:** Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.
-- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en secciones de Multi-Touch y Any-Touch de este informe.
-- **Tasas de conversion:** Calculadas sobre la muestra de la campana actual ({'leads desde Sep 2025' if segmento == 'Grado_Pregrado' else 'leads del ano calendario'}).
+- **Modelo de este informe: Any-Touch ESTANDAR** - Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Incluye todas las consultas, sin filtro de fecha vs pago.
+- **Modelo Causal (informe separado):** Solo cuenta consultas cuya fecha es ANTERIOR O IGUAL a la fecha de pago (Consulta <= Insc_Fecha Pago). Consultas post-pago excluidas. Ver `Presupuesto_ROI_Causal`.
+- **Tasas de conversion:** Se presentan dos tasas complementarias: (1) **sobre consultas** = inscriptos / consultas en ventana, mide eficiencia por interaccion; (2) **sobre personas** = inscriptos / personas unicas en ventana, mide eficiencia por individuo (KPI principal). Embudo: Consultas -> Personas -> Inscriptos. Ventana: {'leads desde Sep 2025' if segmento == 'Grado_Pregrado' else 'leads del ano calendario'}.
 - **Fuente:** Consultas exportadas de Salesforce, inscriptos del sistema academico.
 
 ## Conclusiones y Recomendaciones
@@ -871,6 +917,10 @@ report_content += f"""
 3. **Calidad de Datos:** Una porción de los registros se inscribió de manera directa o ingresó usando correos/teléfonos muy distintos. Se recomienda continuar fortaleciendo la trazabilidad mediante canales digitales.
 
 """
+
+# --- Sección Causal (Any-Touch filtrado por fecha) ---
+causal_data = compute_anytouch_causal(leads_csv, segmento, inscriptos_csv)
+report_content += render_causal_md(causal_data, segmento)
 
 # Guardar
 with open(report_md_file, "w", encoding="utf-8") as file:
@@ -895,21 +945,25 @@ memoria = f"""# Memoria Técnica: Informe Analítico de Marketing
 ## Volúmenes Procesados
 | Métrica | Valor |
 |---|---|
-| Total Leads cargados | {total_leads:,} |
-| Leads en período de conversión | {total_leads_conv:,} |
+| Total Consultas (ID Consulta único) | {total_leads:,} |
+| Personas únicas que consultaron | {total_personas:,} |
+| Consultas en período de conversión | {total_leads_conv:,} |
+| Personas en período de conversión | {total_personas_conv:,} |
 | Total Inscriptos | {total_inscriptos:,} |
-| Leads convertidos (Exacto) | {leads_convertidos_exact:,} |
-| Leads convertidos (Fuzzy) | {leads_convertidos_fuzzy:,} |
-| Leads no convertidos | {leads_no_convertidos:,} |
+| Personas convertidas (Exacto) | {leads_convertidos_exact:,} |
+| Personas convertidas (Fuzzy) | {leads_convertidos_fuzzy:,} |
+| Personas no convertidas | {leads_no_convertidos:,} |
 | Inscriptos atribuidos a Lead (Exacto) | {inscriptos_con_origen:,} |
 | Inscriptos sin trazabilidad | {inscriptos_directos:,} |
 
-## Tasas de Conversión Calculadas
-| Ecosistema | Universo | Convertidos | Tasa |
-|---|---|---|---|
-| **General** | {total_leads_conv:,} | {leads_convertidos_exact:,} | {tasa_conversion_leads:.2f}% |
-| **Google Ads** | {total_google_conv:,} | {google_convertidos:,} | {tasa_conversion_google:.2f}% |
-| **Meta (FB/IG)** | {total_meta_conv:,} | {meta_convertidos:,} | {tasa_conversion_meta:.2f}% |
+> **Nota:** Cada consulta tiene un ID unico de Salesforce y un origen especifico. Una persona puede tener multiples consultas desde diferentes canales. Se presentan DOS tasas de conversion: sobre consultas (eficiencia por interaccion) y sobre personas (eficiencia por individuo, KPI principal). Embudo: Consultas -> Personas -> Inscriptos.
+
+## Tasas de Conversion Calculadas
+| Ecosistema | Consultas | Personas | Convertidas | Tasa s/Consultas | Tasa s/Personas |
+|---|---|---|---|---|---|
+| **General** | {total_leads_conv:,} | {total_personas_conv:,} | {leads_convertidos_exact:,} | {tasa_conversion_consultas:.2f}% | {tasa_conversion_personas:.2f}% |
+| **Google Ads** | {consultas_google_conv:,} | {total_google_conv:,} | {google_convertidos:,} | {tasa_conversion_google_consultas:.2f}% | {tasa_conversion_google_personas:.2f}% |
+| **Meta (FB/IG)** | {consultas_meta_conv:,} | {total_meta_conv:,} | {meta_convertidos:,} | {tasa_conversion_meta_consultas:.2f}% | {tasa_conversion_meta_personas:.2f}% |
 
 ## Procedencia de Leads
 | Categoría | Cantidad | Porcentaje |

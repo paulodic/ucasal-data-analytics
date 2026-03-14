@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_md, render_causal_pdf, make_pk
 
 sns.set_theme(style="whitegrid")
 
@@ -39,6 +40,8 @@ inscriptos_csv = os.path.join(base_output_dir, "reporte_marketing_inscriptos_ori
 print("Cargando datos para Deep Dive Google Ads...")
 df = pd.read_csv(leads_csv, low_memory=False)
 df_insc = pd.read_csv(inscriptos_csv, low_memory=False)
+
+causal_data = compute_anytouch_causal(leads_csv, segmento, inscriptos_csv)
 
 def get_max_date(df_i):
     meses = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio",
@@ -71,9 +74,7 @@ for col in utm_cols:
         df_main[col] = df_main[col].astype(str).replace('nan', '').str.strip().str.lower()
 
 # Deduplicar por persona
-df_main['_pk'] = df_main['DNI'].astype(str).str.replace(r'\.0$', '', regex=True)
-df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), '_pk'] = \
-    df_main.loc[df_main['_pk'].isin(['nan', '', 'None']), 'Correo'].astype(str)
+df_main['_pk'] = make_pk(df_main)
 
 # FILTRO ESPECÍFICO: Google Ads (Volumen Histórico)
 # Buscamos 'googleads' o similar en UtmSource
@@ -100,6 +101,12 @@ df_gads_dedup_conv = df_gads_conv.drop_duplicates(subset='_pk')
 total_gads_conv = len(df_gads_dedup_conv)
 conv_gads = len(df_gads_dedup_conv[df_gads_dedup_conv['_mc'] == 'exacto'])
 tasa_gads = (conv_gads / total_gads_conv * 100) if total_gads_conv > 0 else 0
+
+# Desglose por tipo de match
+insc_dni = len(df_gads_dedup_conv[df_gads_dedup_conv['Match_Tipo'] == 'Exacto (DNI)'])
+insc_email = len(df_gads_dedup_conv[df_gads_dedup_conv['Match_Tipo'] == 'Exacto (Email)'])
+insc_tel = len(df_gads_dedup_conv[df_gads_dedup_conv['Match_Tipo'] == 'Exacto (Teléfono)'])
+insc_cel = len(df_gads_dedup_conv[df_gads_dedup_conv['Match_Tipo'] == 'Exacto (Celular)'])
 
 print(f"Personas de Google Ads (Muestra): {total_gads_conv:,} | Inscriptos: {conv_gads:,} | Tasa: {tasa_gads:.2f}%")
 
@@ -185,10 +192,14 @@ with open(md_path, 'w', encoding='utf-8') as f:
     f.write(f"- Total Personas captadas vía Google Ads (Histórico): {total_gads:,}\n")
     f.write(f"- Total Personas captadas vía Google Ads (Muestra Conversión): {total_gads_conv:,}\n")
     f.write(f"- Inscriptos Confirmados (Muestra): {conv_gads:,}\n")
+    f.write(f"  - por DNI: {insc_dni:,} | por Email: {insc_email:,} | por Teléfono: {insc_tel:,} | por Celular: {insc_cel:,}\n")
     f.write(f"- Tasa de Conversión Google Ads: {tasa_gads:.2f}%\n")
     f.write("\n## Nota Metodologica\n")
-    f.write("- **Modelo Any-Touch:** Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). Detalle en el Informe Analitico (04_reporte_final).\n")
-    f.write("- **Match:** Exacto por DNI, Email, Telefono y Celular.\n")
+    f.write("- **Modelo Any-Touch ESTANDAR (este informe):** Incluye todas las consultas sin filtro de fecha vs pago.\n")
+    f.write("- **Modelo CAUSAL (informe separado):** Solo consultas con fecha <= fecha de pago. Ver Presupuesto_ROI_Causal.\n")
+    f.write(f"- **Match Exacto:** DNI ({insc_dni:,}), Email ({insc_email:,}), Teléfono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {conv_gads:,}.\n")
+    f.write("\n")
+    f.write(render_causal_md(causal_data, segmento))
 print(f"-> Textos exportados a MD: {md_path}\n")
 
 # PDF
@@ -209,17 +220,26 @@ pdf.add_page()
 # Resumen
 pdf.set_font('Helvetica', 'B', 16)
 pdf.cell(0, 10, 'Resumen Ejecutivo Google Ads', new_x="LMARGIN", new_y="NEXT")
-pdf.ln(5)
-pdf.set_font('Helvetica', 'I', 8)
+pdf.ln(3)
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font('Helvetica', 'B', 9)
+pdf.cell(0, 6, 'Metodologia aplicada:', new_x="LMARGIN", new_y="NEXT", fill=True)
+pdf.set_font('Helvetica', '', 8)
 pdf.multi_cell(0, 4,
-    'Modelo: Deduplicado por persona (DNI), filtro canal Google Ads. Match: Exacto (DNI/Email/Telefono/Celular). '
-    'Any-Touch: ver Informe Analitico (04).'
-    + (' Cohorte: leads desde Sep 2025.' if segmento == 'Grado_Pregrado' else ''))
+    'MODELO ESTANDAR (este informe): Match Exacto por DNI > Email > Telefono > Celular. '
+    'Deduplicado por persona (DNI). Atribucion Any-Touch (suma > 100%). '
+    'Incluye TODAS las consultas sin filtro de fecha vs pago.\n'
+    'MODELO CAUSAL (ver Presupuesto_ROI_Causal): Solo consultas con fecha <= fecha de pago.'
+    + (' Ventana: leads desde Sep 2025 (cohorte Ingreso 2026).' if segmento == 'Grado_Pregrado' else ''),
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
 pdf.ln(3)
 pdf.set_font('Helvetica', '', 12)
 pdf.cell(0, 8, f'Total Personas captadas vía Google Ads (Histórico): {total_gads:,}', new_x="LMARGIN", new_y="NEXT")
 pdf.cell(0, 8, f'Total Personas captadas vía Google Ads (Muestra): {total_gads_conv:,}', new_x="LMARGIN", new_y="NEXT")
 pdf.cell(0, 8, f'Inscriptos Confirmados (Muestra): {conv_gads:,}', new_x="LMARGIN", new_y="NEXT")
+pdf.set_font('Helvetica', '', 10)
+pdf.cell(0, 7, f'  Match por DNI: {insc_dni:,} | Email: {insc_email:,} | Telefono: {insc_tel:,} | Celular: {insc_cel:,}', new_x="LMARGIN", new_y="NEXT")
 pdf.set_font('Helvetica', 'B', 12)
 pdf.cell(0, 8, f'Tasa de Conversión Google Ads: {tasa_gads:.2f}%', new_x="LMARGIN", new_y="NEXT")
 pdf.ln(10)
@@ -259,6 +279,13 @@ for c, res in gads_results.items():
         pdf.cell(30, 6, str(int(r['Inscriptos'])), 1)
         pdf.cell(20, 6, f"{r['Tasa_%']:.2f}%", 1, new_x="LMARGIN", new_y="NEXT")
 
+# Atribucion Causal
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 14)
+pdf.cell(0, 10, 'Atribucion Causal (Any-Touch)', new_x="LMARGIN", new_y="NEXT")
+pdf.ln(3)
+render_causal_pdf(pdf, causal_data, segmento)
+
 # Nota Metodologica
 pdf.add_page()
 pdf.set_font('Helvetica', 'B', 14)
@@ -266,7 +293,7 @@ pdf.cell(0, 10, 'Nota Metodologica', new_x="LMARGIN", new_y="NEXT")
 pdf.ln(3)
 pdf.set_font('Helvetica', '', 9)
 pdf.multi_cell(0, 5,
-    'Cruce de datos: Deduplicado por persona (DNI). Match exacto por DNI, Email, Telefono y Celular.\n'
+    f'Cruce de datos: Deduplicado por persona (DNI). Match Exacto: DNI ({insc_dni:,}), Email ({insc_email:,}), Telefono ({insc_tel:,}), Celular ({insc_cel:,}). Total: {conv_gads:,}.\n'
     'Modelo Any-Touch: Un inscripto se cuenta en CADA canal por el que consulto (la suma supera 100%). '
     'Detalle en el Informe Analitico (04_reporte_final).\n'
     'Fuente: Consultas exportadas de Salesforce, inscriptos del sistema academico.')

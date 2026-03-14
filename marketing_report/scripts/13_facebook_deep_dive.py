@@ -22,6 +22,7 @@ import seaborn as sns
 import os
 from fpdf import FPDF
 from datetime import datetime
+from causal_utils import compute_anytouch_causal, render_causal_md, render_causal_pdf, make_pk
 
 import sys
 segmento = sys.argv[1] if len(sys.argv) > 1 else 'Grado_Pregrado'
@@ -35,7 +36,7 @@ leads_csv = os.path.join(base_output_dir, "reporte_marketing_leads_completos.csv
 inscriptos_csv = os.path.join(base_output_dir, "reporte_marketing_inscriptos_origenes.csv")
 
 print("Cargando bases de datos con columnas limitadas...")
-usecols_leads = ['Id. candidato/contacto', 'UtmSource', 'UtmCampaign', 'UtmMedium', 'Match_Tipo', 'FuenteLead', 'Consulta: Fecha de creación']
+usecols_leads = ['Id. candidato/contacto', 'DNI', 'Correo', 'UtmSource', 'UtmCampaign', 'UtmMedium', 'Match_Tipo', 'FuenteLead', 'Consulta: Fecha de creación']
 df_leads = pd.read_csv(leads_csv, usecols=lambda c: c in usecols_leads, low_memory=False)
 
 try:
@@ -61,6 +62,11 @@ def get_max_date(df_i):
     return f"{d.day} de {meses[d.month]} de {d.year}"
 
 max_date_str = get_max_date(df_insc)
+
+causal_data = compute_anytouch_causal(leads_csv, segmento, inscriptos_csv)
+
+# Clave única por persona para deduplicar inscriptos (DNI > Email > Tel > Cel)
+df_leads['_pk'] = make_pk(df_leads)
 
 # LIMPIEZA STRINGS UTM
 df_leads['UtmSource'] = df_leads['UtmSource'].astype(str).str.lower().str.strip()
@@ -94,11 +100,20 @@ if total_meta_leads == 0:
     print("No se encontraron leads procedentes del ecosistema Facebook/Meta.")
     exit()
 
-exactos_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'].str.contains('Exacto', case=False, na=False)])
-insc_dni_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (DNI)'])
-insc_email_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (Email)'])
-insc_tel_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (Teléfono)'])
-insc_cel_meta = len(df_meta_conv[df_meta_conv['Match_Tipo'] == 'Exacto (Celular)'])
+# Deduplicar inscriptos por persona antes de contar
+def _count_match_dedup(sub, match_tipo=None):
+    """Cuenta personas únicas con match exacto, opcionalmente filtrando por tipo."""
+    if match_tipo:
+        sub = sub[sub['Match_Tipo'] == match_tipo]
+    else:
+        sub = sub[sub['Match_Tipo'].str.contains('Exacto', case=False, na=False)]
+    return sub.drop_duplicates(subset='_pk')['_pk'].nunique()
+
+exactos_meta = _count_match_dedup(df_meta_conv)
+insc_dni_meta = _count_match_dedup(df_meta_conv, 'Exacto (DNI)')
+insc_email_meta = _count_match_dedup(df_meta_conv, 'Exacto (Email)')
+insc_tel_meta = _count_match_dedup(df_meta_conv, 'Exacto (Teléfono)')
+insc_cel_meta = _count_match_dedup(df_meta_conv, 'Exacto (Celular)')
 conversion_meta = (exactos_meta / total_meta_leads_conv) * 100 if total_meta_leads_conv > 0 else 0
 
 md_content = f"# Deep Dive: Facebook & Meta Ecosystem\n\n*(Datos actualizados al {max_date_str})*\n\n"
@@ -120,13 +135,19 @@ def clasificar_red(s):
     return 'Otro Meta'
 
 df_meta_conv['Red_Primaria'] = df_meta_conv['UtmSource'].apply(clasificar_red)
+df_meta_conv['_es_exacto'] = df_meta_conv['Match_Tipo'].astype(str).str.contains('Exacto', case=False, na=False)
+# Contar consultas y personas únicas por red (any-touch)
 red_gb = df_meta_conv.groupby('Red_Primaria').agg(
-    Leads_Muestra=('Id. candidato/contacto', 'count'),
-    Inscriptos=('Match_Tipo', lambda x: x.str.contains('Exacto', case=False, na=False).sum())
+    Consultas=('_pk', 'size'),
+    Personas=('_pk', 'nunique'),
 ).reset_index()
+# Inscriptos = personas únicas con match exacto por red
+_insc_por_red = df_meta_conv[df_meta_conv['_es_exacto']].groupby('Red_Primaria')['_pk'].nunique().rename('Inscriptos')
+red_gb = red_gb.merge(_insc_por_red, on='Red_Primaria', how='left').fillna({'Inscriptos': 0})
+red_gb['Inscriptos'] = red_gb['Inscriptos'].astype(int)
 
-red_gb['Conversión_%'] = (red_gb['Inscriptos'] / red_gb['Leads_Muestra'] * 100).round(2)
-red_gb = red_gb.sort_values(by='Leads_Muestra', ascending=False)
+red_gb['Conversión_%'] = (red_gb['Inscriptos'] / red_gb['Personas'] * 100).round(2)
+red_gb = red_gb.sort_values(by='Personas', ascending=False)
 
 md_content += "## 1. Distribución de Origen por Red Social (Muestra Conversión)\n\n"
 md_content += red_gb.to_markdown(index=False) + "\n\n"
@@ -145,24 +166,28 @@ plt.close()
 
 # --- 2. Top Campañas Meta ---
 print("Analizando campañas...")
-camp_gb = df_meta_conv[df_meta_conv['UtmCampaign'] != 'Sin Campaña'].groupby('UtmCampaign').agg(
-    Leads_Muestra=('Id. candidato/contacto', 'count'),
-    Inscriptos=('Match_Tipo', lambda x: x.str.contains('Exacto', case=False, na=False).sum())
+_df_camp = df_meta_conv[df_meta_conv['UtmCampaign'] != 'Sin Campaña']
+camp_gb = _df_camp.groupby('UtmCampaign').agg(
+    Consultas=('_pk', 'size'),
+    Personas=('_pk', 'nunique'),
 ).reset_index()
+_insc_por_camp = _df_camp[_df_camp['_es_exacto']].groupby('UtmCampaign')['_pk'].nunique().rename('Inscriptos')
+camp_gb = camp_gb.merge(_insc_por_camp, on='UtmCampaign', how='left').fillna({'Inscriptos': 0})
+camp_gb['Inscriptos'] = camp_gb['Inscriptos'].astype(int)
 
-camp_gb['Conversión_%'] = (camp_gb['Inscriptos'] / camp_gb['Leads_Muestra'] * 100).round(2)
+camp_gb['Conversión_%'] = (camp_gb['Inscriptos'] / camp_gb['Personas'] * 100).round(2)
 
 # Filtrar campañas basura (con menos de 5 leads en la muestra)
-camp_gb = camp_gb[camp_gb['Leads_Muestra'] >= 5]
+camp_gb = camp_gb[camp_gb['Personas'] >= 5]
 
-top_leads_camps = camp_gb.sort_values('Leads_Muestra', ascending=False).head(15)
+top_leads_camps = camp_gb.sort_values('Personas', ascending=False).head(15)
 top_conv_camps = camp_gb[camp_gb['Inscriptos'] > 0].sort_values('Conversión_%', ascending=False).head(15)
 
 md_content += "## 2. Top 15 Campañas por Volumen de Leads (Muestra Conversión)\n\n"
 md_content += top_leads_camps.to_markdown(index=False) + "\n\n"
 
 plt.figure(figsize=(10, 8))
-sns.barplot(x='Leads_Muestra', y='UtmCampaign', data=top_leads_camps, palette='Blues_r')
+sns.barplot(x='Personas', y='UtmCampaign', data=top_leads_camps, palette='Blues_r')
 plt.title('Top 15 Campañas de Meta por Volumen de Leads (Muestra)')
 plt.xlabel('Cantidad de Leads')
 plt.ylabel('Campaña')
@@ -175,18 +200,21 @@ print("Generando Excel y Markdown...")
 md_content += "\n## Nota Metodológica\n\n"
 md_content += "- **Modelo de atribución:** Directa por canal (FuenteLead=18 o UTM de Meta). Deduplicado por lead.\n"
 md_content += f"- **Match Exacto:** DNI ({insc_dni_meta:,}), Email ({insc_email_meta:,}), Teléfono ({insc_tel_meta:,}), Celular ({insc_cel_meta:,}). Total: {exactos_meta:,}.\n"
-md_content += "- **Any-Touch:** Para ver cuántos inscriptos tuvieron *al menos un contacto* con Meta (aunque también consultaron por otros canales), referirse al Informe Analítico (04_reporte_final).\n"
+md_content += "- **Any-Touch ESTANDAR (este informe):** Incluye todas las consultas sin filtro de fecha vs pago.\n"
+md_content += "- **Modelo CAUSAL (informe separado):** Solo consultas con fecha <= fecha de pago. Excluye post-pago. Ver Presupuesto_ROI_Causal.\n"
 if segmento == 'Grado_Pregrado':
     md_content += "- **Ventana de conversión:** Leads desde 01/09/2025 (campaña ingreso 2026).\n"
 else:
     md_content += "- **Ventana de conversión:** Año calendario 2026.\n"
+
+md_content += render_causal_md(causal_data, segmento)
 
 with open(os.path.join(output_dir, 'Informe_Facebook_Deep_Dive.md'), 'w', encoding='utf-8') as f:
     f.write(md_content)
 
 with pd.ExcelWriter(os.path.join(output_dir, 'reporte_especifico_facebook.xlsx')) as writer:
     red_gb.to_excel(writer, sheet_name='Por_Red', index=False)
-    camp_gb.sort_values('Leads_Muestra', ascending=False).to_excel(writer, sheet_name='Todas_Campañas', index=False)
+    camp_gb.sort_values('Personas', ascending=False).to_excel(writer, sheet_name='Todas_Campañas', index=False)
 
 # Generar PDF
 print("Generando PDF de resultados...")
@@ -208,11 +236,21 @@ pdf.add_page()
 
 pdf.set_font("Helvetica", "B", 12)
 pdf.cell(0, 8, "Resumen Global del Ecosistema Meta", ln=True)
+pdf.ln(3)
+pdf.set_fill_color(240, 248, 255)
+pdf.set_font("Helvetica", "B", 9)
+pdf.cell(0, 6, "Metodologia aplicada:", ln=True, fill=True)
+pdf.set_font("Helvetica", "", 8)
+pdf.multi_cell(0, 4,
+    "MODELO ESTANDAR (este informe): Match Exacto por DNI > Email > Telefono > Celular. "
+    "Deduplicado por persona (DNI). Atribucion Any-Touch (suma > 100%). "
+    "Incluye TODAS las consultas sin filtro de fecha vs pago.\n"
+    "MODELO CAUSAL (ver Presupuesto_ROI_Causal): Solo consultas con fecha <= fecha de pago."
+    + (" Ventana: leads desde Sep 2025 (cohorte Ingreso 2026)." if segmento == 'Grado_Pregrado' else ''),
+    fill=True)
+pdf.set_fill_color(255, 255, 255)
+pdf.ln(3)
 pdf.set_font("Helvetica", size=11)
-if segmento == 'Grado_Pregrado':
-    pdf.set_font("Helvetica", 'I', 8)
-    pdf.cell(0, 6, "Nota Cohortes: Las tasas de conversion se calculan sobre leads desde Septiembre 2025 (campaña ingreso 2026).", ln=True)
-    pdf.set_font("Helvetica", size=11)
 
 pdf.multi_cell(0, 6, f"Volumen total de Leads procedentes de Facebook o Instagram (Histórico): {total_meta_leads:,}\n" \
                      f"Volumen de Leads (Muestra Conversión): {total_meta_leads_conv:,}\n" \

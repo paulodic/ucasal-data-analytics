@@ -26,7 +26,7 @@ sns.set_theme(style="whitegrid")
 # CONFIGURACIÓN DE RUTAS
 # ==========================================
 base_dir = r"h:\Test-Antigravity\marketing_report"
-output_dir = os.path.join(base_dir, "outputs", "Informe_Analitico")
+output_dir = os.path.join(base_dir, "outputs", "General", "Informe_Analitico")
 os.makedirs(output_dir, exist_ok=True)
 base_output_dir = os.path.join(base_dir, "outputs", "Data_Base")
 data_dir = os.path.join(base_dir, "data", "1_raw")

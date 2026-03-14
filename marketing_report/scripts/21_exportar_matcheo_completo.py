@@ -52,16 +52,9 @@ for col in ['DNI', 'Insc_DNI']:
     if col in df_raw.columns:
         df_raw[col] = df_raw[col].astype(str).str.split('.').str[0].str.strip().replace('nan', '')
 
-# Clave de deduplicación: identifica a una persona a partir del primer campo no vacío
-# Prioridad: DNI > Correo > ID Consulta > índice de fila
-def make_pk(row):
-    for field in ['DNI', 'Correo', 'Consulta: ID Consulta']:
-        val = str(row.get(field, '')).strip()
-        if val and val not in ('nan', 'None', ''):
-            return val
-    return str(row.name)
-
-df_raw['_pk'] = df_raw.apply(make_pk, axis=1)
+# Clave de deduplicación: DNI > Email > Telefono > Celular > idx
+from causal_utils import make_pk as _make_pk
+df_raw['_pk'] = _make_pk(df_raw)
 
 # ============================================================
 # DEDUPLICACIÓN PRIORIZADA
