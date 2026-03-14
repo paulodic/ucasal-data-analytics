@@ -1,9 +1,9 @@
-﻿Tipo de Cruzamiento,Cantidad de Inscriptos
-Cruce Exacto (Total),7993
-  - por DNI,5423
-  - por Email,2151
-  - por Telefono,227
-  - por Celular,192
-Cruce Fuzzy (Aprox. Nombre),112
-Cruce Fuzzy Email (1 o 2 Caracteres Error),43
-Sin trazabilidad (No en Leads),1377
+﻿Tipo de Cruzamiento,Cantidad de Inscriptos,%
+Cruce Exacto (Total),7984,83.8
+  - por DNI,5423,56.9
+  - por Email,2151,22.6
+  - por Telefono,215,2.3
+  - por Celular,195,2.0
+Cruce Fuzzy (Aprox. Nombre),110,1.2
+Cruce Fuzzy Email (1 o 2 Caracteres Error),43,0.5
+Sin trazabilidad (No en Leads),1388,14.6
